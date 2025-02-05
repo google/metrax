@@ -14,6 +14,8 @@
 
 """Configuration file for the Sphinx documentation builder."""
 
+import sphinx_rtd_theme
+
 # -- Project information
 
 project = 'metrax'
@@ -31,6 +33,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
+    'sphinx_rtd_theme',
 ]
 
 intersphinx_mapping = {
