@@ -1,0 +1,4 @@
+metrax
+======
+
+.. automodule:: metrax

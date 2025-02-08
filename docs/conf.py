@@ -15,6 +15,12 @@
 """Configuration file for the Sphinx documentation builder."""
 
 import sphinx_rtd_theme
+import os
+import sys
+
+# Import local version of metrax.
+sys.path.insert(0, os.path.abspath('../src'))
+print('DEBUG: PATH', sys.path)
 
 # -- Project information
 
@@ -22,8 +28,8 @@ project = 'metrax'
 copyright = '2025, The metrax Authors'
 author = 'The metrax Authors'
 
-release = '0.0.2'
-version = '0.0.2'
+release = ''
+version = ''
 
 
 # -- General configuration
@@ -34,6 +40,8 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'sphinx_rtd_theme',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
 ]
 
 intersphinx_mapping = {
@@ -50,3 +58,15 @@ html_theme = 'sphinx_rtd_theme'
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
+
+
+# -- Extension configuration
+
+autodoc_member_order = 'bysource'
+
+autodoc_default_options = {
+    'members': None,
+    'undoc-members': True,
+    'show-inheritance': True,
+    'special-members': '__call__, __init__',
+}
