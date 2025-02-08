@@ -1,6 +1,6 @@
 # metrax
 
-`metrax` is an official JAX metrics library.
+`metrax` is a library with standard eval metrics implementations in JAX.
 
 ## Installation
 
@@ -11,6 +11,12 @@ pip install google-metrax
 ```
 
 ## Development
+
+Run the tests:
+
+```sh
+pytest src/metrax
+```
 
 Develop the docs locally:
 
