@@ -117,6 +117,61 @@ class MetricsTest(parameterized.TestCase):
       metric = update if metric is None else metric.merge(update)
     return metric.compute()
 
+  def test_mse_empty(self):
+    """Tests the `empty` method of the `MSE` class."""
+    m = metrax.MSE.empty()
+    self.assertEqual(m.total, jnp.array(0, jnp.float32))
+    self.assertEqual(m.count, jnp.array(0, jnp.int32))
+
+  def test_rmse_empty(self):
+    """Tests the `empty` method of the `RMSE` class."""
+    m = metrax.RMSE.empty()
+    self.assertEqual(m.total, jnp.array(0, jnp.float32))
+    self.assertEqual(m.count, jnp.array(0, jnp.int32))
+
+  def test_rsquared_empty(self):
+    """Tests the `empty` method of the `RSQUARED` class."""
+    m = metrax.RSQUARED.empty()
+    self.assertEqual(m.total, jnp.array(0, jnp.float32))
+    self.assertEqual(m.count, jnp.array(0, jnp.float32))
+    self.assertEqual(m.sum_of_squared_error, jnp.array(0, jnp.float32))
+    self.assertEqual(m.sum_of_squared_label, jnp.array(0, jnp.float32))
+
+  def test_precision_empty(self):
+    """Tests the `empty` method of the `Precision` class."""
+    m = metrax.Precision.empty()
+    self.assertEqual(m.true_positives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.false_positives, jnp.array(0, jnp.float32))
+
+  def test_recall_empty(self):
+    """Tests the `empty` method of the `Recall` class."""
+    m = metrax.Recall.empty()
+    self.assertEqual(m.true_positives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
+
+  def test_aucpr_empty(self):
+    """Tests the `empty` method of the `AUCPR` class."""
+    m = metrax.AUCPR.empty()
+    self.assertEqual(m.true_positives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.false_positives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.num_thresholds, 0)
+
+  def test_aucroc_empty(self):
+    """Tests the `empty` method of the `AUCROC` class."""
+    m = metrax.AUCROC.empty()
+    self.assertEqual(m.true_positives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.true_negatives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.false_positives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.num_thresholds, 0)
+
+  def test_perplexity_empty(self):
+    """Tests the `empty` method of the `Perplexity` class."""
+    m = metrax.Perplexity.empty()
+    self.assertEqual(m.aggregate_crossentropy, jnp.array(0, jnp.float32))
+    self.assertEqual(m.num_samples, jnp.array(0, jnp.float32))
+
   @parameterized.named_parameters(
       ('basic', OUTPUT_LABELS, OUTPUT_PREDS, 0.5),
       ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS, 0.7),
