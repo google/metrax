@@ -178,7 +178,7 @@ class MetricsTest(parameterized.TestCase):
     """Test that metrax metrics work across multiple devices using R2 as an example."""
 
     def create_r2(logits, labels):
-      """Creates a metrax R2 metric given logits and labels."""
+      """Creates a metrax RSQUARED metric given logits and labels."""
       return metrax.RSQUARED.from_model_output(logits, labels)
 
     def sharded_r2(logits, labels):
