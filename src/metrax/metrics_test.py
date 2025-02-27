@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for metrax.metrax."""
+"""Tests for metrax metrics."""
 
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax
 import jax.numpy as jnp
+import keras
 import keras_hub
 import metrax
 import numpy as np
@@ -46,78 +47,6 @@ SAMPLE_WEIGHTS = np.tile(
 
 
 class MetricsTest(parameterized.TestCase):
-
-  def setUp(self):
-    super().setUp()
-
-    # TODO(jeffcarp): Merge these into generated fixtures.
-    self.model_outputs = (
-        dict(
-            logits=jnp.array(
-                [0.34, 0.89, 0.12, 0.67, 0.98, 0.23, 0.56, 0.71, 0.45, 0.08]
-            ),
-            labels=jnp.array([1, 0, 1, 1, 0, 0, 1, 0, 1, 1]),
-        ),
-        dict(
-            logits=jnp.array(
-                [0.23, 0.89, 0.57, 0.11, 0.99, 0.38, 0.76, 0.05, 0.62, 0.44]
-            ),
-            labels=jnp.array([0, 0, 1, 0, 1, 1, 0, 1, 0, 0]),
-        ),
-        dict(
-            logits=jnp.array(
-                [0.67, 0.21, 0.95, 0.03, 0.88, 0.51, 0.34, 0.79, 0.15, 0.42]
-            ),
-            labels=jnp.array([1, 1, 0, 1, 0, 1, 1, 0, 0, 1]),
-        ),
-        dict(
-            logits=jnp.array(
-                [0.91, 0.37, 0.18, 0.75, 0.59, 0.02, 0.83, 0.26, 0.64, 0.48]
-            ),
-            labels=jnp.array([0, 1, 1, 0, 0, 1, 0, 1, 1, 0]),
-        ),
-    )
-    self.model_outputs_batch_size_one = (
-        dict(
-            logits=jnp.array([[0.32]]),
-            labels=jnp.array([1]),
-        ),
-        dict(
-            logits=jnp.array([[0.74]]),
-            labels=jnp.array([1]),
-        ),
-        dict(
-            logits=jnp.array([[0.86]]),
-            labels=jnp.array([1]),
-        ),
-        dict(
-            logits=jnp.array([[0.21]]),
-            labels=jnp.array([1]),
-        ),
-    )
-    self.sample_weights = jnp.array([0.5, 1, 0, 0, 0, 0, 0, 0, 0, 0])
-
-  def compute_aucpr(self, model_outputs, sample_weights=None):
-    metric = None
-    for model_output in model_outputs:
-      update = metrax.AUCPR.from_model_output(
-          predictions=model_output.get('logits'),
-          labels=model_output.get('labels'),
-          sample_weights=sample_weights,
-      )
-      metric = update if metric is None else metric.merge(update)
-    return metric.compute()
-
-  def compute_aucroc(self, model_outputs, sample_weights=None):
-    metric = None
-    for model_output in model_outputs:
-      update = metrax.AUCROC.from_model_output(
-          predictions=model_output.get('logits'),
-          labels=model_output.get('labels'),
-          sample_weights=sample_weights,
-      )
-      metric = update if metric is None else metric.merge(update)
-    return metric.compute()
 
   def test_mse_empty(self):
     """Tests the `empty` method of the `MSE` class."""
@@ -197,10 +126,13 @@ class MetricsTest(parameterized.TestCase):
     metric = jax.jit(sharded_r2)(y_pred, y_true)
     metric = metric.reduce()
 
-    expected = sklearn_metrics.r2_score(
-        y_true.flatten(),
-        y_pred.flatten(),
-    )
+    keras_r2 = keras.metrics.R2Score()
+    for labels, logits in zip(y_true, y_pred):
+      keras_r2.update_state(
+          labels[:, jnp.newaxis],
+          logits[:, jnp.newaxis],
+      )
+    expected = keras_r2.result()
     np.testing.assert_allclose(
         metric.compute(),
         expected,
@@ -215,10 +147,12 @@ class MetricsTest(parameterized.TestCase):
       ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5),
   )
   def test_precision(self, y_true, y_pred, threshold):
-    """Test that Precision metric computes correct values."""
+    """Test that `Precision` metric computes correct values."""
     y_true = y_true.reshape((-1,))
     y_pred = jnp.where(y_pred.reshape((-1,)) >= threshold, 1, 0)
-    expected = sklearn_metrics.precision_score(y_true, y_pred)
+    keras_precision = keras.metrics.Precision(thresholds=threshold)
+    keras_precision.update_state(y_true, y_pred)
+    expected = keras_precision.result()
 
     metric = None
     for logits, labels in zip(y_pred, y_true):
@@ -241,10 +175,12 @@ class MetricsTest(parameterized.TestCase):
       ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5),
   )
   def test_recall(self, y_true, y_pred, threshold):
-    """Test that Recall metric computes correct values."""
+    """Test that `Recall` metric computes correct values."""
     y_true = y_true.reshape((-1,))
     y_pred = jnp.where(y_pred.reshape((-1,)) >= threshold, 1, 0)
-    expected = sklearn_metrics.recall_score(y_true, y_pred)
+    keras_recall = keras.metrics.Recall(thresholds=threshold)
+    keras_recall.update_state(y_true, y_pred)
+    expected = keras_recall.result()
 
     metric = None
     for logits, labels in zip(y_pred, y_true):
@@ -260,64 +196,64 @@ class MetricsTest(parameterized.TestCase):
         expected,
     )
 
-  def test_aucpr(self):
-    """Test that AUC-PR Metric computes correct values."""
+  @parameterized.named_parameters(
+      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, None),
+      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
+      ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+  )
+  def test_aucpr(self, y_true, y_pred, sample_weights):
+    """Test that `AUC-PR` Metric computes correct values."""
+    if sample_weights is None:
+      sample_weights = np.ones_like(y_true)
+
+    metric = None
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      update = metrax.AUCPR.from_model_output(
+          predictions=logits,
+          labels=labels,
+          sample_weights=weights,
+      )
+      metric = update if metric is None else metric.merge(update)
+
+    keras_aucpr = keras.metrics.AUC(curve='PR')
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      keras_aucpr.update_state(labels, logits, sample_weight=weights)
+    expected = keras_aucpr.result()
     np.testing.assert_allclose(
-        self.compute_aucpr(self.model_outputs),
-        jnp.array(0.41513795, dtype=jnp.float32),
+        metric.compute(),
+        expected,
+        rtol=1e-07,
+        atol=1e-07,
     )
 
-  def test_aucpr_with_sample_weight(self):
-    """Test that AUC-PR Metric computes correct values when using sample weights."""
-    np.testing.assert_allclose(
-        self.compute_aucpr(self.model_outputs, self.sample_weights),
-        jnp.array(0.32785615, dtype=jnp.float32),
-    )
+  @parameterized.named_parameters(
+      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, None),
+      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
+      ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+  )
+  def test_aucroc(self, y_true, y_pred, sample_weights):
+    """Test that `AUC-ROC` Metric computes correct values."""
+    if sample_weights is None:
+      sample_weights = np.ones_like(y_true)
 
-  def test_aucpr_with_batch_size_one(self):
-    """Test that AUC-PR Metric computes correct values with batch size one."""
-    np.testing.assert_allclose(
-        self.compute_aucpr(self.model_outputs_batch_size_one),
-        jnp.array(1.0, dtype=jnp.float32),
-    )
+    metric = None
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      update = metrax.AUCROC.from_model_output(
+          predictions=logits,
+          labels=labels,
+          sample_weights=weights,
+      )
+      metric = update if metric is None else metric.merge(update)
 
-  def test_aucroc(self):
-    """Test that AUC-ROC Metric computes correct values."""
-    # Concatenate logits and labels
-    all_logits = jnp.concatenate(
-        [model_output['logits'] for model_output in self.model_outputs]
-    )
-    all_labels = jnp.concatenate(
-        [model_output['labels'] for model_output in self.model_outputs]
-    )
+    keras_aucroc = keras.metrics.AUC(curve='ROC')
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      keras_aucroc.update_state(labels, logits, sample_weight=weights)
+    expected = keras_aucroc.result()
     np.testing.assert_allclose(
-        self.compute_aucroc(self.model_outputs),
-        sklearn_metrics.roc_auc_score(all_labels, all_logits),
-    )
-
-  def test_aucroc_with_sample_weight(self):
-    """Test that AUC-ROC Metric computes correct values when using sample weights."""
-    # Concatenate logits and labels
-    all_logits = jnp.concatenate(
-        [model_output['logits'] for model_output in self.model_outputs]
-    )
-    all_labels = jnp.concatenate(
-        [model_output['labels'] for model_output in self.model_outputs]
-    )
-    sample_weights = jnp.concatenate(
-        [self.sample_weights] * len(self.model_outputs)
-    )
-    np.testing.assert_allclose(
-        jnp.array(
-            self.compute_aucroc(self.model_outputs, self.sample_weights),
-            dtype=jnp.float16,
-        ),
-        jnp.array(
-            sklearn_metrics.roc_auc_score(
-                all_labels, all_logits, sample_weight=sample_weights
-            ),
-            dtype=jnp.float16,
-        ),
+        metric.compute(),
+        expected,
+        rtol=1e-07,
+        atol=1e-07,
     )
 
   @parameterized.named_parameters(
@@ -326,6 +262,7 @@ class MetricsTest(parameterized.TestCase):
       ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
   )
   def test_mse(self, y_true, y_pred, sample_weights):
+    """Test that `MSE` Metric computes correct values."""
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -338,6 +275,8 @@ class MetricsTest(parameterized.TestCase):
       )
       metric = update if metric is None else metric.merge(update)
 
+    # TODO(jiwonshin): Use `keras.metrics.MeanSquaredError` once it supports
+    # sample weights.
     expected = sklearn_metrics.mean_squared_error(
         y_true.flatten(),
         y_pred.flatten(),
@@ -356,6 +295,7 @@ class MetricsTest(parameterized.TestCase):
       ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
   )
   def test_rmse(self, y_true, y_pred, sample_weights):
+    """Test that `RMSE` Metric computes correct values."""
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -368,13 +308,10 @@ class MetricsTest(parameterized.TestCase):
       )
       metric = update if metric is None else metric.merge(update)
 
-    # `sklearn_metrics.root_mean_squared_error` is not available.
-    expected = jnp.sqrt(
-        jnp.average(
-            jnp.square(y_pred.flatten() - y_true.flatten()),
-            weights=sample_weights.flatten(),
-        ),
-    )
+    keras_rmse = keras.metrics.RootMeanSquaredError()
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      keras_rmse.update_state(labels, logits, sample_weight=weights)
+    expected = keras_rmse.result()
     np.testing.assert_allclose(
         metric.compute(),
         expected,
@@ -388,6 +325,7 @@ class MetricsTest(parameterized.TestCase):
       ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
   )
   def test_rsquared(self, y_true, y_pred, sample_weights):
+    """Test that `RSQUARED` Metric computes correct values."""
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -400,11 +338,14 @@ class MetricsTest(parameterized.TestCase):
       )
       metric = update if metric is None else metric.merge(update)
 
-    expected = sklearn_metrics.r2_score(
-        y_true.flatten(),
-        y_pred.flatten(),
-        sample_weight=sample_weights.flatten(),
-    )
+    keras_r2 = keras.metrics.R2Score()
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      keras_r2.update_state(
+          labels[:, jnp.newaxis],
+          logits[:, jnp.newaxis],
+          sample_weight=weights[:, jnp.newaxis],
+      )
+    expected = keras_r2.result()
     np.testing.assert_allclose(
         metric.compute(),
         expected,
@@ -427,6 +368,7 @@ class MetricsTest(parameterized.TestCase):
       ),
   )
   def test_perplexity(self, y_true, y_pred, sample_weights):
+    """Test that `Perplexity` Metric computes correct values."""
     keras_metric = keras_hub.metrics.Perplexity()
     metrax_metric = None
     for index, (labels, logits) in enumerate(zip(y_true, y_pred)):
