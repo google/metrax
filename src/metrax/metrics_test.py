@@ -33,11 +33,12 @@ OUTPUT_LABELS = np.random.randint(
     2,
     size=(BATCHES, BATCH_SIZE),
 ).astype(np.float32)
-OUTPUT_PREDS = np.random.uniform(size=(BATCHES, BATCH_SIZE)).astype(np.float32)
+OUTPUT_PREDS = np.random.uniform(size=(BATCHES, BATCH_SIZE))
+OUTPUT_PREDS_F16 = OUTPUT_PREDS.astype(jnp.float16)
+OUTPUT_PREDS_F32 = OUTPUT_PREDS.astype(jnp.float32)
+OUTPUT_PREDS_BF16 = OUTPUT_PREDS.astype(jnp.bfloat16)
 OUTPUT_LABELS_BS1 = np.random.randint(
-    0,
-    2,
-    size=(BATCHES, 1),
+    0, 2, size=(BATCHES, 1),
 ).astype(np.float32)
 OUTPUT_PREDS_BS1 = np.random.uniform(size=(BATCHES, 1)).astype(np.float32)
 SAMPLE_WEIGHTS = np.tile(
@@ -141,9 +142,15 @@ class MetricsTest(parameterized.TestCase):
     )
 
   @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, 0.5),
-      ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS, 0.7),
-      ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS, 0.1),
+      ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.5),
+      ('high_threshold_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.7),
+      ('low_threshold_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.1),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.5),
+      ('high_threshold_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.7),
+      ('low_threshold_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.1),
+      ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.5),
+      ('high_threshold_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.7),
+      ('low_threshold_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.1),
       ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5),
   )
   def test_precision(self, y_true, y_pred, threshold):
@@ -163,15 +170,26 @@ class MetricsTest(parameterized.TestCase):
       )
       metric = update if metric is None else metric.merge(update)
 
+    # Use lower tolerance for lower precision dtypes.
+    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
     np.testing.assert_allclose(
         metric.compute(),
         expected,
+        rtol=rtol,
+        atol=atol,
     )
 
   @parameterized.named_parameters(
       ('basic', OUTPUT_LABELS, OUTPUT_PREDS, 0.5),
       ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS, 0.7),
       ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS, 0.1),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.5),
+      ('high_threshold_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.7),
+      ('low_threshold_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.1),
+      ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.5),
+      ('high_threshold_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.7),
+      ('low_threshold_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.1),
       ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5),
   )
   def test_recall(self, y_true, y_pred, threshold):
@@ -196,13 +214,23 @@ class MetricsTest(parameterized.TestCase):
         expected,
     )
 
-  @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, None),
-      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
-      ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+  @parameterized.product(
+      inputs=(
+          (OUTPUT_LABELS, OUTPUT_PREDS, None),
+          (OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
+          (OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+      ),
+      dtype=(
+        jnp.float16,
+        jnp.float32,
+        jnp.bfloat16,
+      ),
   )
-  def test_aucpr(self, y_true, y_pred, sample_weights):
+  def test_aucpr(self, inputs, dtype):
     """Test that `AUC-PR` Metric computes correct values."""
+    y_true, y_pred, sample_weights = inputs
+    y_true = y_true.astype(dtype)
+    y_pred = y_pred.astype(dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -222,17 +250,28 @@ class MetricsTest(parameterized.TestCase):
     np.testing.assert_allclose(
         metric.compute(),
         expected,
-        rtol=1e-07,
-        atol=1e-07,
+        # Use lower tolerance for lower precision dtypes.
+        rtol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5,
+        atol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5,
     )
 
-  @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, None),
-      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
-      ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+  @parameterized.product(
+      inputs=(
+          (OUTPUT_LABELS, OUTPUT_PREDS, None),
+          (OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
+          (OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+      ),
+      dtype=(
+        jnp.float16,
+        jnp.float32,
+        jnp.bfloat16,
+      ),
   )
-  def test_aucroc(self, y_true, y_pred, sample_weights):
+  def test_aucroc(self, inputs, dtype):
     """Test that `AUC-ROC` Metric computes correct values."""
+    y_true, y_pred, sample_weights = inputs
+    y_true = y_true.astype(dtype)
+    y_pred = y_pred.astype(dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -252,17 +291,24 @@ class MetricsTest(parameterized.TestCase):
     np.testing.assert_allclose(
         metric.compute(),
         expected,
-        rtol=1e-07,
-        atol=1e-07,
+        # Use lower tolerance for lower precision dtypes.
+        rtol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-7,
+        atol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-7,
     )
 
   @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, None),
+      ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, None),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, None),
+      ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, None),
       ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
-      ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+      ('weighted_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
+      ('weighted_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
+      ('weighted_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, SAMPLE_WEIGHTS),
   )
   def test_mse(self, y_true, y_pred, sample_weights):
     """Test that `MSE` Metric computes correct values."""
+    y_true = y_true.astype(y_pred.dtype)
+    y_pred = y_pred.astype(y_true.dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -282,24 +328,34 @@ class MetricsTest(parameterized.TestCase):
         y_pred.flatten(),
         sample_weight=sample_weights.flatten(),
     )
+    # Use lower tolerance for lower precision dtypes.
+    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         metric.compute(),
         expected,
-        rtol=1e-07,
-        atol=1e-07,
+        rtol=rtol,
+        atol=atol,
     )
 
   @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, None),
+      ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, None),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, None),
+      ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, None),
       ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
-      ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+      ('weighted_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
+      ('weighted_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
+      ('weighted_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, SAMPLE_WEIGHTS),
   )
   def test_rmse(self, y_true, y_pred, sample_weights):
     """Test that `RMSE` Metric computes correct values."""
+    y_true = y_true.astype(y_pred.dtype)
+    y_pred = y_pred.astype(y_true.dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
     metric = None
+    keras_rmse = keras.metrics.RootMeanSquaredError()
     for labels, logits, weights in zip(y_true, y_pred, sample_weights):
       update = metrax.RMSE.from_model_output(
           predictions=logits,
@@ -307,29 +363,36 @@ class MetricsTest(parameterized.TestCase):
           sample_weights=weights,
       )
       metric = update if metric is None else metric.merge(update)
-
-    keras_rmse = keras.metrics.RootMeanSquaredError()
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
       keras_rmse.update_state(labels, logits, sample_weight=weights)
-    expected = keras_rmse.result()
+
+    # Use lower tolerance for lower precision dtypes.
+    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         metric.compute(),
-        expected,
-        rtol=1e-07,
-        atol=1e-07,
+        keras_rmse.result(),
+        rtol=rtol,
+        atol=atol,
     )
 
   @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, None),
+      ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, None),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, None),
+      ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, None),
       ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
-      ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+      ('weighted_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
+      ('weighted_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
+      ('weighted_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, SAMPLE_WEIGHTS),
   )
   def test_rsquared(self, y_true, y_pred, sample_weights):
     """Test that `RSQUARED` Metric computes correct values."""
+    y_true = y_true.astype(y_pred.dtype)
+    y_pred = y_pred.astype(y_true.dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
     metric = None
+    keras_r2 = keras.metrics.R2Score()
     for labels, logits, weights in zip(y_true, y_pred, sample_weights):
       update = metrax.RSQUARED.from_model_output(
           predictions=logits,
@@ -338,19 +401,20 @@ class MetricsTest(parameterized.TestCase):
       )
       metric = update if metric is None else metric.merge(update)
 
-    keras_r2 = keras.metrics.R2Score()
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
       keras_r2.update_state(
           labels[:, jnp.newaxis],
           logits[:, jnp.newaxis],
           sample_weight=weights[:, jnp.newaxis],
       )
-    expected = keras_r2.result()
+
+    # Use lower tolerance for lower precision dtypes.
+    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         metric.compute(),
-        expected,
-        rtol=1e-05,
-        atol=1e-05,
+        keras_r2.result(),
+        rtol=rtol,
+        atol=atol,
     )
 
   @parameterized.named_parameters(
