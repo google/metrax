@@ -21,6 +21,9 @@ from metrax.classification_metrics import (
 from metrax.nlp_metrics import (
     Perplexity,
 )
+from metrax.ranking_metrics import (
+    AveragePrecisionAtK,
+)
 from metrax.regression_metrics import (
     MSE,
     RMSE,
@@ -28,12 +31,13 @@ from metrax.regression_metrics import (
 )
 
 __all__ = [
+    "AUCPR",
+    "AUCROC",
+    "AveragePrecisionAtK",
     "MSE",
-    "RMSE",
-    "RSQUARED",
     "Perplexity",
     "Precision",
     "Recall",
-    "AUCPR",
-    "AUCROC",
+    "RMSE",
+    "RSQUARED",
 ]
