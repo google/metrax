@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for metrax classaification metrics."""
+"""Tests for metrax classification metrics."""
 
 from absl.testing import absltest
 from absl.testing import parameterized
