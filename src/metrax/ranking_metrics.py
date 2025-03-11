@@ -36,7 +36,7 @@ class AveragePrecisionAtK(clu_metrics.Average):
   Given the top :math:`K` recommendations, AP@K is calculated as:
 
   .. math::
-      AP@K = frac{1}{r}\sum_{k=1}^{K} \Precision@k * \rel(k)
+      AP@K = \frac{1}{r} \sum_{k=1}^{K} Precision@k * rel(k) \\
       rel(k) =
         \begin{cases}
           1 & \text{if the item at rank } k \text{ is relevant} \\
