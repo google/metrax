@@ -20,6 +20,7 @@ from metrax.classification_metrics import (
 )
 from metrax.nlp_metrics import (
     Perplexity,
+    WER
 )
 from metrax.ranking_metrics import (
     AveragePrecisionAtK,
@@ -40,4 +41,5 @@ __all__ = [
     "Recall",
     "RMSE",
     "RSQUARED",
+    "WER",
 ]
