@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from metrax.base_metrics import (
+    Average,
+)
 from metrax.classification_metrics import (
     AUCPR,
     AUCROC,
@@ -34,6 +37,7 @@ from metrax.regression_metrics import (
 __all__ = [
     "AUCPR",
     "AUCROC",
+    "Average",
     "AveragePrecisionAtK",
     "MSE",
     "Perplexity",

@@ -18,15 +18,11 @@ from clu import metrics as clu_metrics
 import flax
 import jax
 import jax.numpy as jnp
-
-
-def _divide_no_nan(x: jax.Array, y: jax.Array) -> jax.Array:
-  """Computes a safe divide which returns 0 if the y is zero."""
-  return jnp.where(y != 0, jnp.divide(x, y), 0.0)
+from metrax import base_metrics
 
 
 @flax.struct.dataclass
-class MSE(clu_metrics.Average):
+class MSE(base_metrics.Average):
   r"""Computes the mean squared error for regression problems given `predictions` and `labels`.
 
   The mean squared error without sample weights is defined as:
@@ -220,6 +216,6 @@ class RSQUARED(clu_metrics.Metric):
     Returns:
       The r-squared score.
     """
-    mean = self.total / self.count
+    mean = base_metrics.divide_no_nan(self.total, self.count)
     sst = self.sum_of_squared_label - self.count * jnp.power(mean, 2)
-    return 1 - _divide_no_nan(self.sum_of_squared_error, sst)
+    return 1 - base_metrics.divide_no_nan(self.sum_of_squared_error, sst)

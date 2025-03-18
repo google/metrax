@@ -18,6 +18,7 @@ from clu import metrics as clu_metrics
 import flax
 import jax
 import jax.numpy as jnp
+from metrax import base_metrics
 
 
 @flax.struct.dataclass
@@ -85,7 +86,9 @@ class Perplexity(clu_metrics.Metric):
       ValueError: If type of `labels` is wrong or the shapes of `predictions`
       and `labels` are incompatible.
     """
-    predictions = predictions / jnp.sum(predictions, axis=-1, keepdims=True)
+    predictions = base_metrics.divide_no_nan(
+        predictions, jnp.sum(predictions, axis=-1, keepdims=True)
+    )
     labels_one_hot = jax.nn.one_hot(labels, predictions.shape[-1], axis=-1)
     log_prob = jnp.log(predictions)
     crossentropy = -jnp.sum(labels_one_hot * log_prob, axis=-1)
@@ -94,7 +97,9 @@ class Perplexity(clu_metrics.Metric):
     if sample_weights is not None:
       crossentropy = crossentropy * sample_weights
       # Normalize by the sum of weights for each sequence.
-      crossentropy = jnp.sum(crossentropy) / jnp.sum(sample_weights)
+      crossentropy = base_metrics.divide_no_nan(
+          jnp.sum(crossentropy), jnp.sum(sample_weights)
+      )
     else:
       crossentropy = jnp.mean(crossentropy)
 
@@ -113,105 +118,115 @@ class Perplexity(clu_metrics.Metric):
     )
 
   def compute(self) -> jax.Array:
-    return jnp.exp(self.aggregate_crossentropy / self.num_samples)
+    return jnp.exp(
+        base_metrics.divide_no_nan(
+            self.aggregate_crossentropy, self.num_samples
+        )
+    )
 
 
 @flax.struct.dataclass
-class WER(clu_metrics.Average):
-    r"""Computes Word Error Rate (WER) for speech recognition or text generation tasks.
+class WER(base_metrics.Average):
+  r"""Computes Word Error Rate (WER) for speech recognition or text generation tasks.
 
-    Word Error Rate measures the edit distance between reference texts and predictions,
-    normalized by the length of the reference texts. It is calculated as:
+  Word Error Rate measures the edit distance between reference texts and
+  predictions,
+  normalized by the length of the reference texts. It is calculated as:
 
-    .. math::
-        WER = \frac{S + D + I}{N}
+  .. math::
+      WER = \frac{S + D + I}{N}
 
-    where:
-        - S is the number of substitutions
-        - D is the number of deletions
-        - I is the number of insertions
-        - N is the number of words in the reference
+  where:
+      - S is the number of substitutions
+      - D is the number of deletions
+      - I is the number of insertions
+      - N is the number of words in the reference
 
-    A lower WER indicates better performance, with 0 being perfect.
+  A lower WER indicates better performance, with 0 being perfect.
 
-    This implementation accepts both pre-tokenized inputs (lists of tokens) and untokenized
-    strings. When strings are provided, they are tokenized by splitting on whitespace.
+  This implementation accepts both pre-tokenized inputs (lists of tokens) and
+  untokenized
+  strings. When strings are provided, they are tokenized by splitting on
+  whitespace.
+  """
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: list[str],
+      references: list[str],
+  ) -> 'WER':
+    """Updates the metric.
+
+    Args:
+        prediction: Either a string or a list of tokens in the predicted
+          sequence.
+        reference: Either a string or a list of tokens in the reference
+          sequence.
+
+    Returns:
+        New WER metric instance.
+
+    Raises:
+        ValueError: If inputs are not properly formatted or are empty.
     """
+    if not predictions or not references:
+      raise ValueError('predictions and references must not be empty')
 
-    @classmethod
-    def from_model_output(
-        cls,
-        predictions: list[str],
-        references: list[str],
-    ) -> "WER":
-        """Updates the metric.
+    if isinstance(predictions, str):
+      predictions = predictions.split()
+    if isinstance(references, str):
+      references = references.split()
 
-        Args:
-            prediction: Either a string or a list of tokens in the predicted sequence.
-            reference: Either a string or a list of tokens in the reference sequence.
+    edit_distance = cls._levenshtein_distance(predictions, references)
+    reference_length = len(references)
 
-        Returns:
-            New WER metric instance.
+    return cls(
+        total=jnp.array(edit_distance, dtype=jnp.float32),
+        count=jnp.array(reference_length, dtype=jnp.float32),
+    )
 
-        Raises:
-            ValueError: If inputs are not properly formatted or are empty.
-        """
-        if not predictions or not references:
-            raise ValueError("predictions and references must not be empty")
+  @staticmethod
+  def _levenshtein_distance(prediction: list, reference: list) -> int:
+    """Computes the Levenshtein (edit) distance between two token sequences.
 
-        if isinstance(predictions, str):
-            predictions = predictions.split()
-        if isinstance(references, str):
-            references = references.split()
+    Args:
+        prediction: List of tokens in the predicted sequence.
+        reference: List of tokens in the reference sequence.
 
-        edit_distance = cls._levenshtein_distance(predictions, references)
-        reference_length = len(references)
+    Returns:
+        The minimum number of edits needed to transform prediction into
+        reference.
+    """
+    m, n = len(prediction), len(reference)
 
-        return cls(
-            total=jnp.array(edit_distance, dtype=jnp.float32),
-            count=jnp.array(reference_length, dtype=jnp.float32),
+    # Handle edge cases
+    if m == 0:
+      return n
+    if n == 0:
+      return m
+
+    # Create distance matrix
+    distance_matrix = [[0 for _ in range(n + 1)] for _ in range(m + 1)]
+
+    # Initialize first row and column
+    for i in range(m + 1):
+      distance_matrix[i][0] = i
+    for j in range(n + 1):
+      distance_matrix[0][j] = j
+
+    # Fill the matrix
+    for i in range(1, m + 1):
+      for j in range(1, n + 1):
+        if prediction[i - 1] == reference[j - 1]:
+          cost = 0
+        else:
+          cost = 1
+
+        distance_matrix[i][j] = min(
+            distance_matrix[i - 1][j] + 1,  # deletion
+            distance_matrix[i][j - 1] + 1,  # insertion
+            distance_matrix[i - 1][j - 1] + cost,  # substitution
         )
 
-    @staticmethod
-    def _levenshtein_distance(prediction: list, reference: list) -> int:
-        """Computes the Levenshtein (edit) distance between two token sequences.
-
-        Args:
-            prediction: List of tokens in the predicted sequence.
-            reference: List of tokens in the reference sequence.
-
-        Returns:
-            The minimum number of edits needed to transform prediction into reference.
-        """
-        m, n = len(prediction), len(reference)
-
-        # Handle edge cases
-        if m == 0:
-            return n
-        if n == 0:
-            return m
-
-        # Create distance matrix
-        distance_matrix = [[0 for _ in range(n + 1)] for _ in range(m + 1)]
-
-        # Initialize first row and column
-        for i in range(m + 1):
-            distance_matrix[i][0] = i
-        for j in range(n + 1):
-            distance_matrix[0][j] = j
-
-        # Fill the matrix
-        for i in range(1, m + 1):
-            for j in range(1, n + 1):
-                if prediction[i - 1] == reference[j - 1]:
-                    cost = 0
-                else:
-                    cost = 1
-
-                distance_matrix[i][j] = min(
-                    distance_matrix[i - 1][j] + 1,  # deletion
-                    distance_matrix[i][j - 1] + 1,  # insertion
-                    distance_matrix[i - 1][j - 1] + cost,  # substitution
-                )
-
-        return distance_matrix[m][n]
+    return distance_matrix[m][n]

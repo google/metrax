@@ -14,19 +14,14 @@
 
 """A collection of different metrics for ranking models."""
 
-from clu import metrics as clu_metrics
 import flax
 import jax
 import jax.numpy as jnp
-
-
-def _divide_no_nan(x: jax.Array, y: jax.Array) -> jax.Array:
-  """Computes a safe divide which returns 0 if the y is zero."""
-  return jnp.where(y != 0, jnp.divide(x, y), 0.0)
+from metrax import base_metrics
 
 
 @flax.struct.dataclass
-class AveragePrecisionAtK(clu_metrics.Average):
+class AveragePrecisionAtK(base_metrics.Average):
   r"""Computes AP@k (average precision at k) metrics in JAX.
 
   Average precision at k (AP@k) is a metric used to evaluate the performance of
@@ -68,14 +63,16 @@ class AveragePrecisionAtK(clu_metrics.Average):
     def compute_ap_at_k_single(relevant_labels, total_relevant, ks):
       cumulative_precision = jnp.where(
           relevant_labels,
-          _divide_no_nan(
+          base_metrics.divide_no_nan(
               jnp.cumsum(relevant_labels),
               jnp.arange(1, len(relevant_labels) + 1),
           ),
           0,
       )
       return jnp.array([
-          _divide_no_nan(jnp.sum(cumulative_precision[:k]), total_relevant)
+          base_metrics.divide_no_nan(
+              jnp.sum(cumulative_precision[:k]), total_relevant
+          )
           for k in ks
       ])
 
