@@ -1,5 +1,9 @@
 # metrax
 
+![CI status](https://github.com/google/metrax/actions/workflows/ci.yml/badge.svg?branch=main)
+[![Documentation Status](https://app.readthedocs.org/projects/metrax/badge/?version=latest)](http://metrax.readthedocs.io)
+![pypi](https://img.shields.io/pypi/v/google-metrax)
+
 `metrax` is a library with standard eval metrics implementations in JAX.
 
 ## Vision
