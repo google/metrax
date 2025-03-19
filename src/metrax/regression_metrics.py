@@ -18,11 +18,11 @@ from clu import metrics as clu_metrics
 import flax
 import jax
 import jax.numpy as jnp
-from metrax import base_metrics
+from metrax import base
 
 
 @flax.struct.dataclass
-class MSE(base_metrics.Average):
+class MSE(base.Average):
   r"""Computes the mean squared error for regression problems given `predictions` and `labels`.
 
   The mean squared error without sample weights is defined as:
@@ -216,6 +216,6 @@ class RSQUARED(clu_metrics.Metric):
     Returns:
       The r-squared score.
     """
-    mean = base_metrics.divide_no_nan(self.total, self.count)
+    mean = base.divide_no_nan(self.total, self.count)
     sst = self.sum_of_squared_label - self.count * jnp.power(mean, 2)
-    return 1 - base_metrics.divide_no_nan(self.sum_of_squared_error, sst)
+    return 1 - base.divide_no_nan(self.sum_of_squared_error, sst)

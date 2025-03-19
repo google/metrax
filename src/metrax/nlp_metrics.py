@@ -18,7 +18,7 @@ from clu import metrics as clu_metrics
 import flax
 import jax
 import jax.numpy as jnp
-from metrax import base_metrics
+from metrax import base
 
 
 @flax.struct.dataclass
@@ -86,7 +86,7 @@ class Perplexity(clu_metrics.Metric):
       ValueError: If type of `labels` is wrong or the shapes of `predictions`
       and `labels` are incompatible.
     """
-    predictions = base_metrics.divide_no_nan(
+    predictions = base.divide_no_nan(
         predictions, jnp.sum(predictions, axis=-1, keepdims=True)
     )
     labels_one_hot = jax.nn.one_hot(labels, predictions.shape[-1], axis=-1)
@@ -97,7 +97,7 @@ class Perplexity(clu_metrics.Metric):
     if sample_weights is not None:
       crossentropy = crossentropy * sample_weights
       # Normalize by the sum of weights for each sequence.
-      crossentropy = base_metrics.divide_no_nan(
+      crossentropy = base.divide_no_nan(
           jnp.sum(crossentropy), jnp.sum(sample_weights)
       )
     else:
@@ -119,14 +119,12 @@ class Perplexity(clu_metrics.Metric):
 
   def compute(self) -> jax.Array:
     return jnp.exp(
-        base_metrics.divide_no_nan(
-            self.aggregate_crossentropy, self.num_samples
-        )
+        base.divide_no_nan(self.aggregate_crossentropy, self.num_samples)
     )
 
 
 @flax.struct.dataclass
-class WER(base_metrics.Average):
+class WER(base.Average):
   r"""Computes Word Error Rate (WER) for speech recognition or text generation tasks.
 
   Word Error Rate measures the edit distance between reference texts and

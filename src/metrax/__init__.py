@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from metrax.base_metrics import (
+from metrax.base import (
     Average,
 )
 from metrax.classification_metrics import (

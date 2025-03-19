@@ -18,7 +18,7 @@ from clu import metrics as clu_metrics
 import flax
 import jax
 import jax.numpy as jnp
-from metrax import base_metrics
+from metrax import base
 
 
 def _default_threshold(num_thresholds: int) -> jax.Array:
@@ -112,7 +112,7 @@ class Precision(clu_metrics.Metric):
     )
 
   def compute(self) -> jax.Array:
-    return base_metrics.divide_no_nan(
+    return base.divide_no_nan(
         self.true_positives, (self.true_positives + self.false_positives)
     )
 
@@ -183,7 +183,7 @@ class Recall(clu_metrics.Metric):
     )
 
   def compute(self) -> jax.Array:
-    return base_metrics.divide_no_nan(
+    return base.divide_no_nan(
         self.true_positives, (self.true_positives + self.false_negatives)
     )
 
@@ -361,20 +361,20 @@ class AUCPR(clu_metrics.Metric):
     )
     p = self.true_positives + self.false_positives
     dp = p[: self.num_thresholds - 1] - p[1:]
-    prec_slope = base_metrics.divide_no_nan(dtp, jnp.maximum(dp, 0))
+    prec_slope = base.divide_no_nan(dtp, jnp.maximum(dp, 0))
     intercept = self.true_positives[1:] - prec_slope * p[1:]
 
     # recall_relative_ratio
     safe_p_ratio = jnp.where(
         jnp.multiply(p[: self.num_thresholds - 1] > 0, p[1:] > 0),
-        base_metrics.divide_no_nan(
+        base.divide_no_nan(
             p[: self.num_thresholds - 1],
             jnp.maximum(p[1:], 0),
         ),
         jnp.ones_like(p[1:]),
     )
     # pr_auc_increment
-    pr_auc_increment = base_metrics.divide_no_nan(
+    pr_auc_increment = base.divide_no_nan(
         prec_slope * (dtp + intercept * jnp.log(safe_p_ratio)),
         jnp.maximum(self.true_positives[1:] + self.false_negatives[1:], 0),
     )
@@ -502,10 +502,10 @@ class AUCROC(clu_metrics.Metric):
     )
 
   def compute(self) -> jax.Array:
-    tp_rate = base_metrics.divide_no_nan(
+    tp_rate = base.divide_no_nan(
         self.true_positives, self.true_positives + self.false_negatives
     )
-    fp_rate = base_metrics.divide_no_nan(
+    fp_rate = base.divide_no_nan(
         self.false_positives, self.false_positives + self.true_negatives
     )
     # Threshold goes from 0 to 1, so trapezoid is negative.

@@ -17,11 +17,11 @@
 import flax
 import jax
 import jax.numpy as jnp
-from metrax import base_metrics
+from metrax import base
 
 
 @flax.struct.dataclass
-class AveragePrecisionAtK(base_metrics.Average):
+class AveragePrecisionAtK(base.Average):
   r"""Computes AP@k (average precision at k) metrics in JAX.
 
   Average precision at k (AP@k) is a metric used to evaluate the performance of
@@ -63,16 +63,14 @@ class AveragePrecisionAtK(base_metrics.Average):
     def compute_ap_at_k_single(relevant_labels, total_relevant, ks):
       cumulative_precision = jnp.where(
           relevant_labels,
-          base_metrics.divide_no_nan(
+          base.divide_no_nan(
               jnp.cumsum(relevant_labels),
               jnp.arange(1, len(relevant_labels) + 1),
           ),
           0,
       )
       return jnp.array([
-          base_metrics.divide_no_nan(
-              jnp.sum(cumulative_precision[:k]), total_relevant
-          )
+          base.divide_no_nan(jnp.sum(cumulative_precision[:k]), total_relevant)
           for k in ks
       ])
 
