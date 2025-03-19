@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for metrax base metrics."""
+"""Tests for metrax base utilities."""
 
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax.numpy as jnp
 import keras
 import metrax
-from metrax import base_metrics
+from metrax import base
 import numpy as np
 
 np.random.seed(42)
@@ -36,70 +36,63 @@ SAMPLE_WEIGHTS = np.tile(
 )
 
 
-class BaseMetricsTest(parameterized.TestCase):
+class BaseTest(parameterized.TestCase):
 
-  def test_basic_division(self):
-    x = jnp.array([10.0, 20.0, 30.0])
-    y = jnp.array([2.0, 4.0, 5.0])
-    expected = jnp.array([5.0, 5.0, 6.0])
-    result = base_metrics.divide_no_nan(x, y)
-    self.assertTrue(jnp.array_equal(result, expected))
-
-  def test_division_by_zero(self):
-    x = jnp.array([10.0, 20.0, 30.0])
-    y = jnp.array([2.0, 0.0, 5.0])
-    expected = jnp.array([5.0, 0.0, 6.0])
-    result = base_metrics.divide_no_nan(x, y)
-    self.assertTrue(jnp.array_equal(result, expected))
-
-  def test_all_zeros_denominator(self):
-    x = jnp.array([10.0, 20.0, 30.0])
-    y = jnp.array([0.0, 0.0, 0.0])
-    expected = jnp.array([0.0, 0.0, 0.0])
-    result = base_metrics.divide_no_nan(x, y)
-    self.assertTrue(jnp.array_equal(result, expected))
-
-  def test_all_zeros_numerator(self):
-    x = jnp.array([0.0, 0.0, 0.0])
-    y = jnp.array([2.0, 4.0, 5.0])
-    expected = jnp.array([0.0, 0.0, 0.0])
-    result = base_metrics.divide_no_nan(x, y)
-    self.assertTrue(jnp.array_equal(result, expected))
-
-  def test_mixed_zeros(self):
-    x = jnp.array([10.0, 0.0, 30.0, 0.0])
-    y = jnp.array([2.0, 0.0, 5.0, 4.0])
-    expected = jnp.array([5.0, 0.0, 6.0, 0.0])
-    result = base_metrics.divide_no_nan(x, y)
-    self.assertTrue(jnp.array_equal(result, expected))
-
-  def test_scalar_inputs(self):
-    x = jnp.array(10.0)
-    y = jnp.array(2.0)
-    expected = jnp.array(5.0)
-    result = base_metrics.divide_no_nan(x, y)
-    self.assertTrue(jnp.array_equal(result, expected))
-
-  def test_scalar_denominator_zero(self):
-    x = jnp.array(10.0)
-    y = jnp.array(0.0)
-    expected = jnp.array(0.0)
-    result = base_metrics.divide_no_nan(x, y)
-    self.assertTrue(jnp.array_equal(result, expected))
-
-  def test_negative_values(self):
-    x = jnp.array([-10.0, 20.0, -30.0])
-    y = jnp.array([2.0, -4.0, 5.0])
-    expected = jnp.array([-5.0, -5.0, -6.0])
-    result = base_metrics.divide_no_nan(x, y)
-    self.assertTrue(jnp.array_equal(result, expected))
-
-  def test_negative_and_zero_values(self):
-    x = jnp.array([-10.0, 20.0, -30.0, 10.0])
-    y = jnp.array([2.0, -4.0, 0.0, 0.0])
-    expected = jnp.array([-5.0, -5.0, 0.0, 0.0])
-    result = base_metrics.divide_no_nan(x, y)
-    self.assertTrue(jnp.array_equal(result, expected))
+  @parameterized.named_parameters(
+      (
+          'basic_division',
+          np.array([10.0, 20.0, 30.0]),
+          np.array([2.0, 4.0, 5.0]),
+          np.array([5.0, 5.0, 6.0]),
+      ),
+      (
+          'division_by_zero',
+          np.array([10.0, 20.0, 30.0]),
+          np.array([2.0, 0.0, 5.0]),
+          np.array([5.0, 0.0, 6.0]),
+      ),
+      (
+          'all_zeros_denominator',
+          np.array([10.0, 20.0, 30.0]),
+          np.array([0.0, 0.0, 0.0]),
+          np.array([0.0, 0.0, 0.0]),
+      ),
+      (
+          'all_zeros_numerator',
+          np.array([0.0, 0.0, 0.0]),
+          np.array([2.0, 4.0, 5.0]),
+          np.array([0.0, 0.0, 0.0]),
+      ),
+      (
+          'mixed_zeros',
+          np.array([10.0, 0.0, 30.0, 0.0]),
+          np.array([2.0, 0.0, 5.0, 4.0]),
+          np.array([5.0, 0.0, 6.0, 0.0]),
+      ),
+      ('scalar_inputs', np.array(10.0), np.array(2.0), np.array(5.0)),
+      (
+          'scalar_denominator_zero',
+          np.array(10.0),
+          np.array(0.0),
+          np.array(0.0),
+      ),
+      (
+          'negative_values',
+          np.array([-10.0, 20.0, -30.0]),
+          np.array([2.0, -4.0, 5.0]),
+          np.array([-5.0, -5.0, -6.0]),
+      ),
+      (
+          'negative_and_zero_values',
+          np.array([-10.0, 20.0, -30.0, 10.0]),
+          np.array([2.0, -4.0, 0.0, 0.0]),
+          np.array([-5.0, -5.0, 0.0, 0.0]),
+      ),
+  )
+  def test_divide_no_nan(self, x, y, expected):
+    """Test that `divide_no_nan` functioncomputes correct values."""
+    result = base.divide_no_nan(x, y)
+    self.assertTrue(np.array_equal(result, expected))
 
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_F16, None),
