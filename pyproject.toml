@@ -8,7 +8,7 @@ version = "0.1.2"
 authors = [
   { name="Jiwon Shin", email="jshin1394@gmail.com" },
 ]
-description = "An official JAX metrics library."
+description = "A centralized JAX metrics library."
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
