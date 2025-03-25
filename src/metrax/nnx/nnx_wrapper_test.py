@@ -50,7 +50,7 @@ class NnxWrapperTest(parameterized.TestCase):
 
   def test_reset(self):
     """Tests the `reset` method of the `NnxWrapper` class."""
-    nnx_metric = metrax.nnx.NnxWrapper(metrax.MSE)
+    nnx_metric = metrax.nnx.MSE()
     self.assertEqual(nnx_metric.clu_metric.total, jnp.array(0, jnp.float32))
     self.assertEqual(nnx_metric.clu_metric.count, jnp.array(0, jnp.int32))
     nnx_metric.update(
@@ -78,7 +78,7 @@ class NnxWrapperTest(parameterized.TestCase):
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
-    nnx_metric = metrax.nnx.NnxWrapper(metrax.MSE)
+    nnx_metric = metrax.nnx.MSE()
     for labels, logits, weights in zip(y_true, y_pred, sample_weights):
       nnx_metric.update(
           predictions=logits,

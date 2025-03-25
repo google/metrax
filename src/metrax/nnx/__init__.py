@@ -12,10 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from metrax.nnx.nnx_wrapper import (
-    NnxWrapper,
+from metrax.nnx.nnx_metrics import (
+    AUCPR,
+    AUCROC,
+    Average,
+    AveragePrecisionAtK,
+    MSE,
+    Perplexity,
+    Precision,
+    RMSE,
+    RSQUARED,
+    Recall,
+    WER,
 )
 
 __all__ = [
-    "NnxWrapper",
+    "AUCPR",
+    "AUCROC",
+    "Average",
+    "AveragePrecisionAtK",
+    "MSE",
+    "Perplexity",
+    "Precision",
+    "Recall",
+    "RMSE",
+    "RSQUARED",
+    "WER",
 ]
