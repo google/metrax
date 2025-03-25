@@ -37,5 +37,5 @@ class NnxMetricsTest(parameterized.TestCase):
           self.assertIn(name, metrax_metrics)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   absltest.main()
