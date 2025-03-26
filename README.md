@@ -48,7 +48,7 @@ To cite Metrax please use the citation:
 ```bibtex
 @software{metrax2024,
   title={Metrax},
-  author={Jiwon, Jeff, and others},
+  author={Jiwon Shin, Jeff Carpenter, et al.},
   year={2024},
   howpublished={\url{https://github.com/google/metrax}},
 }
