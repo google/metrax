@@ -40,3 +40,16 @@ pip install -r ./docs/requirements.txt
 sphinx-build ./docs /tmp/metrax_docs
 python -m http.server --directory /tmp/metrax_docs
 ```
+
+## Citing Metrax
+
+This repository is part of the JAX 3P Ecosystem, to cite Metrax please use the citation:
+
+```bibtex
+@software{metrax2024,
+  title={Metrax},
+  author={Jiwon, Jeff, and others},
+  year={2024},
+  howpublished={\url{https://github.com/google/metrax}},
+}
+```
