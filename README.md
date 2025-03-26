@@ -43,7 +43,7 @@ python -m http.server --directory /tmp/metrax_docs
 
 ## Citing Metrax
 
-This repository is part of the JAX 3P Ecosystem, to cite Metrax please use the citation:
+To cite Metrax please use the citation:
 
 ```bibtex
 @software{metrax2024,
