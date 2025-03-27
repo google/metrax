@@ -15,6 +15,8 @@
 """Tests for metrax regression metrics."""
 
 import os
+os.environ['KERAS_BACKEND'] = 'jax'
+
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax

@@ -203,7 +203,7 @@ class RSQUARED(clu_metrics.Metric):
     )
 
   def compute(self) -> jax.Array:
-    """Computes the r-squared score.
+    r"""Computes the r-squared score.
 
     Since we don't know the mean of the labels before we aggregate all of the
     data, we will manipulate the formula to be:

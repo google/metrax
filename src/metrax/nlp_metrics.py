@@ -68,6 +68,7 @@ class Perplexity(clu_metrics.Metric):
       predictions: jax.Array,
       labels: jax.Array,
       sample_weights: jax.Array | None = None,
+      from_logits: bool = False,
   ) -> 'Perplexity':
     """Updates the metric.
 
@@ -78,6 +79,9 @@ class Perplexity(clu_metrics.Metric):
       labels: True value. The shape should be (batch_size, seq_len).
       sample_weights: An optional tensor representing the
         weight of each token. The shape should be (batch_size, seq_len).
+      from_logits: Whether the predictions are logits. If True, the predictions
+        are converted to probabilities using a softmax. If False, all values
+        outside of [0, 1] are clipped to 0 or 1.
 
     Returns:
       Updated Perplexity metric.
@@ -86,11 +90,17 @@ class Perplexity(clu_metrics.Metric):
       ValueError: If type of `labels` is wrong or the shapes of `predictions`
       and `labels` are incompatible.
     """
-    predictions = base.divide_no_nan(
-        predictions, jnp.sum(predictions, axis=-1, keepdims=True)
-    )
+    if from_logits:
+      log_prob = jax.nn.log_softmax(predictions, axis=-1)
+    else:
+      predictions = base.divide_no_nan(
+          predictions, jnp.sum(predictions, axis=-1, keepdims=True)
+      )
+      epsilon = 1e-7
+      predictions = jnp.clip(predictions, epsilon, 1.0 - epsilon)
+      log_prob = jnp.log(predictions)
+
     labels_one_hot = jax.nn.one_hot(labels, predictions.shape[-1], axis=-1)
-    log_prob = jnp.log(predictions)
     crossentropy = -jnp.sum(labels_one_hot * log_prob, axis=-1)
 
     # Sum across sequence length dimension first.
