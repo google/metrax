@@ -28,6 +28,9 @@ Please make sure that your PR passes all tests by running `pytest ./src/` on you
 local machine. Also, you can run only tests that are affected by your code
 changes, but you will need to select them manually.
 
+Metrax uses [ruff](https://github.com/astral-sh/ruff) for linting. Before
+sending a PR please run `ruff check` to catch any issues.
+
 ## Community Guidelines
 
 This project follows [Google's Open Source Community

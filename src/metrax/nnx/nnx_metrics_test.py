@@ -14,12 +14,12 @@
 
 """Tests for metrax NNX metrics."""
 
-import importlib
+import dataclasses
 import inspect
-import pkgutil
+
 from absl.testing import absltest
 from absl.testing import parameterized
-from clu import metrics as clu_metrics
+from flax import nnx
 import metrax
 import metrax.nnx
 
@@ -28,13 +28,16 @@ class NnxMetricsTest(parameterized.TestCase):
 
   def test_nnx_metrics_exists(self):
     """Tests that every metrax CLU metric has an NNX counterpart."""
-    metrax_metrics = metrax.nnx.__all__
-    for _, module_name, _ in pkgutil.iter_modules(metrax.__path__):
-      full_module_name = f"{metrax.__name__}.{module_name}"
-      module = importlib.import_module(full_module_name)
-      for name, obj in inspect.getmembers(module):
-        if inspect.isclass(obj) and issubclass(obj, clu_metrics.Metric):
-          self.assertIn(name, metrax_metrics)
+    metrax_metric_keys = [
+        key for key, metric in inspect.getmembers(metrax)
+        if dataclasses.is_dataclass(metric)
+    ]
+    metrax_nnx_metric_keys = [
+        key for key, metric in inspect.getmembers(metrax.nnx)
+        if inspect.isclass(metric) and issubclass(metric, nnx.Metric)
+    ]
+    self.assertGreater(len(metrax_metric_keys), 0)
+    self.assertSameElements(metrax_metric_keys, metrax_nnx_metric_keys)
 
 
 if __name__ == '__main__':

@@ -12,30 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from metrax.nnx.nnx_metrics import (
-    AUCPR,
-    AUCROC,
-    Average,
-    AveragePrecisionAtK,
-    MSE,
-    Perplexity,
-    Precision,
-    RMSE,
-    RSQUARED,
-    Recall,
-    WER,
-)
+from metrax.nnx import nnx_metrics
 
-__all__ = [
-    "AUCPR",
-    "AUCROC",
-    "Average",
-    "AveragePrecisionAtK",
-    "MSE",
-    "Perplexity",
-    "Precision",
-    "Recall",
-    "RMSE",
-    "RSQUARED",
-    "WER",
-]
+AUCPR = nnx_metrics.AUCPR
+AUCROC = nnx_metrics.AUCROC
+Average = nnx_metrics.Average
+AveragePrecisionAtK = nnx_metrics.AveragePrecisionAtK
+MSE = nnx_metrics.MSE
+Perplexity = nnx_metrics.Perplexity
+Precision = nnx_metrics.Precision
+RMSE = nnx_metrics.RMSE
+RSQUARED = nnx_metrics.RSQUARED
+Recall = nnx_metrics.Recall
+WER = nnx_metrics.WER
