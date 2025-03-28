@@ -14,12 +14,17 @@
 
 """Tests for metrax nlp metrics."""
 
+import os
+os.environ['KERAS_BACKEND'] = 'jax'
+
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax.numpy as jnp
 import keras_hub
 import metrax
 import numpy as np
+
+np.random.seed(42)
 
 
 class NlpMetricsTest(parameterized.TestCase):
@@ -42,17 +47,33 @@ class NlpMetricsTest(parameterized.TestCase):
           np.random.randint(10, size=[2, 5, 10]),
           np.random.uniform(size=(2, 5, 10, 20)),
           None,
+          False,
       ),
       (
           'weighted',
           np.random.randint(10, size=[2, 5, 10]),
           np.random.uniform(size=(2, 5, 10, 20)),
           np.random.randint(2, size=(2, 5, 10)).astype(np.float32),
+          False,
+      ),
+      (
+          'negative_values',
+          np.random.randint(10, size=[2, 5, 10]),
+          np.random.uniform(size=(2, 5, 10, 20), low=-2, high=2),
+          None,
+          False,
+      ),
+      (
+          'from_logits',
+          np.random.randint(10, size=[2, 5, 10]),
+          np.random.uniform(size=(2, 5, 10, 20), low=-2, high=2),
+          None,
+          True,
       ),
   )
-  def test_perplexity(self, y_true, y_pred, sample_weights):
+  def test_perplexity(self, y_true, y_pred, sample_weights, from_logits):
     """Test that `Perplexity` Metric computes correct values."""
-    keras_metric = keras_hub.metrics.Perplexity()
+    keras_metric = keras_hub.metrics.Perplexity(from_logits=from_logits)
     metrax_metric = None
     for index, (labels, logits) in enumerate(zip(y_true, y_pred)):
       weights = sample_weights[index] if sample_weights is not None else None
@@ -61,6 +82,7 @@ class NlpMetricsTest(parameterized.TestCase):
           predictions=logits,
           labels=labels,
           sample_weights=weights,
+          from_logits=from_logits,
       )
       metrax_metric = update if metrax_metric is None else metrax_metric.merge(
           update
