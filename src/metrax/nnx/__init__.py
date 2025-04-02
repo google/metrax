@@ -25,3 +25,18 @@ RMSE = nnx_metrics.RMSE
 RSQUARED = nnx_metrics.RSQUARED
 Recall = nnx_metrics.Recall
 WER = nnx_metrics.WER
+
+
+__all__ = [
+    "AUCPR",
+    "AUCROC",
+    "Average",
+    "AveragePrecisionAtK",
+    "MSE",
+    "Perplexity",
+    "Precision",
+    "RMSE",
+    "RSQUARED",
+    "Recall",
+    "WER",
+]

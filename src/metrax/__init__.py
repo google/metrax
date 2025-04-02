@@ -18,14 +18,29 @@ from metrax import nlp_metrics
 from metrax import ranking_metrics
 from metrax import regression_metrics
 
-Average = base.Average
 AUCPR = classification_metrics.AUCPR
 AUCROC = classification_metrics.AUCROC
-Precision = classification_metrics.Precision
-Recall = classification_metrics.Recall
-Perplexity = nlp_metrics.Perplexity
-WER = nlp_metrics.WER
+Average = base.Average
 AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
 MSE = regression_metrics.MSE
+Perplexity = nlp_metrics.Perplexity
+Precision = classification_metrics.Precision
 RMSE = regression_metrics.RMSE
 RSQUARED = regression_metrics.RSQUARED
+Recall = classification_metrics.Recall
+WER = nlp_metrics.WER
+
+
+__all__ = [
+    "AUCPR",
+    "AUCROC",
+    "Average",
+    "AveragePrecisionAtK",
+    "MSE",
+    "Perplexity",
+    "Precision",
+    "RMSE",
+    "RSQUARED",
+    "Recall",
+    "WER",
+]
