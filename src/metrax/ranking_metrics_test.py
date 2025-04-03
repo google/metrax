@@ -16,6 +16,7 @@
 
 from absl.testing import absltest
 from absl.testing import parameterized
+import jax
 import jax.numpy as jnp
 import metrax
 import numpy as np
@@ -64,6 +65,34 @@ class RankingMetricsTest(parameterized.TestCase):
     """Test that `AveragePrecisionAtK` Metric computes correct values."""
     ks = jnp.array([1, 2, 3, 4, 5, 6])
     metric = metrax.AveragePrecisionAtK.from_model_output(
+        predictions=y_pred,
+        labels=y_true,
+        ks=ks,
+    )
+
+    np.testing.assert_allclose(
+        metric.compute(),
+        map_from_keras,
+        rtol=1e-05,
+        atol=1e-05,
+    )
+
+  @parameterized.named_parameters(
+      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, MAP_FROM_KERAS),
+      (
+          'vocab_size_one',
+          OUTPUT_LABELS_VS1,
+          OUTPUT_PREDS_VS1,
+          MAP_FROM_KERAS_VS1,
+      ),
+  )
+  def test_averageprecisionatk_jitted(self, y_true, y_pred, map_from_keras):
+    """Test that `AveragePrecisionAtK` Metric computes correct values when jitted."""
+    average_precision_at_k_jitted = jax.jit(
+        metrax.AveragePrecisionAtK.from_model_output
+    )
+    ks = jnp.array([1, 2, 3, 4, 5, 6])
+    metric = average_precision_at_k_jitted(
         predictions=y_pred,
         labels=y_true,
         ks=ks,

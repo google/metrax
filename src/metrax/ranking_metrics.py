@@ -56,7 +56,7 @@ class AveragePrecisionAtK(base.Average):
     Returns:
       Rank-2 tensor of shape [batch, |ks|] containing AP@k metrics.
     """
-    top_k_indices = jnp.argsort(-predictions, axis=1)[:, : jnp.max(ks)]
+    sorted_indices = jnp.argsort(-predictions, axis=1)
     labels = jnp.array(labels >= 1, dtype=jnp.float32)
     total_relevant = labels.sum(axis=1)
 
@@ -70,7 +70,16 @@ class AveragePrecisionAtK(base.Average):
           0,
       )
       return jnp.array([
-          base.divide_no_nan(jnp.sum(cumulative_precision[:k]), total_relevant)
+          base.divide_no_nan(
+              jnp.sum(
+                  jnp.where(
+                      jnp.arange(cumulative_precision.shape[0]) < k,
+                      cumulative_precision,
+                      0.0,
+                  )
+              ),
+              total_relevant,
+          )
           for k in ks
       ])
 
@@ -79,7 +88,7 @@ class AveragePrecisionAtK(base.Average):
     )
 
     ap_at_ks = vmap_compute_ap_at_k(
-        jnp.take_along_axis(labels, top_k_indices, axis=1), total_relevant, ks
+        jnp.take_along_axis(labels, sorted_indices, axis=1), total_relevant, ks
     )
     return ap_at_ks
 
