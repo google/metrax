@@ -4,5 +4,3 @@ jax[cpu]
 keras-hub
 pytest
 scikit-learn
-tensorflow-cpu~=2.18
-tensorflow-text~=2.18
