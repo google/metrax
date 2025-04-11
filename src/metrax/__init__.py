@@ -22,6 +22,7 @@ AUCPR = classification_metrics.AUCPR
 AUCROC = classification_metrics.AUCROC
 Average = base.Average
 AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
+BLEU = nlp_metrics.BLEU
 MSE = regression_metrics.MSE
 Perplexity = nlp_metrics.Perplexity
 Precision = classification_metrics.Precision
@@ -36,7 +37,7 @@ __all__ = [
     "AUCROC",
     "Average",
     "AveragePrecisionAtK",
-    "MSE",
+    "BLEUMSE",
     "Perplexity",
     "Precision",
     "RMSE",

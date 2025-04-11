@@ -21,6 +21,7 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import jax.numpy as jnp
 import keras_hub
+import keras_nlp
 import metrax
 import numpy as np
 
@@ -28,6 +29,15 @@ np.random.seed(42)
 
 
 class NlpMetricsTest(parameterized.TestCase):
+
+  def test_bleu_empty(self):
+    """Tests the `empty` method of the `BLEU` class."""
+    m = metrax.BLEU.empty()
+    self.assertEqual(m.max_order, 4)
+    self.assertEqual(m.matches_by_order, jnp.array(0, jnp.float32))
+    self.assertEqual(m.possible_matches_by_order, jnp.array(0, jnp.float32))
+    self.assertEqual(m.translation_length, jnp.array(0, jnp.float32))
+    self.assertEqual(m.reference_length, jnp.array(0, jnp.float32))
 
   def test_perplexity_empty(self):
     """Tests the `empty` method of the `Perplexity` class."""
@@ -40,6 +50,78 @@ class NlpMetricsTest(parameterized.TestCase):
     m = metrax.WER.empty()
     self.assertEqual(m.total, jnp.array(0, jnp.float32))
     self.assertEqual(m.count, jnp.array(0, jnp.float32))
+
+  def test_bleu(self):
+    """Tests that BLEU metric computes correct values."""
+    references = [
+        ["He eats a sweet apple", "He is eating a tasty apple, isn't he"],
+        [
+            "Silicon Valley is one of my favourite shows",
+            "Silicon Valley is the best show ever",
+        ],
+    ]
+    predictions = [
+        "He He He eats sweet apple which is a fruit",
+        "I love Silicon Valley it's one of my favourite shows",
+    ]
+    keras_metric = keras_nlp.metrics.Bleu()
+    keras_metric.update_state(references, predictions)
+    metrax_metric = metrax.BLEU.from_model_output(predictions, references)
+
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        keras_metric.result(),
+        rtol=1e-05,
+        atol=1e-05,
+    )
+
+  def test_bleu_merge(self):
+    """Tests that BLEU metric computes correct values using merge."""
+    references = [
+        ["He eats a sweet apple", "He is eating a tasty apple, isn't he"],
+        [
+            "Silicon Valley is one of my favourite shows",
+            "Silicon Valley is the best show ever",
+        ],
+    ]
+    predictions = [
+        "He He He eats sweet apple which is a fruit",
+        "I love Silicon Valley it's one of my favourite shows",
+    ]
+    keras_metric = keras_nlp.metrics.Bleu()
+    keras_metric.update_state(references, predictions)
+    metrax_metric = None
+    for ref_list, pred in zip(references, predictions):
+      update = metrax.BLEU.from_model_output([pred], [ref_list])
+      metrax_metric = (
+          update if metrax_metric is None else metrax_metric.merge(update)
+      )
+
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        keras_metric.result(),
+        rtol=1e-05,
+        atol=1e-05,
+    )
+
+  def test_bleu_merge_fails_on_different_max_order(self):
+    """Tests that error is raised when BLEU metrics with different max_order are merged."""
+    references = [
+        ["He eats a sweet apple", "He is eating a tasty apple, isn't he"],
+    ]
+    predictions = [
+        "He He He eats sweet apple which is a fruit",
+    ]
+    order_3_metric = metrax.BLEU.from_model_output(
+        predictions, references, max_order=3
+    )
+    order_4_metric = metrax.BLEU.from_model_output(
+        predictions, references, max_order=4
+    )
+
+    np.testing.assert_raises(
+        ValueError, lambda: order_3_metric.merge(order_4_metric)
+    )
 
   @parameterized.named_parameters(
       (

@@ -15,10 +15,162 @@
 """A collection of different metrics for NLP models."""
 
 from clu import metrics as clu_metrics
+import collections
+import math
 import flax
 import jax
 import jax.numpy as jnp
 from metrax import base
+
+
+def get_ngrams(segment: list[str], max_order: int):
+  """Extracts all n-grams up to a given maximum order from an input segment.
+
+  Args:
+      segment: list. Text segment from which n-grams will be extracted.
+      max_order: int. Maximum length in tokens of the n-grams returned by this
+        method.
+  """
+  ngram_counts = collections.Counter()
+  for order in range(1, max_order + 1):
+    for i in range(0, len(segment) - order + 1):
+      ngram = tuple(segment[i : i + order])
+      ngram_counts[ngram] += 1
+  return ngram_counts
+
+
+@flax.struct.dataclass
+class BLEU(clu_metrics.Metric):
+  r"""Computes the BLEU score for sequence generation.
+
+  BLEU measures the similarity between a machine-generated candidate translation
+  and one or more human reference translations, focusing on matching n-grams.
+
+  It's calculated as:
+  .. math::
+    \text{BLEU} = \text{BP} \times \exp\left( \sum_{n=1}^{N} w_n \log p_n
+    \right)
+
+  Where:
+    - :math:`p_n` is the modified n-gram precision for n-grams of order n.
+    - :math:`N` is the maximum n-gram order considered (typically 4).
+    - :math:`w_n` are weights for each order (typically uniform, 1/N).
+    - :math:`\text{BP}` is the Brevity Penalty.
+
+  This implementation uses uniform weights and calculates statistics
+  incrementally.
+
+  Attributes:
+    max_order: Maximum n-gram order to consider.
+    matches_by_order: Accumulated sum of clipped n-gram matches for each order.
+    possible_matches_by_order: Accumulated sum of total n-grams in predictions
+      for each order.
+    translation_length: Accumulated total length of predictions.
+    reference_length: Accumulated total 'effective' reference length (closest
+      length match for each prediction).
+  """
+
+  max_order: int
+  matches_by_order: jax.Array
+  possible_matches_by_order: jax.Array
+  translation_length: jax.Array
+  reference_length: jax.Array
+
+  @classmethod
+  def empty(cls) -> 'BLEU':
+    return cls(
+        max_order=4,
+        matches_by_order=jnp.array(0, jnp.float32),
+        possible_matches_by_order=jnp.array(0, jnp.float32),
+        translation_length=jnp.array(0, jnp.float32),
+        reference_length=jnp.array(0, jnp.float32),
+    )
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: list[str],
+      references: list[list[str]],
+      max_order: int = 4,
+  ) -> 'BLEU':
+    """Computes BLEU statistics for a batch of predictions and references.
+
+    Args:
+      predictions: A list of predicted strings. The shape should be (batch_size,
+        ).
+      references: A list of lists of reference strings. The shape should be
+        (batch_size, num_references).
+      max_order: The maximum order of n-grams to consider.
+
+    Returns:
+      A BLEU metric instance containing the statistics for this batch.
+
+    Raises:
+      ValueError: If the shapes of `predictions` and `references` are
+      incompatible.
+    """
+    matches_by_order = [0] * max_order
+    possible_matches_by_order = [0] * max_order
+    pred_length = 0
+    ref_length = 0
+
+    for pred, ref_list in zip(predictions, references):
+      pred = pred.split()
+      ref_list = [r.split() for r in ref_list]
+      pred_length += len(pred)
+      ref_length += min(len(r) for r in ref_list)
+      prediction_ngram_counts = get_ngrams(pred, max_order)
+      reference_ngram_counts = collections.Counter()
+      for ref in ref_list:
+        reference_ngram_counts |= get_ngrams(ref, max_order)
+      overlap = prediction_ngram_counts & reference_ngram_counts
+      for ngram in overlap:
+        matches_by_order[len(ngram) - 1] += overlap[ngram]
+      for order in range(1, max_order + 1):
+        possible_matches = len(pred) - order + 1
+        if possible_matches > 0:
+          possible_matches_by_order[order - 1] += possible_matches
+
+    return cls(
+        max_order=max_order,
+        matches_by_order=jnp.array(matches_by_order, dtype=jnp.float32),
+        possible_matches_by_order=jnp.array(
+            possible_matches_by_order, dtype=jnp.float32
+        ),
+        translation_length=jnp.array(pred_length, dtype=jnp.float32),
+        reference_length=jnp.array(ref_length, dtype=jnp.float32),
+    )
+
+  def merge(self, other: 'BLEU') -> 'BLEU':
+    if self.max_order != other.max_order:
+      raise ValueError(
+          'BLEU metrics with different max_order cannot be merged.'
+      )
+    return type(self)(
+        max_order=self.max_order,
+        matches_by_order=(self.matches_by_order + other.matches_by_order),
+        possible_matches_by_order=(
+            self.possible_matches_by_order + other.possible_matches_by_order
+        ),
+        translation_length=(self.translation_length + other.translation_length),
+        reference_length=(self.reference_length + other.reference_length),
+    )
+
+  def compute(self) -> jax.Array:
+    precisions = [0] * self.max_order
+    for i in range(0, self.max_order):
+      precisions[i] = base.divide_no_nan(
+          self.matches_by_order[i], self.possible_matches_by_order[i]
+      )
+    geo_mean = (
+        math.exp(sum((1.0 / self.max_order) * math.log(p) for p in precisions))
+        if precisions and min(precisions) > 0
+        else 0
+    )
+    ratio = base.divide_no_nan(self.translation_length, self.reference_length)
+    bp = 1.0 if ratio > 1.0 else math.exp(1 - 1.0 / ratio)
+    bleu = geo_mean * bp
+    return jnp.array(bleu)
 
 
 @flax.struct.dataclass

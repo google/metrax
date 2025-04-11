@@ -46,6 +46,13 @@ class AveragePrecisionAtK(NnxWrapper):
     super().__init__(metrax.AveragePrecisionAtK)
 
 
+class BLEU(NnxWrapper):
+  """An NNX class for the Metrax metric BLEU."""
+
+  def __init__(self):
+    super().__init__(metrax.BLEU)
+
+
 class MSE(NnxWrapper):
   """An NNX class for the Metrax metric MSE."""
 
