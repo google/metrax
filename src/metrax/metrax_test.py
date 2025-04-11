@@ -40,8 +40,6 @@ STRING_REFS = [
     'the quick brown fox jumps over the lazy dog',
     'hello beautiful world',
 ]
-TOKENIZED_PREDS = [sentence.split() for sentence in STRING_PREDS]
-TOKENIZED_REFS = [sentence.split() for sentence in STRING_REFS]
 
 
 class MetraxTest(parameterized.TestCase):
@@ -114,7 +112,12 @@ class MetraxTest(parameterized.TestCase):
       (
           'wer',
           metrax.WER,
-          {'predictions': TOKENIZED_PREDS, 'references': TOKENIZED_REFS},
+          {'predictions': STRING_PREDS, 'references': STRING_REFS},
+      ),
+      (
+          'bleu',
+          metrax.BLEU,
+          {'predictions': STRING_PREDS, 'references': STRING_REFS},
       ),
   )
   def test_metrics_not_jittable(self, metric, kwargs):
