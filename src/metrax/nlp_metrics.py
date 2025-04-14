@@ -23,7 +23,7 @@ import jax.numpy as jnp
 from metrax import base
 
 
-def get_ngrams(segment: list[str], max_order: int):
+def _get_ngrams(segment: list[str], max_order: int):
   """Extracts all n-grams up to a given maximum order from an input segment.
 
   Args:
@@ -119,10 +119,10 @@ class BLEU(clu_metrics.Metric):
       ref_list = [r.split() for r in ref_list]
       pred_length += len(pred)
       ref_length += min(len(r) for r in ref_list)
-      prediction_ngram_counts = get_ngrams(pred, max_order)
+      prediction_ngram_counts = _get_ngrams(pred, max_order)
       reference_ngram_counts = collections.Counter()
       for ref in ref_list:
-        reference_ngram_counts |= get_ngrams(ref, max_order)
+        reference_ngram_counts |= _get_ngrams(ref, max_order)
       overlap = prediction_ngram_counts & reference_ngram_counts
       for ngram in overlap:
         matches_by_order[len(ngram) - 1] += overlap[ngram]
