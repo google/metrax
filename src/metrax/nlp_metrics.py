@@ -47,11 +47,11 @@ class BLEU(clu_metrics.Metric):
   and one or more human reference translations, focusing on matching n-grams.
 
   It's calculated as:
-  .. math::
-    \text{BLEU} = \text{BP} \times \exp\left( \sum_{n=1}^{N} w_n \log p_n
-    \right)
 
-  Where:
+  .. math::
+      BLEU = \text{BP} \cdot \exp\left( \sum_{n=1}^{N} w_n \log p_n \right)
+
+  where:
     - :math:`p_n` is the modified n-gram precision for n-grams of order n.
     - :math:`N` is the maximum n-gram order considered (typically 4).
     - :math:`w_n` are weights for each order (typically uniform, 1/N).
