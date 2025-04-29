@@ -471,12 +471,15 @@ class RougeL(RougeBase):
 
   For a single prediction P and reference R:
 
-  - :math:`LCS(P, R)` = length of the Longest Common Subsequence
-  - :math:`\text{Recall}_{\text{LCS}} = \frac{LCS(P, R)}{|R|}`
-  - :math:`\text{Precision}_{\text{LCS}} = \frac{LCS(P, R)}{|P|}`
-  - :math:`F1_{\text{LCS}} = \frac{2 \cdot \text{Precision}_{\text{LCS}} \cdot
-  \text{Recall}_{\text{LCS}}}{\text{Precision}_{\text{LCS}} +
-  \text{Recall}_{\text{LCS}}}`
+  .. math::
+      LCS(P, R) = \text{length of the Longest Common Subsequence}
+  .. math::
+      \text{Recall}_{\text{LCS}} = \frac{LCS(P, R)}{|R|}
+  .. math::
+      \text{Precision}_{\text{LCS}} = \frac{LCS(P, R)}{|P|}
+  .. math::
+      \text{F1}_{\text{LCS}} = 2 \times \frac{\text{Precision} \times
+      \text{Recall}}{\text{Precision} + \text{Recall}}
 
   Final Macro-Averaged Metrics:
 
