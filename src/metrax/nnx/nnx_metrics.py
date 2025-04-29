@@ -88,6 +88,13 @@ class RMSE(NnxWrapper):
     super().__init__(metrax.RMSE)
 
 
+class RougeL(NnxWrapper):
+  """An NNX class for the Metrax metric RougeL."""
+
+  def __init__(self):
+    super().__init__(metrax.RougeL)
+
+
 class RougeN(NnxWrapper):
   """An NNX class for the Metrax metric RougeN."""
 

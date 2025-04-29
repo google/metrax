@@ -14,6 +14,7 @@
 
 """A collection of different metrics for NLP models."""
 
+import abc
 import collections
 import math
 from clu import metrics as clu_metrics
@@ -51,6 +52,18 @@ def _get_ngrams(segment: list[str], max_order: int):
   for order in range(1, max_order + 1):
     ngram_counts.update(_get_single_n_grams(segment, order))
   return ngram_counts
+
+
+def _lcs_length(a: list[str], b: list[str]) -> int:
+  """Computes the length of the Longest Common Subsequence (LCS)."""
+  lengths = [[0 for j in range(len(b) + 1)] for i in range(len(a) + 1)]
+  for i, x in enumerate(a):
+    for j, y in enumerate(b):
+      if x == y:
+        lengths[i + 1][j + 1] = lengths[i][j] + 1
+      else:
+        lengths[i + 1][j + 1] = max(lengths[i + 1][j], lengths[i][j + 1])
+  return lengths[len(a)][len(b)]
 
 
 @flax.struct.dataclass
@@ -300,25 +313,235 @@ class Perplexity(clu_metrics.Metric):
 
 
 @flax.struct.dataclass
-class RougeN(clu_metrics.Metric):
+class RougeBase(clu_metrics.Metric, abc.ABC):
+  """Abstract base class for ROUGE metrics using macro-averaging."""
+
+  total_precision: jax.Array
+  total_recall: jax.Array
+  total_f1: jax.Array
+  num_examples: jax.Array
+
+  @classmethod
+  @abc.abstractmethod
+  def empty(cls, **kwargs) -> 'RougeBase':
+    """Creates an empty Rouge metric. Implemented by subclasses."""
+    raise NotImplementedError('Subclasses must implement the empty method.')
+
+  @staticmethod
+  @abc.abstractmethod
+  def _calculate_instance_scores(
+      pred_tokens: list[str], ref_tokens: list[str], **kwargs
+  ) -> tuple[float, float, float]:
+    """Calculates precision, recall, and F1 for a single prediction-reference pair.
+
+    kwargs may contain 'order' for RougeN.
+
+    Returns:
+        A tuple (precision, recall, f1_score).
+    """
+    raise NotImplementedError(
+        'Subclasses must implement _calculate_instance_scores.'
+    )
+
+  @classmethod
+  def _get_common_initial_values(cls) -> dict[str, jax.Array]:
+    """Returns a dictionary of common JAX array attributes initialized to zero."""
+    return {
+        'total_precision': jnp.array(0.0, jnp.float32),
+        'total_recall': jnp.array(0.0, jnp.float32),
+        'total_f1': jnp.array(0.0, jnp.float32),
+        'num_examples': jnp.array(0.0, jnp.float32),
+    }
+
+  @classmethod
+  def _get_specific_constructor_args_for_class(cls) -> dict[str, int]:
+    """Returns subclass-specific keyword arguments for the constructor."""
+    return {}
+
+  @classmethod
+  def from_model_output(
+      cls, predictions: list[str], references: list[str], **kwargs
+  ) -> 'RougeBase':
+    """Computes sums of per-instance ROUGE scores for a batch.
+
+    Subclasses implement _calculate_instance_scores and helper methods for
+    specific constructor arguments and validation.
+
+    Args:
+      predictions: A list of predicted strings. The shape should be (batch_size,
+        ).
+      references: A list of reference strings. The shape should be (batch_size,
+        ).
+      **kwargs: Additional keyword arguments passed to
+        _calculate_instance_scores and to the class constructor.
+
+    Returns:
+      An instance of the ROUGE metric with accumulated scores.
+    """
+    total_precision = 0.0
+    total_recall = 0.0
+    total_f1 = 0.0
+    num_examples = 0.0
+
+    for pred_str, ref_str in zip(predictions, references):
+      pred_tokens = pred_str.split()
+      ref_tokens = ref_str.split()
+
+      precision, recall, f1 = cls._calculate_instance_scores(
+          pred_tokens, ref_tokens, **kwargs
+      )
+
+      total_precision += precision
+      total_recall += recall
+      total_f1 += f1
+      num_examples += 1
+
+    constructor_args = {
+        'total_precision': jnp.array(total_precision, dtype=jnp.float32),
+        'total_recall': jnp.array(total_recall, dtype=jnp.float32),
+        'total_f1': jnp.array(total_f1, dtype=jnp.float32),
+        'num_examples': jnp.array(num_examples, dtype=jnp.float32),
+    }
+    constructor_args.update(
+        cls._get_specific_constructor_args_for_class(**kwargs)
+    )
+    return cls(**constructor_args)
+
+  def merge(self, other: 'RougeBase') -> 'RougeBase':
+    """Merges this Rouge metric with another."""
+    if not isinstance(other, type(self)):
+      raise TypeError(
+          'Cannot merge instances of different types:'
+          f' {type(self).__name__} and {type(other).__name__}'
+      )
+
+    self._validate_merge_specifics(other)
+
+    merged_data = {
+        'total_precision': self.total_precision + other.total_precision,
+        'total_recall': self.total_recall + other.total_recall,
+        'total_f1': self.total_f1 + other.total_f1,
+        'num_examples': self.num_examples + other.num_examples,
+    }
+    merged_data.update(self._get_specific_fields_for_merge_constructor())
+    return type(self)(**merged_data)  # type: ignore[call-arg]
+
+  def _validate_merge_specifics(self, other: 'RougeBase'):
+    """Hook for subclass-specific validation during merge (e.g., check order).
+
+    Args:
+      other: The other instance of RougeBase to merge with.
+
+    Raises:
+      ValueError if validation fails.
+    """
+    pass
+
+  def _get_specific_fields_for_merge_constructor(self) -> dict[str, int]:
+    """Returns subclass-specific fields for constructing a merged instance.
+
+    Returns:
+      A dictionary of subclass-specific fields to merge. These fields (e.g.,
+      `order` for RougeN) are taken from `self`.
+    """
+    return {}
+
+  def compute(self) -> jax.Array:
+    """Computes macro-averaged recall, precision, and F1-score."""
+    macro_avg_precision = base.divide_no_nan(
+        self.total_precision, self.num_examples
+    )
+    macro_avg_recall = base.divide_no_nan(self.total_recall, self.num_examples)
+    macro_avg_f1score = base.divide_no_nan(self.total_f1, self.num_examples)
+
+    return jnp.stack([macro_avg_precision, macro_avg_recall, macro_avg_f1score])
+
+
+@flax.struct.dataclass
+class RougeL(RougeBase):
+  r"""Computes macro-averaged ROUGE-L recall, precision, and F1-score.
+
+  ROUGE-L measures the longest common subsequence (LCS) between a prediction
+  and a reference. This metric calculates ROUGE-L precision, recall, and
+  F1-score for each individual prediction compared against its single
+  corresponding reference. These per-instance scores are then averaged.
+
+  How ROUGE-L scores are calculated for each individual prediction-reference
+  pair:
+
+  For a single prediction P and reference R:
+
+  - :math:`LCS(P, R)` = length of the Longest Common Subsequence
+  - :math:`\text{Recall}_{\text{LCS}} = \frac{LCS(P, R)}{|R|}`
+  - :math:`\text{Precision}_{\text{LCS}} = \frac{LCS(P, R)}{|P|}`
+  - :math:`F1_{\text{LCS}} = \frac{2 \cdot \text{Precision}_{\text{LCS}} \cdot
+  \text{Recall}_{\text{LCS}}}{\text{Precision}_{\text{LCS}} +
+  \text{Recall}_{\text{LCS}}}`
+
+  Final Macro-Averaged Metrics:
+
+  .. math::
+      \text{MacroAvgPrecision} =
+      \frac{\text{total_precision}}{\text{num_examples}}
+  .. math::
+      \text{MacroAvgRecall} = \frac{\text{total_recall}}{\text{num_examples}}
+  .. math::
+      \text{MacroAvgF1} = \frac{\text{total_f1}}{\text{num_examples}}
+
+  Attributes:
+    total_precision: Accumulated sum of LCS precision scores from each instance.
+    total_recall: Accumulated sum of LCS recall scores from each instance.
+    total_f1: Accumulated sum of LCS F1 scores from each instance.
+    num_examples: The number of instances (prediction-reference pairs)
+      processed.
+  """
+
+  @classmethod
+  def empty(cls, **kwargs) -> 'RougeL':
+    common_values = super()._get_common_initial_values()
+    return cls(**common_values)
+
+  @staticmethod
+  def _calculate_instance_scores(
+      pred_tokens: list[str],
+      ref_tokens: list[str],
+      **kwargs,
+  ) -> tuple[float, float, float]:
+    lcs = jnp.array(_lcs_length(pred_tokens, ref_tokens))
+    pred_len = jnp.array(len(pred_tokens))
+    ref_len = jnp.array(len(ref_tokens))
+
+    precision = base.divide_no_nan(lcs, pred_len).item()
+    recall = base.divide_no_nan(lcs, ref_len).item()
+    f1 = base.divide_no_nan(2 * precision * recall, precision + recall).item()
+    return float(precision), float(recall), float(f1)
+
+
+@flax.struct.dataclass
+class RougeN(RougeBase):
   r"""Computes macro-averaged ROUGE-N recall, precision, and F1-score.
 
   This metric first calculates ROUGE-N precision, recall, and F1-score for each
-  individual prediction compared against its single corresponding reference. ROUGE-N
+  individual prediction compared against its single corresponding reference.
+  ROUGE-N
   scores are based on the number of overlapping n-grams (sequences of n words)
   between the prediction and the reference text. These per-instance precision,
-  recall, and F1-scores are then averaged across all instances in the dataset/batch.
+  recall, and F1-scores are then averaged across all instances in the
+  dataset/batch.
 
-  How ROUGE-N scores are calculated for each individual prediction-reference pair:
+  How ROUGE-N scores are calculated for each individual prediction-reference
+  pair:
 
   .. math::
       \text{Precision} = \frac{N_o}{N_p}
   .. math::
       \text{Recall} = \frac{N_o}{N_r}
   .. math::
-      \text{F1} = 2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}
+      \text{F1} = 2 \times \frac{\text{Precision} \times
+      \text{Recall}}{\text{Precision} + \text{Recall}}
   where:
-      - :math:`N_o` be the number of n-grams that overlap between the prediction and the reference.
+      - :math:`N_o` be the number of n-grams that overlap between the prediction
+      and the reference.
       - :math:`N_p` be the total number of n-grams in the prediction.
       - :math:`N_r` be the total number of n-grams in the reference.
 
@@ -342,122 +565,44 @@ class RougeN(clu_metrics.Metric):
   """
 
   order: int
-  total_precision: jax.Array
-  total_recall: jax.Array
-  total_f1: jax.Array
-  num_examples: jax.Array
 
   @classmethod
   def empty(cls, order: int = 2) -> 'RougeN':
-    """Creates an empty ROUGE-N metric for macro-averaging.
-
-    Args:
-      order: The order 'N' of n-grams (e.g., 2 for ROUGE-2). Must be a positive
-        integer.
-
-    Returns:
-      An empty RougeN metric.
-    """
-    return cls(
-        order=order,
-        total_precision=jnp.array(0, jnp.float32),
-        total_recall=jnp.array(0, jnp.float32),
-        total_f1=jnp.array(0, jnp.float32),
-        num_examples=jnp.array(0, jnp.float32),
-    )
+    common_values = super()._get_common_initial_values()
+    return cls(order=order, **common_values)
 
   @classmethod
-  def from_model_output(
-      cls,
-      predictions: list[str],
-      references: list[str],
-      order: int = 2,
-  ) -> 'RougeN':
-    """Computes sums of per-instance ROUGE-N scores for a batch.
+  def _get_specific_constructor_args_for_class(cls, **kwargs) -> dict[str, int]:
+    return {'order': kwargs.get('order', 2)}
 
-    Args:
-      predictions: A list of predicted strings. The shape should be (batch_size,
-        ).
-      references: A list of reference strings. Each prediction must have one
-        corresponding reference string. The shape should be (batch_size, ).
-      order: The order 'N' of n-grams to consider. Must be positive.
+  @staticmethod
+  def _calculate_instance_scores(
+      pred_tokens: list[str], ref_tokens: list[str], **kwargs
+  ) -> tuple[float, float, float]:
+    order = kwargs.get('order', 2)
 
-    Returns:
-      A RougeN metric instance with accumulated per-instance scores.
-    """
-    total_precision = 0.0
-    total_recall = 0.0
-    total_f1 = 0.0
-    num_examples = 0.0
+    pred_ngrams_counts = _get_single_n_grams(pred_tokens, order)
+    ref_ngrams_counts = _get_single_n_grams(ref_tokens, order)
+    overlap_counts = pred_ngrams_counts & ref_ngrams_counts
 
-    for pred_str, ref_str in zip(predictions, references):
-      pred_tokens = pred_str.split()
-      ref_tokens = ref_str.split()
+    prediction_ngrams = jnp.array(sum(pred_ngrams_counts.values()))
+    reference_ngrams = jnp.array(sum(ref_ngrams_counts.values()))
+    overlapping_ngrams = jnp.array(sum(overlap_counts.values()))
 
-      pred_ngrams_counts = _get_single_n_grams(pred_tokens, order)
-      ref_ngrams_counts = _get_single_n_grams(ref_tokens, order)
-      overlap_counts = pred_ngrams_counts & ref_ngrams_counts
+    precision = base.divide_no_nan(overlapping_ngrams, prediction_ngrams)
+    recall = base.divide_no_nan(overlapping_ngrams, reference_ngrams)
+    f1 = base.divide_no_nan(2 * precision * recall, precision + recall)
+    return float(precision), float(recall), float(f1)
 
-      prediction_ngrams = jnp.array(sum(pred_ngrams_counts.values()))
-      reference_ngrams = jnp.array(sum(ref_ngrams_counts.values()))
-      overlapping_ngrams = jnp.array(sum(overlap_counts.values()))
-
-      precision = base.divide_no_nan(overlapping_ngrams, prediction_ngrams)
-      recall = base.divide_no_nan(overlapping_ngrams, reference_ngrams)
-      f1 = base.divide_no_nan(2 * precision * recall, precision + recall)
-
-      total_precision += precision
-      total_recall += recall
-      total_f1 += f1
-      num_examples += 1
-
-    return cls(
-        order=order,
-        total_precision=jnp.array(total_precision, dtype=jnp.float32),
-        total_recall=jnp.array(total_recall, dtype=jnp.float32),
-        total_f1=jnp.array(total_f1, dtype=jnp.float32),
-        num_examples=jnp.array(num_examples, dtype=jnp.float32),
-    )
-
-  def merge(self, other: 'RougeN') -> 'RougeN':
-    """Merges this RougeN metric with another.
-
-    Args:
-      other: Another RougeN metric instance.
-
-    Returns:
-      A new RougeN metric instance with combined statistics.
-    """
-    if self.order != other.order:
+  def _validate_merge_specifics(self, other: 'RougeBase'):
+    if not isinstance(other, RougeN) or self.order != other.order:
       raise ValueError(
           'RougeN metrics with different orders cannot be merged. '
-          f'Got {self.order} and {other.order}.'
+          f'Got {self.order} and {getattr(other, "order", "N/A")}.'
       )
-    return RougeN(
-        order=self.order,
-        total_precision=(self.total_precision + other.total_precision),
-        total_recall=(self.total_recall + other.total_recall),
-        total_f1=(self.total_f1 + other.total_f1),
-        num_examples=(self.num_examples + other.num_examples),
-    )
 
-  def compute(self) -> jax.Array:
-    """Computes macro-averaged ROUGE-N recall, precision, and F1-score.
-
-    Returns:
-      A JAX array where:
-            - index 0: macro-averaged precision
-            - index 1: macro-averaged recall
-            - index 2: macro-averaged f1score (derived from avg_precision and
-            avg_recall)
-          Scores are 0.0 if num_examples is zero.
-    """
-    macro_avg_precision = base.divide_no_nan(
-        self.total_precision, self.num_examples
-    )
-    macro_avg_recall = base.divide_no_nan(self.total_recall, self.num_examples)
-    macro_avg_f1score = base.divide_no_nan(self.total_f1, self.num_examples)
-    return jnp.stack([macro_avg_precision, macro_avg_recall, macro_avg_f1score])
+  def _get_specific_fields_for_merge_constructor(self) -> dict[str, int]:
+    return {'order': self.order}
 
 
 @flax.struct.dataclass

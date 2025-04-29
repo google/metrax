@@ -25,6 +25,7 @@ Precision = nnx_metrics.Precision
 RMSE = nnx_metrics.RMSE
 RSQUARED = nnx_metrics.RSQUARED
 Recall = nnx_metrics.Recall
+RougeL = nnx_metrics.RougeL
 RougeN = nnx_metrics.RougeN
 WER = nnx_metrics.WER
 
@@ -41,6 +42,7 @@ __all__ = [
     "RMSE",
     "RSQUARED",
     "Recall",
+    "RougeL",
     "RougeN",
     "WER",
 ]
