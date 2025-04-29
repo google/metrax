@@ -62,7 +62,7 @@ class NlpMetricsTest(parameterized.TestCase):
     ]
     predictions = [
         "He He He eats sweet apple which is a fruit",
-        "I love Silicon Valley it's one of my favourite shows",
+        "I love Silicon Valley it is one of my favourite shows",
     ]
     keras_metric = keras_nlp.metrics.Bleu()
     keras_metric.update_state(references, predictions)
@@ -86,7 +86,7 @@ class NlpMetricsTest(parameterized.TestCase):
     ]
     predictions = [
         "He He He eats sweet apple which is a fruit",
-        "I love Silicon Valley it's one of my favourite shows",
+        "I love Silicon Valley it is one of my favourite shows",
     ]
     keras_metric = keras_nlp.metrics.Bleu()
     keras_metric.update_state(references, predictions)
@@ -117,6 +117,75 @@ class NlpMetricsTest(parameterized.TestCase):
     )
     order_4_metric = metrax.BLEU.from_model_output(
         predictions, references, max_order=4
+    )
+
+    np.testing.assert_raises(
+        ValueError, lambda: order_3_metric.merge(order_4_metric)
+    )
+
+  def test_rougen(self):
+    """Tests that ROUGE-N metric computes correct values."""
+    references = [
+        "He eats a sweet apple",
+        "Silicon Valley is one of my favourite shows",
+    ]
+    predictions = [
+        "He He He eats sweet apple which is a fruit",
+        "I love Silicon Valley it is one of my favourite shows",
+    ]
+    keras_metric = keras_nlp.metrics.RougeN()
+    keras_metric.update_state(references, predictions)
+    keras_metric_array = jnp.stack(list(keras_metric.result().values()))
+    metrax_metric = metrax.RougeN.from_model_output(predictions, references)
+
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        keras_metric_array,
+        rtol=1e-05,
+        atol=1e-05,
+    )
+
+  def test_rougen_merge(self):
+    """Tests that ROUGE-N metric computes correct values using merge."""
+    references = [
+        "He eats a sweet apple",
+        "Silicon Valley is one of my favourite shows",
+    ]
+    predictions = [
+        "He He He eats sweet apple which is a fruit",
+        "I love Silicon Valley it is one of my favourite shows",
+    ]
+    keras_metric = keras_nlp.metrics.RougeN()
+    keras_metric.update_state(references, predictions)
+    keras_metric_array = jnp.stack(list(keras_metric.result().values()))
+
+    metrax_metric = None
+    for ref, pred in zip(references, predictions):
+      update = metrax.RougeN.from_model_output([pred], [ref])
+      metrax_metric = (
+          update if metrax_metric is None else metrax_metric.merge(update)
+      )
+
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        keras_metric_array,
+        rtol=1e-05,
+        atol=1e-05,
+    )
+
+  def test_rougen_merge_fails_on_different_max_order(self):
+    """Tests that error is raised when ROUGE-N metrics with different max_order are merged."""
+    references = [
+        "He eats a sweet apple",
+    ]
+    predictions = [
+        "He He He eats sweet apple which is a fruit",
+    ]
+    order_3_metric = metrax.RougeN.from_model_output(
+        predictions, references, order=3
+    )
+    order_4_metric = metrax.RougeN.from_model_output(
+        predictions, references, order=4
     )
 
     np.testing.assert_raises(

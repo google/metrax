@@ -5,3 +5,4 @@ keras-hub
 keras-nlp
 pytest
 scikit-learn
+rouge-score

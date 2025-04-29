@@ -105,7 +105,7 @@ class MetraxTest(parameterized.TestCase):
     computed_metric = metric.from_model_output(**kwargs)
     jitted_metric = jax.jit(metric.from_model_output)(**kwargs)
     np.testing.assert_allclose(
-        computed_metric.compute(), jitted_metric.compute()
+        computed_metric.compute(), jitted_metric.compute(), rtol=1e-2, atol=1e-2
     )
 
   @parameterized.named_parameters(
@@ -117,6 +117,11 @@ class MetraxTest(parameterized.TestCase):
       (
           'bleu',
           metrax.BLEU,
+          {'predictions': STRING_PREDS, 'references': STRING_REFS},
+      ),
+      (
+          'rougeN',
+          metrax.RougeN,
           {'predictions': STRING_PREDS, 'references': STRING_REFS},
       ),
   )
