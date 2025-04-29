@@ -304,25 +304,33 @@ class RougeN(clu_metrics.Metric):
   r"""Computes macro-averaged ROUGE-N recall, precision, and F1-score.
 
   This metric first calculates ROUGE-N precision, recall, and F1-score for each
-  individual prediction compared against its single corresponding reference.
-  These per-instance precision, recall and F1-scores are then averaged across
-  all instances in the dataset/batch.
+  individual prediction compared against its single corresponding reference. ROUGE-N
+  scores are based on the number of overlapping n-grams (sequences of n words)
+  between the prediction and the reference text. These per-instance precision,
+  recall, and F1-scores are then averaged across all instances in the dataset/batch.
 
-  Accumulation for Macro-Average:
-  - total_precision = sum of all precision values.
-  - total_recall = sum of all instance_recall values.
-  - total_f1 = sum of all f1 values.
-  - num_examples = count of prediction-reference pairs.
+  How ROUGE-N scores are calculated for each individual prediction-reference pair:
+
+  .. math::
+      \text{Precision} = \frac{N_o}{N_p}
+  .. math::
+      \text{Recall} = \frac{N_o}{N_r}
+  .. math::
+      \text{F1} = 2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}
+  where:
+      - :math:`N_o` be the number of n-grams that overlap between the prediction and the reference.
+      - :math:`N_p` be the total number of n-grams in the prediction.
+      - :math:`N_r` be the total number of n-grams in the reference.
 
   Final Macro-Averaged Metrics:
+
   .. math::
       \text{MacroAvgPrecision} =
       \frac{\text{total_precision}}{\text{num_examples}}
   .. math::
       \text{MacroAvgRecall} = \frac{\text{total_recall}}{\text{num_examples}}
   .. math::
-      \text{MacroAvgF1} = 2 \cdot \frac{\text{MacroAvgPrecision} \cdot
-      \text{MacroAvgRecall}}{\text{MacroAvgPrecision} + \text{MacroAvgRecall}}
+      \text{MacroAvgF1} = \frac{\text{total_f1}}{\text{num_examples}}
 
   Attributes:
     order: The specific 'N' in ROUGE-N (e.g., 1 for ROUGE-1, 2 for ROUGE-2).
