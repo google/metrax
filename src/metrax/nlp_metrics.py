@@ -54,16 +54,16 @@ def _get_ngrams(segment: list[str], max_order: int):
   return ngram_counts
 
 
-def _lcs_length(a: list[str], b: list[str]) -> int:
+def _lcs_length(str1: list[str], str2: list[str]) -> int:
   """Computes the length of the Longest Common Subsequence (LCS)."""
-  lengths = [[0 for j in range(len(b) + 1)] for i in range(len(a) + 1)]
-  for i, x in enumerate(a):
-    for j, y in enumerate(b):
+  lengths = [[0 for j in range(len(str2) + 1)] for i in range(len(str1) + 1)]
+  for i, x in enumerate(str1):
+    for j, y in enumerate(str2):
       if x == y:
         lengths[i + 1][j + 1] = lengths[i][j] + 1
       else:
         lengths[i + 1][j + 1] = max(lengths[i + 1][j], lengths[i][j + 1])
-  return lengths[len(a)][len(b)]
+  return lengths[len(str1)][len(str2)]
 
 
 @flax.struct.dataclass
