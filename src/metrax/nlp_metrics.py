@@ -345,7 +345,7 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
 
   @classmethod
   def _get_common_initial_values(cls) -> dict[str, jax.Array]:
-    """Returns a dictionary of common JAX array attributes initialized to zero."""
+    """Returns a dictionary of common metric attributes initialized to zero."""
     return {
         'total_precision': jnp.array(0.0, jnp.float32),
         'total_recall': jnp.array(0.0, jnp.float32),
@@ -526,11 +526,10 @@ class RougeN(RougeBase):
 
   This metric first calculates ROUGE-N precision, recall, and F1-score for each
   individual prediction compared against its single corresponding reference.
-  ROUGE-N
-  scores are based on the number of overlapping n-grams (sequences of n words)
-  between the prediction and the reference text. These per-instance precision,
-  recall, and F1-scores are then averaged across all instances in the
-  dataset/batch.
+  ROUGE-N scores are based on the number of overlapping n-grams (sequences of n
+  words) between the prediction and the reference text. These per-instance
+  precision, recall, and F1-scores are then averaged across all instances in
+  the dataset/batch.
 
   How ROUGE-N scores are calculated for each individual prediction-reference
   pair:
