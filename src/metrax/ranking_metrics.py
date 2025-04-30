@@ -56,7 +56,7 @@ class AveragePrecisionAtK(base.Average):
     Returns:
       Rank-2 tensor of shape (batch, |ks|) containing AP@k metrics.
     """
-    sorted_indices = jnp.argsort(-predictions, axis=1)
+    indices_by_rank = jnp.argsort(-predictions, axis=1)
     labels = jnp.array(labels >= 1, dtype=jnp.float32)
     total_relevant = labels.sum(axis=1)
 
@@ -88,7 +88,7 @@ class AveragePrecisionAtK(base.Average):
     )
 
     ap_at_ks = vmap_compute_ap_at_k(
-        jnp.take_along_axis(labels, sorted_indices, axis=1), total_relevant, ks
+        jnp.take_along_axis(labels, indices_by_rank, axis=1), total_relevant, ks
     )
     return ap_at_ks
 
@@ -155,14 +155,15 @@ class PrecisionAtK(base.Average):
     Returns:
       A rank-2 JAX array of shape (batch_size, |ks|) containing P@k metrics.
     """
-    sorted_indices = jnp.argsort(-predictions, axis=1)
     labels = jnp.array(labels >= 1, dtype=jnp.float32)
-    sorted_relevance = jnp.take_along_axis(labels, sorted_indices, axis=1)
-    relevant_at_rank = jnp.cumsum(sorted_relevance, axis=1)
-    columns = jnp.minimum(ks - 1, relevant_at_rank.shape[1] - 1)
-    return base.divide_no_nan(
-        relevant_at_rank[:, columns], ks.astype(jnp.float32)
-    )
+    indices_by_rank = jnp.argsort(-predictions, axis=1)
+    labels_by_rank = jnp.take_along_axis(labels, indices_by_rank, axis=1)
+    relevant_by_rank = jnp.cumsum(labels_by_rank, axis=1)
+
+    vocab_size = predictions.shape[1]
+    relevant_at_k = relevant_by_rank[:, jnp.minimum(ks - 1, vocab_size - 1)]
+    total_at_k = jnp.minimum(ks, vocab_size)
+    return base.divide_no_nan(relevant_at_k, total_at_k)
 
   @classmethod
   def from_model_output(
