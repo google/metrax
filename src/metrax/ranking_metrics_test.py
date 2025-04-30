@@ -48,6 +48,8 @@ MAP_FROM_KERAS = np.array([
     0.637499988079071,
 ])
 MAP_FROM_KERAS_VS1 = np.array([0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
+P_FROM_KERAS = np.array([0.75, 0.875, 0.58333337306976320, 0.5625, 0.5, 0.5])
+P_FROM_KERAS_VS1 = np.array([0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
 
 
 class RankingMetricsTest(parameterized.TestCase):
@@ -77,6 +79,31 @@ class RankingMetricsTest(parameterized.TestCase):
       average_precision_at_k = jax.jit(average_precision_at_k)
     ks = jnp.array([1, 2, 3, 4, 5, 6])
     metric = average_precision_at_k(
+        predictions=y_pred,
+        labels=y_true,
+        ks=ks,
+    )
+
+    np.testing.assert_allclose(
+        metric.compute(),
+        map_from_keras,
+        rtol=1e-05,
+        atol=1e-05,
+    )
+
+  @parameterized.named_parameters(
+      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, P_FROM_KERAS),
+      (
+          'vocab_size_one',
+          OUTPUT_LABELS_VS1,
+          OUTPUT_PREDS_VS1,
+          P_FROM_KERAS_VS1,
+      ),
+  )
+  def test_precisionatk(self, y_true, y_pred, map_from_keras):
+    """Test that `PrecisionAtK` Metric computes correct values."""
+    ks = jnp.array([1, 2, 3, 4, 5, 6])
+    metric = metrax.PrecisionAtK.from_model_output(
         predictions=y_pred,
         labels=y_true,
         ks=ks,
