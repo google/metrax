@@ -36,7 +36,7 @@ class NnxMetricsTest(parameterized.TestCase):
         key for key, metric in inspect.getmembers(metrax.nnx)
         if inspect.isclass(metric) and issubclass(metric, nnx.Metric)
     ]
-    self.assertGreater(len(metrax_metric_keys), 0)
+    self.assertNotEmpty(metrax_metric_keys)
     self.assertSameElements(metrax_metric_keys, metrax_nnx_metric_keys)
 
 

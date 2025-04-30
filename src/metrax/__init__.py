@@ -26,6 +26,7 @@ BLEU = nlp_metrics.BLEU
 MSE = regression_metrics.MSE
 Perplexity = nlp_metrics.Perplexity
 Precision = classification_metrics.Precision
+PrecisionAtK = ranking_metrics.PrecisionAtK
 RMSE = regression_metrics.RMSE
 RSQUARED = regression_metrics.RSQUARED
 Recall = classification_metrics.Recall
@@ -43,6 +44,7 @@ __all__ = [
     "MSE",
     "Perplexity",
     "Precision",
+    "PrecisionAtK",
     "RMSE",
     "RSQUARED",
     "Recall",

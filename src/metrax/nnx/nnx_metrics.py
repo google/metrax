@@ -74,6 +74,13 @@ class Precision(NnxWrapper):
     super().__init__(metrax.Precision)
 
 
+class PrecisionAtK(NnxWrapper):
+  """An NNX class for the Metrax metric PrecisionAtK."""
+
+  def __init__(self):
+    super().__init__(metrax.PrecisionAtK)
+
+
 class Recall(NnxWrapper):
   """An NNX class for the Metrax metric Recall."""
 

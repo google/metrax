@@ -22,6 +22,7 @@ BLEU = nnx_metrics.BLEU
 MSE = nnx_metrics.MSE
 Perplexity = nnx_metrics.Perplexity
 Precision = nnx_metrics.Precision
+PrecisionAtK = nnx_metrics.PrecisionAtK
 RMSE = nnx_metrics.RMSE
 RSQUARED = nnx_metrics.RSQUARED
 Recall = nnx_metrics.Recall
@@ -39,6 +40,7 @@ __all__ = [
     "MSE",
     "Perplexity",
     "Precision",
+    "PrecisionAtK",
     "RMSE",
     "RSQUARED",
     "Recall",
