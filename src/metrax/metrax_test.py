@@ -129,6 +129,11 @@ class MetraxTest(parameterized.TestCase):
           {'predictions': STRING_PREDS, 'references': STRING_REFS},
       ),
       (
+          'rougeL',
+          metrax.RougeL,
+          {'predictions': STRING_PREDS, 'references': STRING_REFS},
+      ),
+      (
           'rougeN',
           metrax.RougeN,
           {'predictions': STRING_PREDS, 'references': STRING_REFS},
