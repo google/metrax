@@ -29,6 +29,7 @@ OUTPUT_LABELS = np.random.randint(
     size=(BATCHES, BATCH_SIZE),
 ).astype(np.float32)
 OUTPUT_PREDS = np.random.uniform(size=(BATCHES, BATCH_SIZE))
+KS = np.array([3])
 
 STRING_PREDS = [
     'the cat sat on the mat',
@@ -66,7 +67,7 @@ class MetraxTest(parameterized.TestCase):
           {
               'predictions': OUTPUT_LABELS,
               'labels': OUTPUT_PREDS,
-              'ks': np.array([3]),
+              'ks': KS,
           },
       ),
       (
@@ -90,7 +91,7 @@ class MetraxTest(parameterized.TestCase):
           {
               'predictions': OUTPUT_LABELS,
               'labels': OUTPUT_PREDS,
-              'ks': np.array([3]),
+              'ks': KS,
           },
       ),
       (
@@ -107,6 +108,15 @@ class MetraxTest(parameterized.TestCase):
           'recall',
           metrax.Recall,
           {'predictions': OUTPUT_LABELS, 'labels': OUTPUT_PREDS},
+      ),
+      (
+          'recallAtK',
+          metrax.RecallAtK,
+          {
+              'predictions': OUTPUT_LABELS,
+              'labels': OUTPUT_PREDS,
+              'ks': KS,
+          },
       ),
   )
   def test_metrics_jittable(self, metric, kwargs):

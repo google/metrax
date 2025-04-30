@@ -88,6 +88,13 @@ class Recall(NnxWrapper):
     super().__init__(metrax.Recall)
 
 
+class RecallAtK(NnxWrapper):
+  """An NNX class for the Metrax metric RecallAtK."""
+
+  def __init__(self):
+    super().__init__(metrax.RecallAtK)
+
+
 class RMSE(NnxWrapper):
   """An NNX class for the Metrax metric RMSE."""
 

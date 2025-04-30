@@ -14,6 +14,7 @@
 
 """A collection of different metrics for ranking models."""
 
+import abc
 import flax
 import jax
 import jax.numpy as jnp
@@ -125,11 +126,121 @@ class AveragePrecisionAtK(base.Average):
 
 
 @flax.struct.dataclass
-class PrecisionAtK(base.Average):
+class TopKRankingMetric(base.Average, abc.ABC):
+  """Abstract base class for Top-K ranking metrics like Precision@k and Recall@k.
+
+  This class provides common functionality for calculating metrics that evaluate
+  the quality of the top k items in a ranked list. Subclasses must implement
+  the `_calculate_metric_at_ks` method to define the specific metric
+  computation (e.g., precision, recall).
+
+  The `from_model_output` method is a factory method that computes the metric
+  values for a batch of predictions and labels, and aggregates them.
+  """
+
+  @staticmethod
+  def _get_relevant_at_k(
+      predictions: jax.Array, labels: jax.Array, ks: jax.Array
+  ) -> jax.Array:
+    """Computes the number of relevant items at each k.
+
+    This static method processes predictions and labels to determine the
+    number of relevant items at specified k-values.
+
+    Args:
+      predictions: A floating point 2D array representing the prediction scores
+        from the model. Higher scores indicate higher relevance. The shape
+        should be (batch_size, vocab_size).
+      labels: A multi-hot encoding (0 or 1, or counts) of the true labels. The
+        shape should be (batch_size, vocab_size).
+      ks: A 1D array of integers representing the k's (cut-off points) for which
+        to compute metrics. The shape should be (|ks|).
+
+    Returns:
+      relevant_at_k: A 2D array of shape (batch_size, |ks|). Each element [i, j]
+      is the number of relevant items among the top ks[j] recommendations for
+      the i-th example in the batch.
+    """
+    labels = jnp.array(labels >= 1, dtype=jnp.float32)
+    indices_by_rank = jnp.argsort(-predictions, axis=1)
+    labels_by_rank = jnp.take_along_axis(labels, indices_by_rank, axis=1)
+    relevant_by_rank = jnp.cumsum(labels_by_rank, axis=1)
+
+    vocab_size = predictions.shape[1]
+    k_indices = jnp.minimum(ks - 1, vocab_size - 1)
+    relevant_at_k = relevant_by_rank[:, k_indices]
+
+    return relevant_at_k
+
+  @classmethod
+  @abc.abstractmethod
+  def _calculate_metric_at_ks(
+      cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array
+  ) -> jax.Array:
+    """Computes the specific metric (e.g., P@k, R@k) values per example for each k.
+
+    This method must be implemented by concrete subclasses (e.g., PrecisionAtK,
+    RecallAtK) to define the actual calculation of the metric based on
+    predictions, labels, and k-values.
+
+    Args:
+      predictions: A floating point 2D array representing the prediction scores
+        from the model.
+      labels: A multi-hot encoding of the true labels.
+      ks: A 1D array of integers representing the k's.
+
+    Returns:
+      A rank-2 array of shape (batch_size, |ks|) containing the metric
+      values for each example in the batch and each specified k.
+    """
+    raise NotImplementedError('Subclasses must implement this method.')
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
+  ) -> 'TopKRankingMetric':
+    """Creates a metric instance from model output.
+
+    This class method computes the specific ranking metric (defined by the
+    subclass's implementation of `_calculate_metric_at_ks`) for each example
+    in the batch. It then aggregates these values (sum of metric values and
+    count of examples) into a metric object. This object can later be used
+    to compute the mean metric value (e.g., Mean Precision@k) by calling
+    its `.compute()` method (inherited from `base.Average`).
+
+    Args:
+      predictions: A floating point 2D array representing the prediction scores
+        from the model. The shape should be (batch_size, vocab_size).
+      labels: A multi-hot encoding (0 or 1, or counts) of the true labels. The
+        shape should be (batch_size, vocab_size).
+      ks: A 1D array of integers representing the k's to compute the metrics.
+        The shape should be (|ks|).
+
+    Returns:
+      An instance of the calling class (e.g., PrecisionAtK, RecallAtK)
+      with `total` and `count` fields populated. The `total` field will
+      have shape (|ks|), representing the sum of metric values for each k
+      across the batch, and `count` will be a scalar representing the
+      number of examples in the batch.
+    """
+    metric_at_ks = cls._calculate_metric_at_ks(predictions, labels, ks)
+    num_examples = jnp.array(labels.shape[0], dtype=jnp.float32)
+    return cls(
+        total=metric_at_ks.sum(axis=0),
+        count=num_examples,
+    )
+
+
+@flax.struct.dataclass
+class PrecisionAtK(TopKRankingMetric):
   r"""Computes P@k (precision at k) metrics in JAX.
 
   Precision at k (P@k) is a metric that measures the proportion of
-  relevant items found in the top k recommendations.
+  relevant items found in the top k recommendations. It answers the question:
+  "Out of the K items recommended, how many are actually relevant?"
 
   Given the top :math:`K` recommendations, P@K is calculated as:
 
@@ -138,58 +249,77 @@ class PrecisionAtK(base.Average):
   """
 
   @classmethod
-  def precision_at_ks(
+  def _calculate_metric_at_ks(
       cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array
   ) -> jax.Array:
-    """Computes P@k (precision at k) metrics for each of k in ks.
+    """Computes P@k (precision at k) metrics for each of k in ks for each example.
+
+    This method implements the core logic for calculating Precision@k.
+    It utilizes the `_get_relevant_at_k` helper from the base
+    class to get the number of relevant items at each k, and then divides
+    by k (clamped by vocabulary size) to get the precision.
 
     Args:
-      predictions: A floating point 2D array representing the prediction
-        scores from the model. Higher scores indicate higher relevance. The
+      predictions: A floating point 2D array representing the prediction scores
+        from the model. The shape should be (batch_size, vocab_size).
+      labels: A multi-hot encoding (0 or 1, or counts) of the true labels. The
         shape should be (batch_size, vocab_size).
-      labels: A multi-hot encoding (0 or 1) of the true labels. The shape should
-        be (batch_size, vocab_size).
       ks: A 1D array of integers representing the k's to compute the P@k
         metrics. The shape should be (|ks|).
 
     Returns:
-      A rank-2 array of shape (batch_size, |ks|) containing P@k metrics.
+      A rank-2 array of shape (batch_size, |ks|) containing P@k metrics
+      for each example and each k.
     """
-    labels = jnp.array(labels >= 1, dtype=jnp.float32)
-    indices_by_rank = jnp.argsort(-predictions, axis=1)
-    labels_by_rank = jnp.take_along_axis(labels, indices_by_rank, axis=1)
-    relevant_by_rank = jnp.cumsum(labels_by_rank, axis=1)
+    relevant_at_k = cls._get_relevant_at_k(predictions, labels, ks)
+    vocab_size = labels.shape[1]
+    denominator_p_at_k = jnp.minimum(ks.astype(jnp.float32), vocab_size)
+    return base.divide_no_nan(relevant_at_k, denominator_p_at_k[jnp.newaxis, :])
 
-    vocab_size = predictions.shape[1]
-    relevant_at_k = relevant_by_rank[:, jnp.minimum(ks - 1, vocab_size - 1)]
-    total_at_k = jnp.minimum(ks, vocab_size)
-    return base.divide_no_nan(relevant_at_k, total_at_k)
+
+@flax.struct.dataclass
+class RecallAtK(TopKRankingMetric):
+  r"""Computes R@k (recall at k) metrics in JAX.
+
+  Recall at k (R@k) is a metric that measures the proportion of
+  relevant items that are found in the top k recommendations, out of the
+  total number of relevant items for a given user/query. It answers the
+  question:
+  "Out of all the items that are truly relevant, how many did we find in the top
+  K?"
+
+  Given the top :math:`K` recommendations, R@K is calculated as:
+
+  .. math::
+      Recall@K = \frac{\text{Number of relevant items in top K}}{\text{Total
+      number of relevant items}}
+  """
 
   @classmethod
-  def from_model_output(
-      cls,
-      predictions: jax.Array,
-      labels: jax.Array,
-      ks: jax.Array,
-  ) -> 'PrecisionAtK':
-    """Creates a PrecisionAtK metric instance from model output.
+  def _calculate_metric_at_ks(
+      cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array
+  ) -> jax.Array:
+    """Computes R@k (recall at k) metrics for each of k in ks for each example.
 
-    This computes the P@k for each example in the batch and then aggregates
-    them (sum of P@k values and count of examples) to be averaged later by
-    calling .compute() on the returned metric object.
+    This method implements the core logic for calculating Recall@k.
+    It utilizes the `_get_relevant_at_k` helper from the base
+    class to get the number of relevant items at each k and the binarized
+    labels.
+    The number of relevant items at k is then divided by the total number of
+    relevant items for that example to get the recall.
 
     Args:
-      predictions: A floating point 2D array representing the prediction
-        scores from the model. The shape should be (batch_size, vocab_size).
-      labels: A multi-hot encoding (0 or 1) of the true labels. The shape should
-        be (batch_size, vocab_size).
-      ks: A 1D array of integers representing the k's to compute the P@k
+      predictions: A floating point 2D array representing the prediction scores
+        from the model. The shape should be (batch_size, vocab_size).
+      labels: A multi-hot encoding (0 or 1, or counts) of the true labels. The
+        shape should be (batch_size, vocab_size).
+      ks: A 1D array of integers representing the k's to compute the R@k
         metrics. The shape should be (|ks|).
 
     Returns:
-      The PrecisionAtK metric object. The `total` field will have shape (|ks|),
-      and `count` will be a scalar.
+      A rank-2 array of shape (batch_size, |ks|) containing R@k metrics
+      for each example and each k.
     """
-    p_at_ks = cls.precision_at_ks(predictions, labels, ks)
-    num_examples = jnp.array(labels.shape[0], dtype=jnp.float32)
-    return cls(total=p_at_ks.sum(axis=0), count=num_examples)
+    relevant_at_k = cls._get_relevant_at_k(predictions, labels, ks)
+    total_relevant = jnp.sum(jnp.array(labels >= 1, dtype=jnp.float32), axis=1)
+    return base.divide_no_nan(relevant_at_k, total_relevant[:, jnp.newaxis])

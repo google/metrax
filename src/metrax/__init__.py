@@ -30,6 +30,7 @@ PrecisionAtK = ranking_metrics.PrecisionAtK
 RMSE = regression_metrics.RMSE
 RSQUARED = regression_metrics.RSQUARED
 Recall = classification_metrics.Recall
+RecallAtK = ranking_metrics.RecallAtK
 RougeL = nlp_metrics.RougeL
 RougeN = nlp_metrics.RougeN
 WER = nlp_metrics.WER
@@ -48,6 +49,7 @@ __all__ = [
     "RMSE",
     "RSQUARED",
     "Recall",
+    "RecallAtK",
     "RougeL",
     "RougeN",
     "WER",
