@@ -144,16 +144,16 @@ class PrecisionAtK(base.Average):
     """Computes P@k (precision at k) metrics for each of k in ks.
 
     Args:
-      predictions: A floating point 2D JAX array representing the prediction
+      predictions: A floating point 2D array representing the prediction
         scores from the model. Higher scores indicate higher relevance. The
         shape should be (batch_size, vocab_size).
       labels: A multi-hot encoding (0 or 1) of the true labels. The shape should
         be (batch_size, vocab_size).
-      ks: A 1D JAX array of integers representing the k's to compute the P@k
+      ks: A 1D array of integers representing the k's to compute the P@k
         metrics. The shape should be (|ks|).
 
     Returns:
-      A rank-2 JAX array of shape (batch_size, |ks|) containing P@k metrics.
+      A rank-2 array of shape (batch_size, |ks|) containing P@k metrics.
     """
     labels = jnp.array(labels >= 1, dtype=jnp.float32)
     indices_by_rank = jnp.argsort(-predictions, axis=1)
@@ -179,11 +179,11 @@ class PrecisionAtK(base.Average):
     calling .compute() on the returned metric object.
 
     Args:
-      predictions: A floating point 2D JAX array representing the prediction
+      predictions: A floating point 2D array representing the prediction
         scores from the model. The shape should be (batch_size, vocab_size).
       labels: A multi-hot encoding (0 or 1) of the true labels. The shape should
         be (batch_size, vocab_size).
-      ks: A 1D JAX array of integers representing the k's to compute the P@k
+      ks: A 1D array of integers representing the k's to compute the P@k
         metrics. The shape should be (|ks|).
 
     Returns:
