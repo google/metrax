@@ -22,6 +22,92 @@ from metrax import base
 
 
 @flax.struct.dataclass
+class DCGAtK(base.Average):
+  r"""Computes DCG@k (Discounted Cumulative Gain at k) metrics.
+
+  This implementation calculates DCG@k based on the principle:
+  $DCG@k(y, s) = \sum_{i | \text{rank}(s_i) \le k} \text{gain}(y_i) \times
+  \text{rank\_discount}(\text{rank}(s_i))$
+  where $y_i$ is the label of item $i$, $s_i$ is its score,
+  and $\text{rank}(s_i)$ is the 1-based rank of item $i$ based on its score.
+
+  The gain is $gain(y_i) = 2^{y_i} - 1$.
+  The rank_discount is $1 / \log_2(\text{rank} + 1)$.
+  """
+
+  @classmethod
+  def _calculate_dcg_at_ks(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
+  ) -> jax.Array:
+    """Computes DCG@k for each example and for each k, using 'exp2' gain.
+
+    This function is JIT-compiled. The gain calculation is fixed to 'exp2'.
+    It uses jax.vmap to compute DCG for multiple k values efficiently.
+
+    Args:
+      predictions: A floating point 2D array (batch_size, vocab_size)
+        representing prediction scores. Higher scores mean higher rank.
+      labels: A 2D array (batch_size, vocab_size) of graded relevance scores.
+      ks: A 1D array of integers representing the k values for which DCG is
+        computed (e.g., jnp.array([1, 5, 10])). Shape: (num_ks,).
+
+    Returns:
+      A 2D array (batch_size, num_ks) containing DCG@k values.
+    """
+    gains = jnp.power(2.0, labels.astype(jnp.float32)) - 1.0
+    score_ranks = jnp.argsort(jnp.argsort(-predictions, axis=1), axis=1) + 1
+    score_rank_discounts = 1.0 / jnp.log2(score_ranks.astype(jnp.float32) + 1.0)
+    item_contributions = gains * score_rank_discounts
+
+    def _compute_dcg_at_k(k, current_item_contributions, current_score_ranks):
+      """Computes DCG for a single k value across all examples in a batch.
+
+      Args:
+        k: A scalar JAX array representing the single 'k' (top-k) value for
+          which DCG is to be computed.
+        current_item_contributions: A 2D JAX array containing the pre-calculated
+          contribution (gain * discount) for each item in each example of the
+          batch. The shape should be (batch_size, vocab_size).
+        current_score_ranks: A 2D JAX array containing the 1-based rank for each
+          item in each example of the batch. The shape should be (batch_size,
+          vocab_size).
+
+      Returns:
+        A 1D JAX array containing the DCG@k for each example in the batch.
+        The shape should be (batch_size, ).
+      """
+      mask_for_k = current_score_ranks <= k
+      dcg_at_k = jnp.sum(current_item_contributions * mask_for_k, axis=1)
+      return dcg_at_k
+
+    dcg_at_ks = jax.vmap(
+        _compute_dcg_at_k,
+        in_axes=(0, None, None),
+        out_axes=1,  # Place the mapped axis(from ks) as the second axis
+    )(ks, item_contributions, score_ranks)
+
+    return dcg_at_ks
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
+  ) -> 'DCGAtK':
+    """Creates a DCGAtK metric instance from model output."""
+    dcg_at_ks = cls._calculate_dcg_at_ks(predictions, labels, ks)
+    num_examples = jnp.array(labels.shape[0], dtype=jnp.float32)
+    return cls(
+        total=jnp.sum(dcg_at_ks, axis=0),
+        count=num_examples,
+    )
+
+
+@flax.struct.dataclass
 class AveragePrecisionAtK(base.Average):
   r"""Computes AP@k (average precision at k) metrics.
 
@@ -151,10 +237,10 @@ class TopKRankingMetric(base.Average, abc.ABC):
       predictions: A floating point 2D array representing the prediction scores
         from the model. Higher scores indicate higher relevance. The shape
         should be (batch_size, vocab_size).
-      labels: A multi-hot encoding (0 or 1, or counts) of the true labels. The
-        shape should be (batch_size, vocab_size).
-      ks: A 1D array of integers representing the k's (cut-off points) for which
-        to compute metrics. The shape should be (|ks|).
+      labels: A multi-hot encoding (0 or 1) of the true labels. The shape should
+        be (batch_size, vocab_size).
+      ks: A 1D array of integers representing the k's to compute the P@k
+        metrics. The shape should be (|ks|).
 
     Returns:
       relevant_at_k: A 2D array of shape (batch_size, |ks|). Each element [i, j]
@@ -279,7 +365,7 @@ class PrecisionAtK(TopKRankingMetric):
 
 @flax.struct.dataclass
 class RecallAtK(TopKRankingMetric):
-  r"""Computes R@k (recall at k) metrics in JAX.
+  r"""Computes R@k (recall at k) metrics.
 
   Recall at k (R@k) is a metric that measures the proportion of
   relevant items that are found in the top k recommendations, out of the

@@ -71,6 +71,15 @@ class MetraxTest(parameterized.TestCase):
           },
       ),
       (
+          'dcgAtK',
+          metrax.DCGAtK,
+          {
+              'predictions': OUTPUT_LABELS,
+              'labels': OUTPUT_PREDS,
+              'ks': KS,
+          },
+      ),
+      (
           'mse',
           metrax.MSE,
           {'predictions': OUTPUT_LABELS, 'labels': OUTPUT_PREDS},

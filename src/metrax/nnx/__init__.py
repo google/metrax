@@ -19,6 +19,7 @@ AUCROC = nnx_metrics.AUCROC
 Average = nnx_metrics.Average
 AveragePrecisionAtK = nnx_metrics.AveragePrecisionAtK
 BLEU = nnx_metrics.BLEU
+DCGAtK = nnx_metrics.DCGAtK
 MSE = nnx_metrics.MSE
 Perplexity = nnx_metrics.Perplexity
 Precision = nnx_metrics.Precision
@@ -38,6 +39,7 @@ __all__ = [
     "Average",
     "AveragePrecisionAtK",
     "BLEU",
+    "DCGAtK",
     "MSE",
     "Perplexity",
     "Precision",

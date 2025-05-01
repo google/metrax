@@ -32,12 +32,22 @@ OUTPUT_LABELS = np.random.randint(
 OUTPUT_PREDS = np.random.uniform(size=(BATCH_SIZE, VOCAB_SIZE)).astype(
     np.float32
 )
+OUTPUT_RELEVANCES = np.random.randint(
+    0,
+    2,
+    size=(BATCH_SIZE, VOCAB_SIZE),
+).astype(np.float32)
 OUTPUT_LABELS_VS1 = np.random.randint(
     0,
     2,
     size=(BATCH_SIZE, 1),
 ).astype(np.float32)
 OUTPUT_PREDS_VS1 = np.random.uniform(size=(BATCH_SIZE, 1)).astype(np.float32)
+OUTPUT_RELEVANCES_VS1 = np.random.randint(
+    0,
+    2,
+    size=(BATCH_SIZE, 1),
+).astype(np.float32)
 # TODO(jiwonshin): Replace with keras metric once it is available in OSS.
 MAP_FROM_KERAS = np.array([
     0.2083333432674408,
@@ -59,6 +69,15 @@ R_FROM_KERAS = np.array([
     0.75,
 ])
 R_FROM_KERAS_VS1 = np.array([0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
+DCG_FROM_KERAS = np.array([
+    0.25,
+    0.880929708480835,
+    1.255929708480835,
+    1.5789371728897095,
+    1.8690768480300903,
+    2.04718017578125,
+])
+DCG_FROM_KERAS_VS1 = np.array([0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
 
 
 class RankingMetricsTest(parameterized.TestCase):
@@ -138,6 +157,31 @@ class RankingMetricsTest(parameterized.TestCase):
     """Test that `RecallAtK` Metric computes correct values."""
     ks = jnp.array([1, 2, 3, 4, 5, 6])
     metric = metrax.RecallAtK.from_model_output(
+        predictions=y_pred,
+        labels=y_true,
+        ks=ks,
+    )
+
+    np.testing.assert_allclose(
+        metric.compute(),
+        map_from_keras,
+        rtol=1e-05,
+        atol=1e-05,
+    )
+
+  @parameterized.named_parameters(
+      ('basic', OUTPUT_RELEVANCES, OUTPUT_PREDS, DCG_FROM_KERAS),
+      (
+          'vocab_size_one',
+          OUTPUT_RELEVANCES_VS1,
+          OUTPUT_PREDS_VS1,
+          DCG_FROM_KERAS_VS1,
+      ),
+  )
+  def test_dcgatk(self, y_true, y_pred, map_from_keras):
+    """Test that `DCGAtK` Metric computes correct values."""
+    ks = jnp.array([1, 2, 3, 4, 5, 6])
+    metric = metrax.DCGAtK.from_model_output(
         predictions=y_pred,
         labels=y_true,
         ks=ks,
