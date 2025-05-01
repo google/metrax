@@ -23,7 +23,7 @@ from metrax import base
 
 @flax.struct.dataclass
 class AveragePrecisionAtK(base.Average):
-  r"""Computes AP@k (average precision at k) metrics in JAX.
+  r"""Computes AP@k (average precision at k) metrics.
 
   Average precision at k (AP@k) is a metric used to evaluate the performance of
   ranking models. It measures the sum of precision at k where the item at
@@ -236,7 +236,7 @@ class TopKRankingMetric(base.Average, abc.ABC):
 
 @flax.struct.dataclass
 class PrecisionAtK(TopKRankingMetric):
-  r"""Computes P@k (precision at k) metrics in JAX.
+  r"""Computes P@k (precision at k) metrics.
 
   Precision at k (P@k) is a metric that measures the proportion of
   relevant items found in the top k recommendations. It answers the question:
