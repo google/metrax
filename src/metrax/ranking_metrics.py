@@ -23,16 +23,30 @@ from metrax import base
 
 @flax.struct.dataclass
 class DCGAtK(base.Average):
-  r"""Computes DCG@k (Discounted Cumulative Gain at k) metrics.
+  r"""Computes Discounted Cumulative Gain at k metric.
 
-  This implementation calculates DCG@k based on the principle:
-  $DCG@k(y, s) = \sum_{i | \text{rank}(s_i) \le k} \text{gain}(y_i) \times
-  \text{rank\_discount}(\text{rank}(s_i))$
-  where $y_i$ is the label of item $i$, $s_i$ is its score,
-  and $\text{rank}(s_i)$ is the 1-based rank of item $i$ based on its score.
+  DCG tells how good a list of search results or recommendations is, based on
+  the relevance of the items and their positions in the list.
 
-  The gain is $gain(y_i) = 2^{y_i} - 1$.
-  The rank_discount is $1 / \log_2(\text{rank} + 1)$.
+  This implementation calculates :math:`DCG@k` based on the following formula:
+
+  .. math::
+      DCG@K(y, s) = \sum_{i=1}^{K} \text{gain}(y_i) \times
+      \text{rank_discount}(\text{rank}(s_i))
+
+  where
+
+    - :math:`y_i` is the relevance label from the labels,
+    - :math:`s_i` is its score from the prediction,
+    - :math:`\text{rank}(s_i)` is the 1-based rank of item :math:`i`.
+    - :math:`\text{gain}(y_i) = 2^{y_i} - 1`.
+    - :math:`\text{rank_discount}(\text{rank}(s_i)) = \frac{1}{\log_2(\text{rank}(s_i) + 1)}`.
+
+  We get the final formula:
+
+  .. math::
+      DCG@K(y, s) = \sum_{i=1}^{K} \frac{2^{y_i} - 1}{\log_2(\text{rank}(s_i) +
+      1)}
   """
 
   @classmethod
