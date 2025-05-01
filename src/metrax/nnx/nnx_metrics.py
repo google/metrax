@@ -67,6 +67,13 @@ class MSE(NnxWrapper):
     super().__init__(metrax.MSE)
 
 
+class NDCGAtK(NnxWrapper):
+  """An NNX class for the Metrax metric NDCGAtK."""
+
+  def __init__(self):
+    super().__init__(metrax.NDCGAtK)
+
+
 class Perplexity(NnxWrapper):
   """An NNX class for the Metrax metric Perplexity."""
 

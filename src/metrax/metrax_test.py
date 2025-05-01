@@ -85,6 +85,15 @@ class MetraxTest(parameterized.TestCase):
           {'predictions': OUTPUT_LABELS, 'labels': OUTPUT_PREDS},
       ),
       (
+          'ndcgAtK',
+          metrax.NDCGAtK,
+          {
+              'predictions': OUTPUT_LABELS,
+              'labels': OUTPUT_PREDS,
+              'ks': KS,
+          },
+      ),
+      (
           'perplexity',
           metrax.Perplexity,
           {'predictions': OUTPUT_LABELS, 'labels': OUTPUT_PREDS},

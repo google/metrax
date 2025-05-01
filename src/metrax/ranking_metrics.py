@@ -40,7 +40,8 @@ class DCGAtK(base.Average):
     - :math:`s_i` is its score from the prediction,
     - :math:`\text{rank}(s_i)` is the 1-based rank of item :math:`i`.
     - :math:`\text{gain}(y_i) = 2^{y_i} - 1`.
-    - :math:`\text{rank_discount}(\text{rank}(s_i)) = \frac{1}{\log_2(\text{rank}(s_i) + 1)}`.
+    - :math:`\text{rank_discount}(\text{rank}(s_i)) =
+    \frac{1}{\log_2(\text{rank}(s_i) + 1)}`.
 
   We get the final formula:
 
@@ -80,17 +81,17 @@ class DCGAtK(base.Average):
       """Computes DCG for a single k value across all examples in a batch.
 
       Args:
-        k: A scalar JAX array representing the single 'k' (top-k) value for
-          which DCG is to be computed.
-        current_item_contributions: A 2D JAX array containing the pre-calculated
+        k: A scalar array representing the single 'k' (top-k) value for which
+          DCG is to be computed.
+        current_item_contributions: A 2D array containing the pre-calculated
           contribution (gain * discount) for each item in each example of the
           batch. The shape should be (batch_size, vocab_size).
-        current_score_ranks: A 2D JAX array containing the 1-based rank for each
+        current_score_ranks: A 2D array containing the 1-based rank for each
           item in each example of the batch. The shape should be (batch_size,
           vocab_size).
 
       Returns:
-        A 1D JAX array containing the DCG@k for each example in the batch.
+        A 1D array containing the DCG@k for each example in the batch.
         The shape should be (batch_size, ).
       """
       mask_for_k = current_score_ranks <= k
@@ -119,6 +120,57 @@ class DCGAtK(base.Average):
         total=jnp.sum(dcg_at_ks, axis=0),
         count=num_examples,
     )
+
+
+@flax.struct.dataclass
+class NDCGAtK(DCGAtK):
+  r"""Computes Normalized Discounted Cumulative Gain at k (NDCG@k) metrics.
+
+  NDCG@k normalizes DCG@k by the Ideal DCG@k (IDCG@k), which is the DCG@k
+  score of a perfectly ranked list (items sorted by their true relevance).
+
+  This implementation calculates :math:`NDCG@k` based on the following formula:
+
+  .. math::
+      NDCG@k = \frac{DCG@k}{IDCG@k}
+
+  where
+
+    - If IDCG@k is 0, NDCG@k is defined as 0.
+    - The :math:`DCG@k` calculation uses 'exp2' gain
+    (:math:`2^{\text{relevance}} - 1`) and
+  standard logarithmic discount (:math:`\frac{1}{\log_2(\text{rank} + 1)}`).
+  """
+
+  @classmethod
+  def _calculate_dcg_at_ks(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
+  ) -> jax.Array:
+    """Computes NDCG@k for each example and for each k.
+
+    Args:
+      predictions: A floating point 2D array (batch_size, vocab_size)
+        representing prediction scores.
+      labels: A 2D array (batch_size, vocab_size) of graded relevance scores.
+      ks: A 1D array of integers representing the k values. The shape should be
+        (|ks|, ).
+
+    Returns:
+      A 2D array (batch_size, |ks|) containing NDCG@k values.
+    """
+    actual_dcg_at_ks = super()._calculate_dcg_at_ks(predictions, labels, ks)
+    ideal_dcg_at_ks = super()._calculate_dcg_at_ks(
+        predictions=labels,  # Use labels to determine ideal ranking
+        labels=labels,  # Use labels to determine gain
+        ks=ks,
+    )
+    ndcg_at_ks = base.divide_no_nan(actual_dcg_at_ks, ideal_dcg_at_ks)
+    # Ensure NDCG is not greater than 1.
+    ndcg_at_ks = jnp.minimum(ndcg_at_ks, 1.0)
+    return ndcg_at_ks
 
 
 @flax.struct.dataclass

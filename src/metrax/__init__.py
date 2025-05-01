@@ -25,6 +25,7 @@ AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
 BLEU = nlp_metrics.BLEU
 DCGAtK = ranking_metrics.DCGAtK
 MSE = regression_metrics.MSE
+NDCGAtK = ranking_metrics.NDCGAtK
 Perplexity = nlp_metrics.Perplexity
 Precision = classification_metrics.Precision
 PrecisionAtK = ranking_metrics.PrecisionAtK
@@ -45,6 +46,7 @@ __all__ = [
     "BLEU",
     "DCGAtK",
     "MSE",
+    "NDCGAtK",
     "Perplexity",
     "Precision",
     "PrecisionAtK",

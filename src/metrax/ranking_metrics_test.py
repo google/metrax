@@ -16,7 +16,6 @@
 
 from absl.testing import absltest
 from absl.testing import parameterized
-import jax
 import jax.numpy as jnp
 import metrax
 import numpy as np
@@ -78,110 +77,95 @@ DCG_FROM_KERAS = np.array([
     2.04718017578125,
 ])
 DCG_FROM_KERAS_VS1 = np.array([0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
+NDGC_FROM_KERAS = np.array([
+    0.25,
+    0.5401396155357361,
+    0.5893810987472534,
+    0.6163855791091919,
+    0.6469491124153137,
+    0.6560885906219482,
+])
+NDGC_FROM_KERAS_VS1 = np.array([0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
 
 
 class RankingMetricsTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, MAP_FROM_KERAS, False),
-      ('basic_jitted', OUTPUT_LABELS, OUTPUT_PREDS, MAP_FROM_KERAS, True),
       (
-          'vocab_size_one',
+          'averageprecisionatk_basic',
+          metrax.AveragePrecisionAtK,
+          OUTPUT_LABELS,
+          OUTPUT_PREDS,
+          MAP_FROM_KERAS,
+      ),
+      (
+          'averageprecisionatk_vocab_size_one',
+          metrax.AveragePrecisionAtK,
           OUTPUT_LABELS_VS1,
           OUTPUT_PREDS_VS1,
           MAP_FROM_KERAS_VS1,
-          False,
       ),
       (
-          'vocab_size_one_jitted',
-          OUTPUT_LABELS_VS1,
-          OUTPUT_PREDS_VS1,
-          MAP_FROM_KERAS_VS1,
-          True,
+          'precisionatk_basic',
+          metrax.PrecisionAtK,
+          OUTPUT_LABELS,
+          OUTPUT_PREDS,
+          P_FROM_KERAS,
       ),
-  )
-  def test_averageprecisionatk(self, y_true, y_pred, map_from_keras, jitted):
-    """Test that `AveragePrecisionAtK` Metric computes correct values."""
-    average_precision_at_k = metrax.AveragePrecisionAtK.from_model_output
-    if jitted:
-      average_precision_at_k = jax.jit(average_precision_at_k)
-    ks = jnp.array([1, 2, 3, 4, 5, 6])
-    metric = average_precision_at_k(
-        predictions=y_pred,
-        labels=y_true,
-        ks=ks,
-    )
-
-    np.testing.assert_allclose(
-        metric.compute(),
-        map_from_keras,
-        rtol=1e-05,
-        atol=1e-05,
-    )
-
-  @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, P_FROM_KERAS),
       (
-          'vocab_size_one',
+          'precisionatk_vocab_size_one',
+          metrax.PrecisionAtK,
           OUTPUT_LABELS_VS1,
           OUTPUT_PREDS_VS1,
           P_FROM_KERAS_VS1,
       ),
-  )
-  def test_precisionatk(self, y_true, y_pred, map_from_keras):
-    """Test that `PrecisionAtK` Metric computes correct values."""
-    ks = jnp.array([1, 2, 3, 4, 5, 6])
-    metric = metrax.PrecisionAtK.from_model_output(
-        predictions=y_pred,
-        labels=y_true,
-        ks=ks,
-    )
-
-    np.testing.assert_allclose(
-        metric.compute(),
-        map_from_keras,
-        rtol=1e-05,
-        atol=1e-05,
-    )
-
-  @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, R_FROM_KERAS),
       (
-          'vocab_size_one',
+          'recallatk_basic',
+          metrax.RecallAtK,
+          OUTPUT_LABELS,
+          OUTPUT_PREDS,
+          R_FROM_KERAS,
+      ),
+      (
+          'recallatk_vocab_size_one',
+          metrax.RecallAtK,
           OUTPUT_LABELS_VS1,
           OUTPUT_PREDS_VS1,
           R_FROM_KERAS_VS1,
       ),
-  )
-  def test_recallatk(self, y_true, y_pred, map_from_keras):
-    """Test that `RecallAtK` Metric computes correct values."""
-    ks = jnp.array([1, 2, 3, 4, 5, 6])
-    metric = metrax.RecallAtK.from_model_output(
-        predictions=y_pred,
-        labels=y_true,
-        ks=ks,
-    )
-
-    np.testing.assert_allclose(
-        metric.compute(),
-        map_from_keras,
-        rtol=1e-05,
-        atol=1e-05,
-    )
-
-  @parameterized.named_parameters(
-      ('basic', OUTPUT_RELEVANCES, OUTPUT_PREDS, DCG_FROM_KERAS),
       (
-          'vocab_size_one',
+          'dcgatk_basic',
+          metrax.DCGAtK,
+          OUTPUT_RELEVANCES,
+          OUTPUT_PREDS,
+          DCG_FROM_KERAS,
+      ),
+      (
+          'dcgatk_vocab_size_one',
+          metrax.DCGAtK,
           OUTPUT_RELEVANCES_VS1,
           OUTPUT_PREDS_VS1,
           DCG_FROM_KERAS_VS1,
       ),
+      (
+          'ndcgatk_basic',
+          metrax.NDCGAtK,
+          OUTPUT_RELEVANCES,
+          OUTPUT_PREDS,
+          NDGC_FROM_KERAS,
+      ),
+      (
+          'ndcgatk_vocab_size_one',
+          metrax.NDCGAtK,
+          OUTPUT_RELEVANCES_VS1,
+          OUTPUT_PREDS_VS1,
+          NDGC_FROM_KERAS_VS1,
+      ),
   )
-  def test_dcgatk(self, y_true, y_pred, map_from_keras):
-    """Test that `DCGAtK` Metric computes correct values."""
+  def test_ranking_metrics(self, metric, y_true, y_pred, map_from_keras):
+    """Test that `NDCGAtK` Metric computes correct values."""
     ks = jnp.array([1, 2, 3, 4, 5, 6])
-    metric = metrax.DCGAtK.from_model_output(
+    metric = metric.from_model_output(
         predictions=y_pred,
         labels=y_true,
         ks=ks,
