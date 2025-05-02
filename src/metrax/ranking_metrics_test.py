@@ -18,6 +18,7 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import jax.numpy as jnp
 import metrax
+import keras_rs 
 import numpy as np
 
 np.random.seed(42)
@@ -47,45 +48,6 @@ OUTPUT_RELEVANCES_VS1 = np.random.randint(
     2,
     size=(BATCH_SIZE, 1),
 ).astype(np.float32)
-# TODO(jiwonshin): Replace with keras metric once it is available in OSS.
-MAP_FROM_KERAS = np.array([
-    0.2083333432674408,
-    0.4791666865348816,
-    0.4791666865348816,
-    0.5416666865348816,
-    0.574999988079071,
-    0.637499988079071,
-])
-MAP_FROM_KERAS_VS1 = np.array([0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
-P_FROM_KERAS = np.array([0.75, 0.875, 0.58333337306976320, 0.5625, 0.5, 0.5])
-P_FROM_KERAS_VS1 = np.array([0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
-R_FROM_KERAS = np.array([
-    0.2083333432674408,
-    0.5416666865348816,
-    0.5416666865348816,
-    0.625,
-    0.6666666865348816,
-    0.75,
-])
-R_FROM_KERAS_VS1 = np.array([0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
-DCG_FROM_KERAS = np.array([
-    0.25,
-    0.880929708480835,
-    1.255929708480835,
-    1.5789371728897095,
-    1.8690768480300903,
-    2.04718017578125,
-])
-DCG_FROM_KERAS_VS1 = np.array([0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
-NDGC_FROM_KERAS = np.array([
-    0.25,
-    0.5401396155357361,
-    0.5893810987472534,
-    0.6163855791091919,
-    0.6469491124153137,
-    0.6560885906219482,
-])
-NDGC_FROM_KERAS_VS1 = np.array([0.75, 0.75, 0.75, 0.75, 0.75, 0.75])
 
 
 class RankingMetricsTest(parameterized.TestCase):
@@ -94,75 +56,75 @@ class RankingMetricsTest(parameterized.TestCase):
       (
           'averageprecisionatk_basic',
           metrax.AveragePrecisionAtK,
+          keras_rs.metrics.MeanAveragePrecision,
           OUTPUT_LABELS,
           OUTPUT_PREDS,
-          MAP_FROM_KERAS,
       ),
       (
           'averageprecisionatk_vocab_size_one',
           metrax.AveragePrecisionAtK,
+          keras_rs.metrics.MeanAveragePrecision,
           OUTPUT_LABELS_VS1,
           OUTPUT_PREDS_VS1,
-          MAP_FROM_KERAS_VS1,
       ),
       (
           'precisionatk_basic',
           metrax.PrecisionAtK,
+          keras_rs.metrics.PrecisionAtK,
           OUTPUT_LABELS,
           OUTPUT_PREDS,
-          P_FROM_KERAS,
       ),
       (
           'precisionatk_vocab_size_one',
           metrax.PrecisionAtK,
+          keras_rs.metrics.PrecisionAtK,
           OUTPUT_LABELS_VS1,
           OUTPUT_PREDS_VS1,
-          P_FROM_KERAS_VS1,
       ),
       (
           'recallatk_basic',
           metrax.RecallAtK,
+          keras_rs.metrics.RecallAtK,
           OUTPUT_LABELS,
           OUTPUT_PREDS,
-          R_FROM_KERAS,
       ),
       (
           'recallatk_vocab_size_one',
           metrax.RecallAtK,
+          keras_rs.metrics.RecallAtK,
           OUTPUT_LABELS_VS1,
           OUTPUT_PREDS_VS1,
-          R_FROM_KERAS_VS1,
       ),
       (
           'dcgatk_basic',
           metrax.DCGAtK,
+          keras_rs.metrics.DCG,
           OUTPUT_RELEVANCES,
           OUTPUT_PREDS,
-          DCG_FROM_KERAS,
       ),
       (
           'dcgatk_vocab_size_one',
           metrax.DCGAtK,
+          keras_rs.metrics.DCG,
           OUTPUT_RELEVANCES_VS1,
           OUTPUT_PREDS_VS1,
-          DCG_FROM_KERAS_VS1,
       ),
       (
           'ndcgatk_basic',
           metrax.NDCGAtK,
+          keras_rs.metrics.NDCG,
           OUTPUT_RELEVANCES,
           OUTPUT_PREDS,
-          NDGC_FROM_KERAS,
       ),
       (
           'ndcgatk_vocab_size_one',
           metrax.NDCGAtK,
+          keras_rs.metrics.NDCG,
           OUTPUT_RELEVANCES_VS1,
           OUTPUT_PREDS_VS1,
-          NDGC_FROM_KERAS_VS1,
       ),
   )
-  def test_ranking_metrics(self, metric, y_true, y_pred, map_from_keras):
+  def test_ranking_metrics(self, metric, keras_metric, y_true, y_pred):
     """Test that `NDCGAtK` Metric computes correct values."""
     ks = jnp.array([1, 2, 3, 4, 5, 6])
     metric = metric.from_model_output(
@@ -171,9 +133,15 @@ class RankingMetricsTest(parameterized.TestCase):
         ks=ks,
     )
 
+    keras_metrics = [keras_metric(k=n+1) for n in range(6)]
+    results = []
+    for keras_metric in keras_metrics:
+        keras_metric.update_state(y_true, y_pred)
+        results.append(keras_metric.result())
+
     np.testing.assert_allclose(
         metric.compute(),
-        map_from_keras,
+        jnp.array(results),
         rtol=1e-05,
         atol=1e-05,
     )

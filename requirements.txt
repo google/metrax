@@ -3,6 +3,7 @@ clu
 jax[cpu]
 keras-hub
 keras-nlp
+keras-rs
 pytest
 rouge-score
 scikit-learn
