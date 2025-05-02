@@ -160,8 +160,8 @@ class NDCGAtK(DCGAtK):
     """
     actual_dcg_at_ks = super()._calculate_dcg_at_ks(predictions, labels, ks)
     ideal_dcg_at_ks = super()._calculate_dcg_at_ks(
-        predictions=labels,  # Use labels to determine ideal ranking
-        labels=labels,  # Use labels to determine gain
+        predictions=labels,  # Use labels to determine ideal DCG.
+        labels=labels,
         ks=ks,
     )
     ndcg_at_ks = base.divide_no_nan(actual_dcg_at_ks, ideal_dcg_at_ks)
