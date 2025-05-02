@@ -147,11 +147,11 @@ class RankingMetricsTest(parameterized.TestCase):
         ks=ks,
     )
 
-    keras_metrics = [keras_metric(k=n + 1) for n in range(6)]
+    keras_metrics = [keras_metric(k=n+1) for n in range(6)]
     results = []
     for keras_metric in keras_metrics:
-      keras_metric.update_state(y_true, y_pred)
-      results.append(keras_metric.result())
+       keras_metric.update_state(y_true, y_pred)
+       results.append(keras_metric.result())
 
     np.testing.assert_allclose(
         metric.compute(),
