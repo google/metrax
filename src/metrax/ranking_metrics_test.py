@@ -17,8 +17,8 @@
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax.numpy as jnp
+import keras_rs
 import metrax
-import keras_rs 
 import numpy as np
 
 np.random.seed(42)
@@ -34,7 +34,7 @@ OUTPUT_PREDS = np.random.uniform(size=(BATCH_SIZE, VOCAB_SIZE)).astype(
 )
 OUTPUT_RELEVANCES = np.random.randint(
     0,
-    2,
+    4,
     size=(BATCH_SIZE, VOCAB_SIZE),
 ).astype(np.float32)
 OUTPUT_LABELS_VS1 = np.random.randint(
@@ -45,7 +45,7 @@ OUTPUT_LABELS_VS1 = np.random.randint(
 OUTPUT_PREDS_VS1 = np.random.uniform(size=(BATCH_SIZE, 1)).astype(np.float32)
 OUTPUT_RELEVANCES_VS1 = np.random.randint(
     0,
-    2,
+    4,
     size=(BATCH_SIZE, 1),
 ).astype(np.float32)
 
@@ -123,9 +123,23 @@ class RankingMetricsTest(parameterized.TestCase):
           OUTPUT_RELEVANCES_VS1,
           OUTPUT_PREDS_VS1,
       ),
+      (
+          'mrr_basic',
+          metrax.MRR,
+          keras_rs.metrics.MeanReciprocalRank,
+          OUTPUT_LABELS,
+          OUTPUT_PREDS,
+      ),
+      (
+          'mrr_vocab_size_one',
+          metrax.MRR,
+          keras_rs.metrics.MeanReciprocalRank,
+          OUTPUT_LABELS_VS1,
+          OUTPUT_PREDS_VS1,
+      ),
   )
   def test_ranking_metrics(self, metric, keras_metric, y_true, y_pred):
-    """Test that `NDCGAtK` Metric computes correct values."""
+    """Test that a metrax ranking metric computes correct values."""
     ks = jnp.array([1, 2, 3, 4, 5, 6])
     metric = metric.from_model_output(
         predictions=y_pred,
@@ -133,11 +147,11 @@ class RankingMetricsTest(parameterized.TestCase):
         ks=ks,
     )
 
-    keras_metrics = [keras_metric(k=n+1) for n in range(6)]
+    keras_metrics = [keras_metric(k=n + 1) for n in range(6)]
     results = []
     for keras_metric in keras_metrics:
-        keras_metric.update_state(y_true, y_pred)
-        results.append(keras_metric.result())
+      keras_metric.update_state(y_true, y_pred)
+      results.append(keras_metric.result())
 
     np.testing.assert_allclose(
         metric.compute(),

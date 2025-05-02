@@ -40,7 +40,8 @@ class DCGAtK(base.Average):
     - :math:`s_i` is its score from the prediction,
     - :math:`\text{rank}(s_i)` is the 1-based rank of item :math:`i`.
     - :math:`\text{gain}(y_i) = 2^{y_i} - 1`.
-    - :math:`\text{rank_discount}(\text{rank}(s_i)) = \frac{1}{\log_2(\text{rank}(s_i) + 1)}`.
+    - :math:`\text{rank_discount}(\text{rank}(s_i)) =
+    \frac{1}{\log_2(\text{rank}(s_i) + 1)}`.
 
   We get the final formula:
 
@@ -66,10 +67,10 @@ class DCGAtK(base.Average):
         representing prediction scores. Higher scores mean higher rank.
       labels: A 2D array (batch_size, vocab_size) of graded relevance scores.
       ks: A 1D array of integers representing the k values for which DCG is
-        computed (e.g., jnp.array([1, 5, 10])). Shape: (num_ks,).
+        computed (e.g., jnp.array([1, 5, 10])). Shape: (|ks|,).
 
     Returns:
-      A 2D array (batch_size, num_ks) containing DCG@k values.
+      A 2D array (batch_size, |ks|) containing DCG@k values.
     """
     gains = jnp.power(2.0, labels.astype(jnp.float32)) - 1.0
     score_ranks = jnp.argsort(jnp.argsort(-predictions, axis=1), axis=1) + 1
@@ -136,7 +137,9 @@ class NDCGAtK(DCGAtK):
   where
 
     - If :math:`IDCG@k` is 0, then :math:`NDCG@k` is defined as 0.
-    - The :math:`DCG@k` calculation uses :math:`exp2` gain (:math:`2^{\text{relevance}} - 1`) and standard logarithmic discount (:math:`\frac{1}{\log_2(\text{rank} + 1)}`).
+    - The :math:`DCG@k` calculation uses :math:`exp2` gain
+    (:math:`2^{\text{relevance}} - 1`) and standard logarithmic discount
+    (:math:`\frac{1}{\log_2(\text{rank} + 1)}`).
   """
 
   @classmethod
@@ -271,6 +274,91 @@ class AveragePrecisionAtK(base.Average):
     return cls(
         total=ap_at_ks.sum(axis=0),
         count=num_examples,
+    )
+
+
+@flax.struct.dataclass
+class MRR(base.Average):
+  r"""Computes Mean Reciprocal Rank (MRR), supporting MRR@k for multiple k values.
+
+  MRR is the average of the reciprocal ranks of the first relevant item
+  for a set of queries. The reciprocal rank for a single query is
+  :math:`\frac{1}{\text{rank}}`, where 'rank' is the 1-based position of the
+  first relevant item. If no relevant item is found within the top k positions
+  (for MRR@k), the reciprocal rank for that k is 0.
+
+  This implementation assumes binary relevance labels (1 for relevant, 0 for not
+  relevant).
+  """
+
+  @classmethod
+  def _calculate_rr_at_ks(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
+  ) -> jax.Array:
+    """Calculates the Reciprocal Rank@k for each query in a batch, for each k.
+
+    Args:
+      predictions: A 2D array of prediction scores. Higher scores indicate
+        higher rank. The shape should be (batch_size, vocab_size).
+      labels: A 2D array of binary relevance labels (0 or 1). The shape should
+        be (batch_size, vocab_size).
+      ks: A 1D array of integers representing the k cutoffs. The shape should be
+        (|ks|,).
+
+    Returns:
+      A 2D array containing the Reciprocal Rank@k for each query and each k.
+      Shape: (batch_size, |ks|).
+    """
+    indices_by_rank = jnp.argsort(-predictions, axis=1)
+    labels_by_rank = jnp.take_along_axis(labels, indices_by_rank, axis=1)
+    first_relevant_indices = jnp.argmax(labels_by_rank, axis=1)
+    first_relevant_ranks = first_relevant_indices + 1
+    # Check if a relevant item exists for each query.
+    reciprocal_rank = jnp.where(
+        jnp.any(labels_by_rank > 0, axis=1),
+        1.0 / first_relevant_ranks.astype(jnp.float32),
+        0.0,
+    )
+
+    def _compute_rr_at_k(k, reciprocal_rank, first_relevant_rank):
+      rr_at_k = jnp.where(first_relevant_rank <= k, reciprocal_rank, 0.0)
+      return rr_at_k
+
+    rr_at_ks = jax.vmap(_compute_rr_at_k, in_axes=(0, None, None), out_axes=1)(
+        ks, reciprocal_rank, first_relevant_ranks
+    )
+
+    return rr_at_ks
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
+  ) -> 'MRR':
+    """Creates an MRR metric instance from model output, calculating MRR@k for each k.
+
+    Args:
+      predictions: A 2D array of prediction scores. Higher scores indicate
+        higher rank. The shape should be (batch_size, vocab_size).
+      labels: A 2D array of binary relevance labels (0 or 1). The shape should
+        be (batch_size, vocab_size).
+      ks: A 1D array of integers representing the k cutoffs. The shape should be
+        (|ks|, ).
+
+    Returns:
+      An MRR metric object. The 'total' field will be an array of shape
+      (|ks|, ).
+    """
+    rr_at_ks = cls._calculate_rr_at_ks(predictions, labels, ks)
+    num_queries = jnp.array(labels.shape[0], dtype=jnp.float32)
+    return cls(
+        total=rr_at_ks.sum(axis=0),
+        count=num_queries,
     )
 
 
