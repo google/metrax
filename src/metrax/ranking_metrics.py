@@ -280,12 +280,12 @@ class MRR(base.Average):
 
   MRR is the average of the reciprocal ranks of the first relevant item
   for a set of queries.
-  
+
   The mean reciprocal rank for a group of queries :math:`q` in :math:`Q` is defined as follows:
 
   .. math::
       MRR = \frac{1}{|Q|} \sum_{q \in Q} RR_q
-  
+
   Where :math:`RR_q` is the reciprocal rank for query :math:`q`, defined as:
 
   .. math::
