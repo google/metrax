@@ -40,8 +40,7 @@ class DCGAtK(base.Average):
     - :math:`s_i` is its score from the prediction,
     - :math:`\text{rank}(s_i)` is the 1-based rank of item :math:`i`.
     - :math:`\text{gain}(y_i) = 2^{y_i} - 1`.
-    - :math:`\text{rank_discount}(\text{rank}(s_i)) =
-    \frac{1}{\log_2(\text{rank}(s_i) + 1)}`.
+    - :math:`\text{rank_discount}(\text{rank}(s_i)) = \frac{1}{\log_2(\text{rank}(s_i) + 1)}`.
 
   We get the final formula:
 
@@ -137,9 +136,7 @@ class NDCGAtK(DCGAtK):
   where
 
     - If :math:`IDCG@k` is 0, then :math:`NDCG@k` is defined as 0.
-    - The :math:`DCG@k` calculation uses :math:`exp2` gain
-    (:math:`2^{\text{relevance}} - 1`) and standard logarithmic discount
-    (:math:`\frac{1}{\log_2(\text{rank} + 1)}`).
+    - The :math:`DCG@k` calculation uses :math:`exp2` gain (:math:`2^{\text{relevance}} - 1`) and standard logarithmic discount (:math:`\frac{1}{\log_2(\text{rank} + 1)}`).
   """
 
   @classmethod
@@ -282,10 +279,21 @@ class MRR(base.Average):
   r"""Computes Mean Reciprocal Rank (MRR), supporting MRR@k for multiple k values.
 
   MRR is the average of the reciprocal ranks of the first relevant item
-  for a set of queries. The reciprocal rank for a single query is
-  :math:`\frac{1}{\text{rank}}`, where 'rank' is the 1-based position of the
-  first relevant item. If no relevant item is found within the top k positions
-  (for MRR@k), the reciprocal rank for that k is 0.
+  for a set of queries.
+  
+  The mean reciprocal rank for a group of queries :math:`q` in :math:`Q` is defined as follows:
+
+  .. math::
+      MRR = \frac{1}{|Q|} \sum_{q \in Q} RR_q
+  
+  Where :math:`RR_q` is the reciprocal rank for query :math:`q`, defined as:
+
+  .. math::
+      RR_q =
+        \begin{cases}
+          \frac{1}{\text{rank}} & \text{if a revelant item is found} \\
+          0 & \text{if no relevant item is found.}
+        \end{cases}
 
   This implementation assumes binary relevance labels (1 for relevant, 0 for not
   relevant).
