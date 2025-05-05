@@ -24,6 +24,7 @@ Average = base.Average
 AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
 BLEU = nlp_metrics.BLEU
 DCGAtK = ranking_metrics.DCGAtK
+MAE = regression_metrics.MAE
 MRR = ranking_metrics.MRR
 MSE = regression_metrics.MSE
 NDCGAtK = ranking_metrics.NDCGAtK
@@ -46,6 +47,7 @@ __all__ = [
     "AveragePrecisionAtK",
     "BLEU",
     "DCGAtK",
+    "MAE",
     "MRR",
     "MSE",
     "NDCGAtK",
