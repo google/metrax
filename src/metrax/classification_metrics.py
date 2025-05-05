@@ -74,8 +74,8 @@ class Accuracy(base.Average):
 
     This method computes element-wise equality between `predictions` and
     `labels`. The result of this comparison (a boolean array, treated as 1 for
-    True and 0
-    for False) is then used to update the metric's `total` and `count`.
+    True and 0 for False) is then used to update the metric's `total` and
+    `count`.
 
     Args:
       predictions: JAX array of predicted values. Expected to have a shape
@@ -96,8 +96,8 @@ class Accuracy(base.Average):
         to incompatible shapes or types among `predictions`, `labels`, and
         `sample_weights`. For instance, if `predictions` and `labels` shapes
         are not identical and not broadcastable to a common shape for
-        comparison,
-        or if `sample_weights` cannot be broadcast to `labels`' shape.
+        comparison, or if `sample_weights` cannot be broadcast to `labels`'
+        shape.
     """
     correct = predictions == labels
     count = jnp.ones_like(labels, dtype=jnp.int32)
