@@ -35,3 +35,16 @@ sending a PR please run `ruff check` to catch any issues.
 
 This project follows [Google's Open Source Community
 Guidelines](https://opensource.google.com/conduct/).
+
+## Release Checklist
+
+1. Bump version in `pyproject.toml` according to [semver](https://semver.org/)
+1. Commit change
+1. [Generate and upload to PyPI](https://packaging.python.org/en/latest/tutorials/packaging-projects/#generating-distribution-archives)
+
+```
+# pip install --upgrade build twine
+python -m build
+python -m twine upload --repository pypi dist/*
+python -m twine upload --repository testpypi dist/*
+```
