@@ -32,6 +32,12 @@ class AUCROC(NnxWrapper):
     super().__init__(metrax.AUCROC)
 
 
+class Accuracy(NnxWrapper):
+  """An NNX class for the Metrax metric Accuracy."""
+
+  def __init__(self):
+    super().__init__(metrax.Accuracy)
+
 class Average(NnxWrapper):
   """An NNX class for the Metrax metric Average."""
 

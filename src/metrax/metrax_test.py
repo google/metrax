@@ -47,6 +47,11 @@ class MetraxTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
       (
+          'accuracy',
+          metrax.Accuracy,
+          {'predictions': OUTPUT_LABELS, 'labels': OUTPUT_PREDS},
+      ),
+      (
           'aucpr',
           metrax.AUCPR,
           {'predictions': OUTPUT_LABELS, 'labels': OUTPUT_PREDS},

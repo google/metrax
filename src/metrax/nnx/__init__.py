@@ -16,6 +16,7 @@ from metrax.nnx import nnx_metrics
 
 AUCPR = nnx_metrics.AUCPR
 AUCROC = nnx_metrics.AUCROC
+Accuracy = nnx_metrics.Accuracy
 Average = nnx_metrics.Average
 AveragePrecisionAtK = nnx_metrics.AveragePrecisionAtK
 BLEU = nnx_metrics.BLEU

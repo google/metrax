@@ -44,6 +44,73 @@ def _default_threshold(num_thresholds: int) -> jax.Array:
 
 
 @flax.struct.dataclass
+class Accuracy(base.Average):
+  r"""Computes accuracy, which is the frequency with which `predictions` match `labels`.
+
+  This metric calculates the proportion of correct predictions by comparing
+  `predictions` and `labels` element-wise. It is the ratio of the sum of
+  weighted correct predictions to the sum of all corresponding weights.
+  If no `sample_weights` are provided, weights default to 1 for each element.
+
+  The calculation is as follows:
+
+  .. math::
+      \text{Accuracy} = \frac{\sum (\text{weight} \times \text{correct})}{\sum
+      \text{weight}}
+
+  where `correct` is 1 if `prediction == label` for an element, and 0 otherwise.
+  `weight` is the `sample_weight` for that element, or 1 if no weights are
+  given.
+  """
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+  ) -> 'Accuracy':
+    """Updates the metric state with new `predictions` and `labels`.
+
+    This method computes element-wise equality between `predictions` and
+    `labels`. The result of this comparison (a boolean array, treated as 1 for
+    True and 0
+    for False) is then used to update the metric's `total` and `count`.
+
+    Args:
+      predictions: JAX array of predicted values. Expected to have a shape
+        compatible with `labels` for element-wise comparison (e.g.,
+        `(batch_size,)`, `(batch_size, num_classes)`, `(batch_size,
+        sequence_length, num_features)`).
+      labels: JAX array of true values. Expected to have a shape compatible with
+        `predictions` for element-wise comparison.
+      sample_weights: Optional JAX array of weights. If provided, it must be
+        broadcastable to the shape of `labels` (which should also be compatible
+        with `predictions`' shape).
+
+    Returns:
+      An updated instance of `Accuracy` metric.
+
+    Raises:
+      ValueError: If JAX operations (like broadcasting or arithmetic) fail due
+        to incompatible shapes or types among `predictions`, `labels`, and
+        `sample_weights`. For instance, if `predictions` and `labels` shapes
+        are not identical and not broadcastable to a common shape for
+        comparison,
+        or if `sample_weights` cannot be broadcast to `labels`' shape.
+    """
+    correct = predictions == labels
+    count = jnp.ones_like(labels, dtype=jnp.int32)
+    if sample_weights is not None:
+      correct = correct * sample_weights
+      count = count * sample_weights
+    return cls(
+        total=correct.sum(),
+        count=count.sum(),
+    )
+
+
+@flax.struct.dataclass
 class Precision(clu_metrics.Metric):
   r"""Computes precision for binary classification given `predictions` and `labels`.
 

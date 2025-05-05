@@ -80,6 +80,37 @@ class ClassificationMetricsTest(parameterized.TestCase):
     self.assertEqual(m.num_thresholds, 0)
 
   @parameterized.named_parameters(
+      ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
+      ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, SAMPLE_WEIGHTS),
+      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
+  )
+  def test_accuracy(self, y_true, y_pred, sample_weights):
+    """Test that `Accuracy` metric computes correct values."""
+    if sample_weights is None:
+      sample_weights = np.ones_like(y_true)
+    metrax_accuracy = metrax.Accuracy.empty()
+    keras_accuracy = keras.metrics.Accuracy()
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      update = metrax.Accuracy.from_model_output(
+          predictions=logits,
+          labels=labels,
+          sample_weights=weights,
+      )
+      metrax_accuracy = metrax_accuracy.merge(update)
+      keras_accuracy.update_state(labels, logits, weights)
+
+    # Use lower tolerance for lower precision dtypes.
+    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    np.testing.assert_allclose(
+        metrax_accuracy.compute(),
+        keras_accuracy.result(),
+        rtol=rtol,
+        atol=atol,
+    )
+
+  @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.5),
       ('high_threshold_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.7),
       ('low_threshold_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.1),

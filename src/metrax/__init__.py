@@ -20,6 +20,7 @@ from metrax import regression_metrics
 
 AUCPR = classification_metrics.AUCPR
 AUCROC = classification_metrics.AUCROC
+Accuracy = classification_metrics.Accuracy
 Average = base.Average
 AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
 BLEU = nlp_metrics.BLEU
@@ -42,6 +43,7 @@ WER = nlp_metrics.WER
 __all__ = [
     "AUCPR",
     "AUCROC",
+    "Accuracy",
     "Average",
     "AveragePrecisionAtK",
     "BLEU",
