@@ -94,6 +94,11 @@ class MetraxTest(parameterized.TestCase):
           },
       ),
       (
+          'mae',
+          metrax.MAE,
+          {'predictions': OUTPUT_LABELS, 'labels': OUTPUT_PREDS},
+      ),
+      (
           'mse',
           metrax.MSE,
           {'predictions': OUTPUT_LABELS, 'labels': OUTPUT_PREDS},

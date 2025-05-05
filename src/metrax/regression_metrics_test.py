@@ -118,6 +118,48 @@ class RegressionMetricsTest(parameterized.TestCase):
       ('weighted_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
       ('weighted_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, SAMPLE_WEIGHTS),
   )
+  def test_mae(self, y_true, y_pred, sample_weights):
+    """Test that `MAE` Metric computes correct values."""
+    y_true = y_true.astype(y_pred.dtype)
+    y_pred = y_pred.astype(y_true.dtype)
+    if sample_weights is None:
+      sample_weights = np.ones_like(y_true)
+
+    metric = None
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      update = metrax.MAE.from_model_output(
+          predictions=logits,
+          labels=labels,
+          sample_weights=weights,
+      )
+      metric = update if metric is None else metric.merge(update)
+
+    # TODO(jiwonshin): Use `keras.metrics.MeanAbsoluteError` once it supports
+    # sample weights.
+    expected = sklearn_metrics.mean_absolute_error(
+        y_true.flatten(),
+        y_pred.flatten(),
+        sample_weight=sample_weights.flatten(),
+    )
+    # Use lower tolerance for lower precision dtypes.
+    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    np.testing.assert_allclose(
+        metric.compute(),
+        expected,
+        rtol=rtol,
+        atol=atol,
+    )
+
+  @parameterized.named_parameters(
+      ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, None),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, None),
+      ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, None),
+      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
+      ('weighted_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
+      ('weighted_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
+      ('weighted_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, SAMPLE_WEIGHTS),
+  )
   def test_mse(self, y_true, y_pred, sample_weights):
     """Test that `MSE` Metric computes correct values."""
     y_true = y_true.astype(y_pred.dtype)

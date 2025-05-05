@@ -22,6 +22,62 @@ from metrax import base
 
 
 @flax.struct.dataclass
+class MAE(base.Average):
+  r"""Computes the mean absolute error for regression problems given `predictions` and `labels`.
+
+  The mean absolute error without sample weights is defined as:
+
+  .. math::
+      MAE = \frac{1}{N} \sum_{i=1}^{N} |y_i - \hat{y}_i|
+
+  When sample weights :math:`w_i` are provided, the weighted mean absolute error
+  is:
+
+  .. math::
+      MAE = \frac{\sum_{i=1}^{N} w_i|y_i - \hat{y}_i|}{\sum_{i=1}^{N} w_i}
+
+  where:
+      - :math:`y_i` are true values
+      - :math:`\hat{y}_i` are predictions
+      - :math:`w_i` are sample weights
+      - :math:`N` is the number of samples
+  """
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+  ) -> 'MAE':
+    """Updates the metric.
+
+    Args:
+      predictions: A floating point 1D vector representing the prediction
+        generated from the model. The shape should be (batch_size,).
+      labels: True value. The shape should be (batch_size,).
+      sample_weights: An optional floating point 1D vector representing the
+        weight of each sample. The shape should be (batch_size,).
+
+    Returns:
+      Updated MAE metric. The shape should be a single scalar.
+
+    Raises:
+      ValueError: If type of `labels` is wrong or the shapes of `predictions`
+      and `labels` are incompatible.
+    """
+    absolute_error = jnp.abs(predictions - labels)
+    count = jnp.ones_like(labels, dtype=jnp.int32)
+    if sample_weights is not None:
+      absolute_error = absolute_error * sample_weights
+      count = count * sample_weights
+    return cls(
+        total=absolute_error.sum(),
+        count=count.sum(),
+    )
+
+
+@flax.struct.dataclass
 class MSE(base.Average):
   r"""Computes the mean squared error for regression problems given `predictions` and `labels`.
 

@@ -66,6 +66,13 @@ class DCGAtK(NnxWrapper):
     super().__init__(metrax.DCGAtK)
 
 
+class MAE(NnxWrapper):
+  """An NNX class for the Metrax metric MAE."""
+
+  def __init__(self):
+    super().__init__(metrax.MAE)
+
+
 class MRR(NnxWrapper):
   """An NNX class for the Metrax metric MRR."""
 
