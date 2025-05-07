@@ -14,6 +14,7 @@
 
 from metrax import base
 from metrax import classification_metrics
+from metrax import image_metrics
 from metrax import nlp_metrics
 from metrax import ranking_metrics
 from metrax import regression_metrics
@@ -38,6 +39,7 @@ Recall = classification_metrics.Recall
 RecallAtK = ranking_metrics.RecallAtK
 RougeL = nlp_metrics.RougeL
 RougeN = nlp_metrics.RougeN
+SSIM = image_metrics.SSIM
 WER = nlp_metrics.WER
 
 
@@ -62,5 +64,6 @@ __all__ = [
     "RecallAtK",
     "RougeL",
     "RougeN",
+    "SSIM",
     "WER",
 ]
