@@ -6,13 +6,33 @@ from . import image_metrics
 
 class KernelImageMetricsTest(absltest.TestCase):
 
+    # Tests empty instantiation and merge of KID metric
+    def test_kernel_inception_distance_empty_and_merge(self):
+        empty1 = image_metrics.KernelInceptionDistanceMetric.empty()
+        empty2 = image_metrics.KernelInceptionDistanceMetric.empty()
+        merged = empty1.merge(empty2)
+        # Should still be empty and not error
+        self.assertEqual(merged.real_features.shape[0], 0)
+        self.assertEqual(merged.fake_features.shape[0], 0)
+
+        # Now merge with non-empty
+        key1, key2 = random.split(random.PRNGKey(99))
+        real_features = random.normal(key1, shape=(10, 2048))
+        fake_features = random.normal(key2, shape=(10, 2048))
+        kid_nonempty = image_metrics.KernelInceptionDistanceMetric.from_model_output(
+            real_features, fake_features, subset_size=5
+        )
+        merged2 = kid_nonempty.merge(empty1)
+        self.assertEqual(merged2.real_features.shape[0], 10)
+        self.assertEqual(merged2.fake_features.shape[0], 10)
+
     # Tests KID metric with default parameters on random features
     def test_kernel_inception_distance_default_params(self):
         key1, key2 = random.split(random.PRNGKey(42))
         real_features = random.normal(key1, shape=(100, 2048))
         fake_features = random.normal(key2, shape=(100, 2048))
 
-        kid = image_metrics.KernelInceptionMetric.from_model_output(
+        kid = image_metrics.KernelInceptionDistanceMetric.from_model_output(
             real_features, 
             fake_features, 
             subset_size=50  # Using smaller subset size for testing
@@ -29,14 +49,14 @@ class KernelImageMetricsTest(absltest.TestCase):
         fake_features = random.normal(key2, shape=(100, 2048))
 
         with self.assertRaises(ValueError):
-            image_metrics.KernelInceptionMetric.from_model_output(
+            image_metrics.KernelInceptionDistanceMetric.from_model_output(
                 real_features,
                 fake_features,
                 subsets=-1,  # Invalid
             )
 
         with self.assertRaises(ValueError):
-            image_metrics.KernelInceptionMetric.from_model_output(
+            image_metrics.KernelInceptionDistanceMetric.from_model_output(
                 real_features,
                 fake_features,
                 subset_size=0,  # Invalid
@@ -48,7 +68,7 @@ class KernelImageMetricsTest(absltest.TestCase):
         real_features = random.normal(key1, shape=(10, 2048))
         fake_features = random.normal(key2, shape=(10, 2048))
 
-        kid = image_metrics.KernelInceptionMetric.from_model_output(
+        kid = image_metrics.KernelInceptionDistanceMetric.from_model_output(
             real_features,
             fake_features,
             subset_size=5,  
@@ -61,7 +81,7 @@ class KernelImageMetricsTest(absltest.TestCase):
         key = random.PRNGKey(46)
         features = random.normal(key, shape=(100, 2048))
 
-        kid = image_metrics.KernelInceptionMetric.from_model_output(
+        kid = image_metrics.KernelInceptionDistanceMetric.from_model_output(
             features,  
             features,
             subsets=50,
@@ -80,7 +100,7 @@ class KernelImageMetricsTest(absltest.TestCase):
         small_noise = random.normal(key2, shape=(100, 2048)) * 0.01
         fake_features = repeated_base + small_noise
 
-        kid = image_metrics.KernelInceptionMetric.from_model_output(
+        kid = image_metrics.KernelInceptionDistanceMetric.from_model_output(
             real_features,
             fake_features,
             subset_size=50 
@@ -97,10 +117,10 @@ class KernelImageMetricsTest(absltest.TestCase):
         outliers = random.normal(key3, shape=(10, 2048)) * 10.0
         fake_features_with_outliers = fake_features.at[:10].set(outliers)
 
-        kid_normal = image_metrics.KernelInceptionMetric.from_model_output(
+        kid_normal = image_metrics.KernelInceptionDistanceMetric.from_model_output(
             real_features, fake_features, subset_size=50  # Using smaller subset size for testing
         )
-        kid_with_outliers = image_metrics.KernelInceptionMetric.from_model_output(
+        kid_with_outliers = image_metrics.KernelInceptionDistanceMetric.from_model_output(
             real_features, fake_features_with_outliers, subset_size=50  # Using smaller subset size for testing
         )
 
@@ -115,10 +135,10 @@ class KernelImageMetricsTest(absltest.TestCase):
         real_features = random.normal(key1, shape=(200, 2048))
         fake_features = random.normal(key2, shape=(200, 2048))
 
-        kid_small_subsets = image_metrics.KernelInceptionMetric.from_model_output(
+        kid_small_subsets = image_metrics.KernelInceptionDistanceMetric.from_model_output(
             real_features, fake_features, subsets=10, subset_size=10
         )
-        kid_large_subsets = image_metrics.KernelInceptionMetric.from_model_output(
+        kid_large_subsets = image_metrics.KernelInceptionDistanceMetric.from_model_output(
             real_features, fake_features, subsets=5, subset_size=100
         )
 
@@ -138,7 +158,7 @@ class KernelImageMetricsTest(absltest.TestCase):
         std = 2.0
         fake_features = mean + std * random.normal(key2, shape=(100, 2048))
         
-        kid = image_metrics.KernelInceptionMetric.from_model_output(
+        kid = image_metrics.KernelInceptionDistanceMetric.from_model_output(
             real_features, fake_features, subset_size=50  # Using smaller subset size for testing
         )
         result = kid.compute()
@@ -147,7 +167,7 @@ class KernelImageMetricsTest(absltest.TestCase):
         key3 = random.PRNGKey(51)
         another_real_features = random.normal(key3, shape=(100, 2048))
         
-        kid_same_dist = image_metrics.KernelInceptionMetric.from_model_output(
+        kid_same_dist = image_metrics.KernelInceptionDistanceMetric.from_model_output(
             real_features, another_real_features, subset_size=50  # Using smaller subset size for testing
         )
         result_same_dist = kid_same_dist.compute()
