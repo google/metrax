@@ -21,13 +21,16 @@ import flax
 import jax
 from clu import metrics as clu_metrics
 
-
+KID_DEFAULT_SUBSETS = 100
+KID_DEFAULT_SUBSET_SIZE = 1000
+KID_DEFAULT_DEGREE = 3
+KID_DEFAULT_GAMMA = None
+KID_DEFAULT_COEF = 1.0
 
 
 @flax.struct.dataclass
-class KernelInceptionMetric(clu_metrics.Metric):
+class KernelInceptionDistanceMetric(clu_metrics.Metric):
     r"""Computes Kernel Inception Distance (KID) for asses quality of generated images.
-
     KID is a metric used to evaluate the quality of generated images by comparing
     the distribution of generated images to the distribution of real images.
     It is based on the Inception Score (IS) and uses a kernelized version of the
@@ -65,17 +68,17 @@ class KernelInceptionMetric(clu_metrics.Metric):
 
 
     @classmethod
-    def from_model_output(cls, 
+    def from_model_output(
+        cls,
         real_features: jax.Array,
         fake_features: jax.Array,
-        subsets: int = 100,
-        subset_size: int = 1000,
-        degree: int = 3,
-        gamma: float = None,
-        coef: float = 1.0,                          
-                          ):
-
-        ## checks for the valid inputs 
+        subsets: int = KID_DEFAULT_SUBSETS,
+        subset_size: int = KID_DEFAULT_SUBSET_SIZE,
+        degree: int = KID_DEFAULT_DEGREE,
+        gamma: float = KID_DEFAULT_GAMMA,
+        coef: float = KID_DEFAULT_COEF,
+    ):
+        # checks for the valid inputs
         if subsets <= 0 or subset_size <= 0 or degree <= 0 or (gamma is not None and gamma <= 0) or coef <= 0:
             raise ValueError("All parameters must be positive and non-zero.")
         return cls(
@@ -88,9 +91,29 @@ class KernelInceptionMetric(clu_metrics.Metric):
             fake_features=fake_features,
         )
 
+    @classmethod
+    def empty(cls) -> "KernelInceptionDistanceMetric":
+        """
+        Create an empty instance of KernelInceptionDistanceMetric.
+        """
+        return cls(
+            subsets=KID_DEFAULT_SUBSETS,
+            subset_size=KID_DEFAULT_SUBSET_SIZE,
+            degree=KID_DEFAULT_DEGREE,
+            gamma=KID_DEFAULT_GAMMA,
+            coef=KID_DEFAULT_COEF,
+            real_features=jnp.empty((0, 2048), dtype=jnp.float32),
+            fake_features=jnp.empty((0, 2048), dtype=jnp.float32),
+        )
+
     def compute_mmd(self, f_real: jax.Array, f_fake: jax.Array) -> float:
         """
         Compute the Maximum Mean Discrepancy (MMD) using a polynomial kernel.
+        Args:
+            f_real: Features from real images.
+            f_fake: Features from fake images.
+        Returns:
+            MMD value in order to compute KID
         """
         k_11 = self.polynomial_kernel(f_real, f_real)
         k_22 = self.polynomial_kernel(f_fake, f_fake)
@@ -111,6 +134,11 @@ class KernelInceptionMetric(clu_metrics.Metric):
     def polynomial_kernel(self, x: jax.Array, y: jax.Array) -> jax.Array:
         """
         Compute the polynomial kernel between two sets of features.
+        Args:
+            x: First set of features.
+            y: another set of features to be computed with.
+        Returns:
+            Polynomial kernel value of Array type .
         """
         gamma = self.gamma if self.gamma is not None else 1.0 / x.shape[1]
         return (jnp.dot(x, y.T) * gamma + self.coef) ** self.degree
@@ -141,3 +169,21 @@ class KernelInceptionMetric(clu_metrics.Metric):
         kid_std = jnp.std(jnp.array(kid_scores))
         return jnp.array([kid_mean, kid_std])
     
+
+    def merge(self, other: "KernelInceptionDistanceMetric") -> "KernelInceptionDistanceMetric":
+        """
+        Merge two KernelInceptionDistanceMetric instances.
+        Args:
+            other: Another instance of KernelInceptionDistanceMetric.
+        Returns:
+            A new instance of KernelInceptionDistanceMetric with combined features.
+        """
+        return type(self)(
+            subsets=self.subsets,
+            subset_size=self.subset_size,
+            degree=self.degree,
+            gamma=self.gamma,
+            coef=self.coef,
+            real_features=jnp.concatenate([self.real_features, other.real_features]),
+            fake_features=jnp.concatenate([self.fake_features, other.fake_features]),
+        )

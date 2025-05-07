@@ -155,6 +155,20 @@ class MetraxTest(parameterized.TestCase):
               'ks': KS,
           },
       ),
+
+      (
+        'kidm',
+        metrax.KIDM,
+        {
+            'real_features': np.random.uniform(size=(BATCHES * BATCH_SIZE, 2048)),
+            'fake_features': np.random.uniform(size=(BATCHES * BATCH_SIZE, 2048)),
+            'subsets': 10,
+            'subset_size': 8,
+            'degree': 3,
+            'gamma': 0.3,
+            'coef': 1.0,
+        },
+      )
   )
   def test_metrics_jittable(self, metric, kwargs):
     """Tests that jitted metrax metric yields the same result as non-jitted metric."""

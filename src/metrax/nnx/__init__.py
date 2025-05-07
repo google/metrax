@@ -35,6 +35,7 @@ RecallAtK = nnx_metrics.RecallAtK
 RougeL = nnx_metrics.RougeL
 RougeN = nnx_metrics.RougeN
 WER = nnx_metrics.WER
+KIDM = nnx_metrics.KernelInceptionDistanceMetric
 
 
 __all__ = [
@@ -58,4 +59,5 @@ __all__ = [
     "RougeL",
     "RougeN",
     "WER",
+    "KIDM"
 ]
