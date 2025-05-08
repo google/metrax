@@ -35,7 +35,7 @@ RecallAtK = nnx_metrics.RecallAtK
 RougeL = nnx_metrics.RougeL
 RougeN = nnx_metrics.RougeN
 WER = nnx_metrics.WER
-KID = nnx_metrics.KernelInceptionDistance
+KID = nnx_metrics.KID
 
 
 __all__ = [

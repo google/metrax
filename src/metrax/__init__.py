@@ -17,7 +17,6 @@ from metrax import classification_metrics
 from metrax import nlp_metrics
 from metrax import ranking_metrics
 from metrax import regression_metrics
-from metrax import image_metrics
 AUCPR = classification_metrics.AUCPR
 AUCROC = classification_metrics.AUCROC
 Accuracy = classification_metrics.Accuracy
@@ -39,7 +38,6 @@ RecallAtK = ranking_metrics.RecallAtK
 RougeL = nlp_metrics.RougeL
 RougeN = nlp_metrics.RougeN
 WER = nlp_metrics.WER
-KID = image_metrics.KernelInceptionDistance
 
 
 __all__ = [

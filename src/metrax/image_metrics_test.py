@@ -3,12 +3,38 @@ import jax.numpy as jnp
 from jax import random
 import numpy as np
 import torch
-from torchmetrics.image.kid import KernelInceptionDistance as TorchKID
+from torchmetrics.image.kid import KID as TorchKID
 from .image_metrics import random_images
 from metrax import KID
+import numpy as np
+from PIL import Image
 
 
-class KernelInceptionDistanceTest(absltest.TestCase):
+def random_images(seed, n):
+    """
+    Generate n random RGB images as numpy arrays in (N, 3, 299, 299) format using PIL.Image.
+    Args:
+        seed: Random seed for reproducibility.
+        n: Number of images to generate.
+    Returns:
+        images: numpy array of shape (n, 3, 299, 299), dtype uint8
+    """
+    rng = np.random.RandomState(seed)
+    images = []
+    for _ in range(n):
+        # Generate a random (299, 299, 3) uint8 array
+        arr = rng.randint(0, 256, size=(299, 299, 3), dtype=np.uint8)
+        # Convert to PIL Image and back to numpy to ensure valid image
+        img = Image.fromarray(arr, mode='RGB')
+        arr_pil = np.array(img)
+        # Transpose to (3, 299, 299) as required by KID/torchmetrics
+        arr_pil = arr_pil.transpose(2, 0, 1)
+        images.append(arr_pil)
+    return np.stack(images, axis=0).astype(np.uint8)
+
+
+
+class KIDTest(absltest.TestCase):
     @staticmethod
     def compute_torchmetrics_kid(real_images, fake_images, subsets=10, subset_size=8):
         """

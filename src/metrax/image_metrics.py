@@ -21,8 +21,6 @@ import flax
 import jax
 from clu import metrics as clu_metrics
 from metrax import base
-import numpy as np
-from PIL import Image
 
 KID_DEFAULT_SUBSETS = 100
 KID_DEFAULT_SUBSET_SIZE = 1000
@@ -50,30 +48,8 @@ def polynomial_kernel(x: jax.Array, y: jax.Array, degree: int, gamma: float, coe
 
 
 
-def random_images(seed, n):
-    """
-    Generate n random RGB images as numpy arrays in (N, 3, 299, 299) format using PIL.Image.
-    Args:
-        seed: Random seed for reproducibility.
-        n: Number of images to generate.
-    Returns:
-        images: numpy array of shape (n, 3, 299, 299), dtype uint8
-    """
-    rng = np.random.RandomState(seed)
-    images = []
-    for _ in range(n):
-        # Generate a random (299, 299, 3) uint8 array
-        arr = rng.randint(0, 256, size=(299, 299, 3), dtype=np.uint8)
-        # Convert to PIL Image and back to numpy to ensure valid image
-        img = Image.fromarray(arr, mode='RGB')
-        arr_pil = np.array(img)
-        # Transpose to (3, 299, 299) as required by KID/torchmetrics
-        arr_pil = arr_pil.transpose(2, 0, 1)
-        images.append(arr_pil)
-    return np.stack(images, axis=0).astype(np.uint8)
-
 @flax.struct.dataclass
-class KernelInceptionDistance(base.Average):
+class KID(base.Average):
     r"""Computes Kernel Inception Distance (KID) for asses quality of generated images.
     KID is a metric used to evaluate the quality of generated images by comparing
     the distribution of generated images to the distribution of real images.
@@ -119,6 +95,10 @@ class KernelInceptionDistance(base.Average):
         gamma: float = KID_DEFAULT_GAMMA,
         coef: float = KID_DEFAULT_COEF,
     ):
+        """
+        Create a KID instance from model output.
+        also it computes average output and then store it in the instance.        
+        """
         # checks for the valid inputs
         if subsets <= 0 or subset_size <= 0 or degree <= 0 or (gamma is not None and gamma <= 0) or coef <= 0:
             raise ValueError("All parameters must be positive and non-zero.")
@@ -148,9 +128,9 @@ class KernelInceptionDistance(base.Average):
         )
 
     @classmethod
-    def empty(cls) -> "KernelInceptionDistance":
+    def empty(cls) -> "KID":
         """
-        Create an empty instance of KernelInceptionDistance.
+        Create an empty instance of KID.
         """
         return cls(
             total=0.0,
@@ -164,7 +144,7 @@ class KernelInceptionDistance(base.Average):
 
 
     @staticmethod
-    def __compute_mmd_static(f_real: jax.Array, f_fake: jax.Array, degree: int, gamma: float, coef: float) -> float:
+    def _compute_mmd_static(f_real: jax.Array, f_fake: jax.Array, degree: int, gamma: float, coef: float) -> float:
         k_11 = polynomial_kernel(f_real, f_real, degree, gamma, coef)
         k_22 = polynomial_kernel(f_fake, f_fake, degree, gamma, coef)
         k_12 = polynomial_kernel(f_real, f_fake, degree, gamma, coef)
@@ -194,9 +174,9 @@ class KernelInceptionDistance(base.Average):
         return result
     
 
-    def merge(self, other: "KernelInceptionDistance") -> "KernelInceptionDistance":
+    def merge(self, other: "KID") -> "KID":
         """
-        Merge two KernelInceptionDistance instances by summing totals and counts.
+        Merge two KID instances by summing totals and counts.
         """
         return type(self)(
             total=self.total + other.total,
