@@ -13,7 +13,6 @@
 # limitations under the License.
 
 """Tests for metrax image metrics."""
-
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax.numpy as jnp
@@ -25,9 +24,9 @@ import jax.numpy as jnp
 from jax import random
 import numpy as np
 import torch
-from torchmetrics.image.kid import KID as TorchKID
-from .image_metrics import random_images
-from metrax import KID
+from torchmetrics.image.kid import KernelInceptionDistance as TorchKID
+from PIL import Image
+from metrax.image_metrics import KID
 
 np.random.seed(42)
 
@@ -74,10 +73,6 @@ TARGETS_5_NP = np.copy(PREDS_5_NP)  # Identical images
 MAX_VAL_5 = 1.0
 
 
-class ImageMetricsTest(parameterized.TestCase):
-
-import numpy as np
-from PIL import Image
 
 
 def random_images(seed, n):
@@ -104,7 +99,7 @@ def random_images(seed, n):
 
 
 
-class KIDTest(absltest.TestCase):
+class ImageMetricsTest(parameterized.TestCase):
     @staticmethod
     def compute_torchmetrics_kid(real_images, fake_images, subsets=10, subset_size=8):
         """
@@ -131,7 +126,7 @@ class KIDTest(absltest.TestCase):
         )
         metrax_result = kid_metric.compute()
         # metrax_result may be a single value or a tuple
-        if hasattr(metrax_result, '__len__') and len(metrax_result) == 2:
+        if isinstance(metrax_result, tuple) and len(metrax_result) == 2:
             metrax_mean, metrax_std = float(metrax_result[0]), float(metrax_result[1])
         else:
             metrax_mean, metrax_std = float(metrax_result), float('nan')
@@ -160,8 +155,8 @@ class KIDTest(absltest.TestCase):
     def test_kid_equivalence_and_timing(self):
         """Compare KID between Metrax and torchmetrics implementations."""
         n = 32
-        subsets = 3
-        subset_size = 16
+        subsets: int = 3
+        subset_size: int = 16
         imgs_real = random_images(0, n)
         imgs_fake = random_images(1, n)
         real_features = np.random.randn(n, 2048).astype(np.float32)
@@ -174,10 +169,12 @@ class KIDTest(absltest.TestCase):
             jnp.array(real_features), jnp.array(fake_features),
             subsets=subsets, subset_size=subset_size
         )
-        kid_mean_metrax2 = kid_metric.compute()
+        # Accept numpy scalar or float
+        ## return float(kid_mean.cpu().numpy()), float(kid_std.cpu().numpy()), metrax_mean, metrax_std
         self.assertIsInstance(kid_mean_torch, float)
         self.assertIsInstance(kid_mean_metrax, float)
-        self.assertIsInstance(kid_mean_metrax2, (float, jnp.ndarray))
+        self.assertIsInstance(kid_std_torch, float)
+        self.assertIsInstance(kid_std_metrax, float)
 
 
     # Tests KID metric with default parameters on random features
@@ -340,141 +337,112 @@ class KIDTest(absltest.TestCase):
 
 
 
-
-
-def compute_torchmetrics_kid(real_features, fake_features, subsets=10, subset_size=8, degree=3, gamma=None, coef=1.0):
-    """
-    Compute KID using torchmetrics for two batches of features.
-    Args:
-        real_features: numpy array of shape of  4 params
-        fake_features: numpy array of shape (N, 3, 299, 299) or torch tensor
-        subsets, subset_size, degree, gamma, coef: KID parameters (degree/gamma/coef are not exposed in torchmetrics)
-    Returns:
-        kid_mean, kid_std (numpy floats)
-    """
-    if isinstance(real_features, np.ndarray):
-        real_features = torch.from_numpy(real_features)
-    if isinstance(fake_features, np.ndarray):
-        fake_features = torch.from_numpy(fake_features)
-    if real_features.dtype != torch.uint8:
-        real_features = real_features.to(torch.uint8)
-    if fake_features.dtype != torch.uint8:
-        fake_features = fake_features.to(torch.uint8)
-
-    kid = TorchKID(subsets=subsets, subset_size=subset_size)
-    kid.update(real_features, real=True)
-    kid.update(fake_features, real=False)
-    kid_mean, kid_std = kid.compute()
-    return kid_mean.cpu().numpy(), kid_std.cpu().numpy()
-
-
-
-  @parameterized.named_parameters(
-      (
-          'ssim_basic_norm_single_channel',
-          PREDS_1_NP,
-          TARGETS_1_NP,
-          MAX_VAL_1,
-          DEFAULT_FILTER_SIZE,
-          DEFAULT_FILTER_SIGMA,
-          DEFAULT_K1,
-          DEFAULT_K2,
-      ),
-      (
-          'ssim_multichannel_norm',
-          PREDS_2_NP,
-          TARGETS_2_NP,
-          MAX_VAL_2,
-          DEFAULT_FILTER_SIZE,
-          DEFAULT_FILTER_SIGMA,
-          DEFAULT_K1,
-          DEFAULT_K2,
-      ),
-      (
-          'ssim_uint8_range_single_channel',
-          PREDS_3_NP,
-          TARGETS_3_NP,
-          MAX_VAL_3,
-          DEFAULT_FILTER_SIZE,
-          DEFAULT_FILTER_SIGMA,
-          DEFAULT_K1,
-          DEFAULT_K2,
-      ),
-      (
-          'ssim_custom_params_norm_single_channel',
-          PREDS_4_NP,
-          TARGETS_4_NP,
-          MAX_VAL_4,
-          FILTER_SIZE_CUSTOM,
-          FILTER_SIGMA_CUSTOM,
-          K1_CUSTOM,
-          K2_CUSTOM,
-      ),
-      (
-          'ssim_identical_images',
-          PREDS_5_NP,
-          TARGETS_5_NP,
-          MAX_VAL_5,
-          DEFAULT_FILTER_SIZE,
-          DEFAULT_FILTER_SIGMA,
-          DEFAULT_K1,
-          DEFAULT_K2,
-      ),
-  )
-  def test_ssim_against_tensorflow(
-      self,
-      predictions_np: np.ndarray,
-      targets_np: np.ndarray,
-      max_val: float,
-      filter_size: int,
-      filter_sigma: float,
-      k1: float,
-      k2: float,
-  ):
-    """Test that metrax.SSIM computes values close to tf.image.ssim."""
-    # Calculate SSIM using Metrax
-    predictions_jax = jnp.array(predictions_np)
-    targets_jax = jnp.array(targets_np)
-    metrax_metric = metrax.SSIM.from_model_output(
-        predictions=predictions_jax,
-        targets=targets_jax,
-        max_val=max_val,
-        filter_size=filter_size,
-        filter_sigma=filter_sigma,
-        k1=k1,
-        k2=k2,
-    )
-    metrax_result = metrax_metric.compute()
-
-    # Calculate SSIM using TensorFlow
-    predictions_tf = tf.convert_to_tensor(predictions_np, dtype=tf.float32)
-    targets_tf = tf.convert_to_tensor(targets_np, dtype=tf.float32)
-    tf_ssim_per_image = tf.image.ssim(
-        img1=predictions_tf,
-        img2=targets_tf,
-        max_val=max_val,
-        filter_size=filter_size,
-        filter_sigma=filter_sigma,
-        k1=k1,
-        k2=k2,
-    )
-    tf_result_mean = tf.reduce_mean(tf_ssim_per_image).numpy()
-
-    np.testing.assert_allclose(
-        metrax_result,
-        tf_result_mean,
-        rtol=1e-5,
-        atol=1e-5,
-        err_msg=(
-            f'SSIM mismatch for params: max_val={max_val}, '
-            f'filter_size={filter_size}, filter_sigma={filter_sigma}, '
-            f'k1={k1}, k2={k2}'
+    @parameterized.named_parameters(
+        (
+            'ssim_basic_norm_single_channel',
+            PREDS_1_NP,
+            TARGETS_1_NP,
+            MAX_VAL_1,
+            DEFAULT_FILTER_SIZE,
+            DEFAULT_FILTER_SIGMA,
+            DEFAULT_K1,
+            DEFAULT_K2,
+        ),
+        (
+            'ssim_multichannel_norm',
+            PREDS_2_NP,
+            TARGETS_2_NP,
+            MAX_VAL_2,
+            DEFAULT_FILTER_SIZE,
+            DEFAULT_FILTER_SIGMA,
+            DEFAULT_K1,
+            DEFAULT_K2,
+        ),
+        (
+            'ssim_uint8_range_single_channel',
+            PREDS_3_NP,
+            TARGETS_3_NP,
+            MAX_VAL_3,
+            DEFAULT_FILTER_SIZE,
+            DEFAULT_FILTER_SIGMA,
+            DEFAULT_K1,
+            DEFAULT_K2,
+        ),
+        (
+            'ssim_custom_params_norm_single_channel',
+            PREDS_4_NP,
+            TARGETS_4_NP,
+            MAX_VAL_4,
+            FILTER_SIZE_CUSTOM,
+            FILTER_SIGMA_CUSTOM,
+            K1_CUSTOM,
+            K2_CUSTOM,
+        ),
+        (
+            'ssim_identical_images',
+            PREDS_5_NP,
+            TARGETS_5_NP,
+            MAX_VAL_5,
+            DEFAULT_FILTER_SIZE,
+            DEFAULT_FILTER_SIGMA,
+            DEFAULT_K1,
+            DEFAULT_K2,
         ),
     )
-    # For identical images, we expect a value very close to 1.0
-    if np.array_equal(predictions_np, targets_np):
-      self.assertAlmostEqual(float(metrax_result), 1.0, delta=1e-6)
-      self.assertAlmostEqual(float(tf_result_mean), 1.0, delta=1e-6)
+    def test_ssim_against_tensorflow(
+        self,
+        predictions_np: np.ndarray,
+        targets_np: np.ndarray,
+        max_val: float,
+        filter_size: int,
+        filter_sigma: float,
+        k1: float,
+        k2: float,
+    ):
+        """Test that metrax.SSIM computes values close to tf.image.ssim."""
+        # Calculate SSIM using Metrax
+        predictions_jax = jnp.array(predictions_np)
+        targets_jax = jnp.array(targets_np)
+        metrax_metric = metrax.SSIM.from_model_output(
+            predictions=predictions_jax,
+            targets=targets_jax,
+            max_val=max_val,
+            filter_size=filter_size,
+            filter_sigma=filter_sigma,
+            k1=k1,
+            k2=k2,
+        )
+        metrax_result = metrax_metric.compute()
+
+        # Calculate SSIM using TensorFlow
+        predictions_tf = tf.convert_to_tensor(predictions_np, dtype=tf.float32)
+        targets_tf = tf.convert_to_tensor(targets_np, dtype=tf.float32)
+        tf_ssim_per_image = tf.image.ssim(
+            img1=predictions_tf,
+            img2=targets_tf,
+            max_val=max_val,
+            filter_size=filter_size,
+            filter_sigma=filter_sigma,
+            k1=k1,
+            k2=k2,
+        )
+        tf_result_mean = tf.reduce_mean(tf_ssim_per_image).numpy()
+
+        np.testing.assert_allclose(
+            metrax_result,
+            tf_result_mean,
+            rtol=1e-5,
+            atol=1e-5,
+            err_msg=(
+                f'SSIM mismatch for params: max_val={max_val}, '
+                f'filter_size={filter_size}, filter_sigma={filter_sigma}, '
+                f'k1={k1}, k2={k2}'
+            ),
+        )
+        # For identical images, we expect a value very close to 1.0
+        if np.array_equal(predictions_np, targets_np):
+            self.assertAlmostEqual(float(metrax_result), 1.0, delta=1e-6)
+            self.assertAlmostEqual(float(tf_result_mean), 1.0, delta=1e-6)
 
 
 if __name__ == '__main__':
