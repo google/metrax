@@ -157,6 +157,13 @@ class RSQUARED(NnxWrapper):
     super().__init__(metrax.RSQUARED)
 
 
+class SSIM(NnxWrapper):
+  """An NNX class for the Metrax metric SSIM."""
+
+  def __init__(self):
+    super().__init__(metrax.SSIM)
+
+
 class WER(NnxWrapper):
   """An NNX class for the Metrax metric WER."""
 

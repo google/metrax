@@ -42,6 +42,10 @@ STRING_REFS = [
     'hello beautiful world',
 ]
 
+IMG_SHAPE = (4, 32, 32, 3)
+PRED_IMGS = np.random.rand(*IMG_SHAPE).astype(np.float32)
+TARGET_IMGS = np.random.rand(*IMG_SHAPE).astype(np.float32)
+MAX_IMG_VAL = 255.0
 
 class MetraxTest(parameterized.TestCase):
 
@@ -155,9 +159,8 @@ class MetraxTest(parameterized.TestCase):
               'ks': KS,
           },
       ),
-
       (
-        'KID',
+        'kid',
         metrax.KID,
         {
             'real_features': np.random.uniform(size=(BATCHES * BATCH_SIZE, 2048)),
@@ -169,6 +172,15 @@ class MetraxTest(parameterized.TestCase):
             'coef': 1.0,
         },
       )
+      (
+          'ssim',
+          metrax.SSIM,
+          {
+              'predictions': PRED_IMGS,
+              'targets': TARGET_IMGS,
+              'max_val': MAX_IMG_VAL,
+          },
+      ),
   )
   def test_metrics_jittable(self, metric, kwargs):
     """Tests that jitted metrax metric yields the same result as non-jitted metric."""
