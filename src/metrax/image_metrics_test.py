@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for metrax SSIM metric."""
+"""Tests for metrax image metrics."""
 
 from absl.testing import absltest
 from absl.testing import parameterized
@@ -66,7 +66,7 @@ TARGETS_5_NP = np.copy(PREDS_5_NP)  # Identical images
 MAX_VAL_5 = 1.0
 
 
-class SSIMTest(parameterized.TestCase):
+class ImageMetricsTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
       (
