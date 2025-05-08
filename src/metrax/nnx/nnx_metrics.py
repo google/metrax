@@ -164,8 +164,8 @@ class WER(NnxWrapper):
     super().__init__(metrax.WER)
 
 
-class KernelInceptionDistanceMetric(NnxWrapper):
+class KernelInceptionDistance(NnxWrapper):
   """An NNX class for the Metrax metric KernelInceptionMetric."""
 
   def __init__(self):
-    super().__init__(metrax.KIDM)
+    super().__init__(metrax.KID)

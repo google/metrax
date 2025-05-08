@@ -7,3 +7,5 @@ keras-rs
 pytest
 rouge-score
 scikit-learn
+torchmetrics
+torch-fidelity

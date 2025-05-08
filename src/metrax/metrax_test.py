@@ -157,8 +157,8 @@ class MetraxTest(parameterized.TestCase):
       ),
 
       (
-        'kidm',
-        metrax.KIDM,
+        'KID',
+        metrax.KID,
         {
             'real_features': np.random.uniform(size=(BATCHES * BATCH_SIZE, 2048)),
             'fake_features': np.random.uniform(size=(BATCHES * BATCH_SIZE, 2048)),

@@ -39,7 +39,7 @@ RecallAtK = ranking_metrics.RecallAtK
 RougeL = nlp_metrics.RougeL
 RougeN = nlp_metrics.RougeN
 WER = nlp_metrics.WER
-KIDM = image_metrics.KernelInceptionDistanceMetric
+KID = image_metrics.KernelInceptionDistance
 
 
 __all__ = [
@@ -64,5 +64,5 @@ __all__ = [
     "RougeL",
     "RougeN",
     "WER",
-    "KIDM",
+    "KID",
 ]
