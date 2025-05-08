@@ -40,7 +40,7 @@ RougeL = nlp_metrics.RougeL
 RougeN = nlp_metrics.RougeN
 SSIM = image_metrics.SSIM
 WER = nlp_metrics.WER
-
+KID = image_metrics.KID
 
 __all__ = [
     "AUCPR",

@@ -127,10 +127,9 @@ class KID(base.Average):
         Create a KID instance from model output.
         also it computes average output and then store it in the instance.        
         """
-        # checks for the valid inputs
         if subsets <= 0 or subset_size <= 0 or degree <= 0 or (gamma is not None and gamma <= 0) or coef <= 0:
             raise ValueError("All parameters must be positive and non-zero.")
-        # Compute KID for this batch
+        # Compute KID for this batch and then store the aggregated response.
         if real_features.shape[0] < subset_size or fake_features.shape[0] < subset_size:
             raise ValueError("Subset size must be smaller than the number of samples.")
         master_key = random.PRNGKey(42)
@@ -141,10 +140,10 @@ class KID(base.Average):
             fake_indices = random.choice(key_fake, fake_features.shape[0], (subset_size,), replace=False)
             f_real_subset = real_features[real_indices]
             f_fake_subset = fake_features[fake_indices]
-            kid = cls.__compute_mmd_static(f_real_subset, f_fake_subset, degree, gamma, coef)
+            kid = cls._compute_mmd_static(f_real_subset, f_fake_subset, degree, gamma, coef)
             kid_scores.append(kid)
         kid_mean = jnp.mean(jnp.array(kid_scores))
-        # Accumulate sum and count for averaging
+
         return cls(
             total=kid_mean,
             count=1.0,
@@ -155,20 +154,6 @@ class KID(base.Average):
             coef=coef,
         )
 
-    @classmethod
-    def empty(cls) -> "KID":
-        """
-        Create an empty instance of KID.
-        """
-        return cls(
-            total=0.0,
-            count=0.0,
-            subsets=KID_DEFAULT_SUBSETS,
-            subset_size=KID_DEFAULT_SUBSET_SIZE,
-            degree=KID_DEFAULT_DEGREE,
-            gamma=KID_DEFAULT_GAMMA,
-            coef=KID_DEFAULT_COEF,
-        )
 
     @staticmethod
     def _compute_mmd_static(f_real: jax.Array, f_fake: jax.Array, degree: int, gamma: float, coef: float) -> float:
@@ -187,34 +172,6 @@ class KID(base.Average):
         value = (jnp.sum(kt_xx_sum) + jnp.sum(kt_yy_sum)) / (m * (m - 1))
         value -= 2 * jnp.sum(k_xy_sum) / (m**2)
         return value
-
-    
-    def compute(self) -> jax.Array:
-        """
-        Compute the average KID value from accumulated batches.
-        Always returns a scalar (0-dim array or float).
-        """
-        result = base.divide_no_nan(self.total, self.count)
-        # If result is a 0-dim array, convert to float for easier downstream use
-        if hasattr(result, 'shape') and result.shape == ():
-            return float(result)
-        return result
-    
-
-    def merge(self, other: "KID") -> "KID":
-        """
-        Merge two KID instances by summing totals and counts.
-        """
-        return type(self)(
-            total=self.total + other.total,
-            count=self.count + other.count,
-            subsets=self.subsets,
-            subset_size=self.subset_size,
-            degree=self.degree,
-            gamma=self.gamma,
-            coef=self.coef,
-        )
-
 
 @flax.struct.dataclass
 class SSIM(base.Average):
@@ -523,4 +480,3 @@ class SSIM(base.Average):
         k2=k2,
     )
     return super().from_model_output(values=batch_ssim_values)
-
