@@ -1,4 +1,4 @@
-# Copyright 2024 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,222 +53,265 @@ def _gaussian_kernel1d(sigma, radius):
   return phi_x
 
 
-def _calculate_ssim(
-    img1: jnp.ndarray,
-    img2: jnp.ndarray,
-    max_val: float,
-    filter_size: int = 11,
-    filter_sigma: float = 1.5,
-    k1: float = 0.01,
-    k2: float = 0.03,
-) -> jnp.ndarray:
-  """Computes SSIM (Structural Similarity Index Measure) values for a batch of images.
-
-  This function calculates the SSIM between two batches of images (`img1` and
-  `img2`). If the images have multiple channels, SSIM is calculated for each
-  channel independently, and then the mean SSIM across channels is returned.
-
-  Args:
-    img1: The first batch of images, expected shape ``(batch, height, width,
-      channels)``.
-    img2: The second batch of images, expected shape ``(batch, height, width,
-      channels)``.
-    max_val: The dynamic range of the pixel values (e.g., 1.0 for images
-      normalized to [0,1] or 255 for uint8 images).
-    filter_size: The size of the Gaussian filter window used for calculating
-      local statistics. Must be an odd integer.
-    filter_sigma: The standard deviation of the Gaussian filter.
-    k1: A small constant used in the SSIM formula to stabilize the luminance
-      comparison.
-    k2: A small constant used in the SSIM formula to stabilize the
-      contrast/structure comparison.
-
-  Returns:
-    A 1D JAX array of shape ``(batch,)`` containing the SSIM value for each
-    image pair in the batch.
-  """
-  if img1.shape != img2.shape:
-    raise ValueError(
-        f'Input images must have the same shape, but got {img1.shape} and'
-        f' {img2.shape}'
-    )
-  if img1.ndim != 4:  # (batch, H, W, C)
-    raise ValueError(
-        'Input images must be 4D tensors (batch, height, width, channels), but'
-        f' got {img1.ndim}D'
-    )
-  if img1.shape[-3] < filter_size or img1.shape[-2] < filter_size:
-    raise ValueError(
-        f'Image dimensions ({img1.shape[-3]}x{img1.shape[-2]}) must be at least'
-        f' filter_size x filter_size ({filter_size}x{filter_size}).'
-    )
-
-  num_channels = img1.shape[-1]
-  img1 = img1.astype(jnp.float32)
-  img2 = img2.astype(jnp.float32)
-
-  gaussian_kernal_1d = _gaussian_kernel1d(filter_sigma, (filter_size - 1) // 2)
-  gaussian_kernel_2d = jnp.outer(gaussian_kernal_1d, gaussian_kernal_1d)
-  # Kernel for convolution: (H_k, W_k, C_in=1, C_out=1)
-  kernel_conv = gaussian_kernel_2d[:, :, jnp.newaxis, jnp.newaxis]
-
-  c1 = (k1 * max_val) ** 2
-  c2 = (k2 * max_val) ** 2
-
-  def _calculate_ssim_for_channel(x_ch, y_ch, conv_kernel, c1, c2):
-    r"""Calculates the Structural Similarity Index (SSIM) for a single channel.
-
-    This function computes the SSIM between two single-channel image arrays
-    (:math:`x_{ch}` and :math:`y_{ch}`) using a precomputed Gaussian kernel for
-    local statistics. The SSIM metric quantifies image quality degradation
-    based on perceived changes in structural information, also incorporating
-    important perceptual phenomena like luminance and contrast masking.
-
-    The general SSIM formula considers three components: luminance (l),
-    contrast (c), and structure (s):
-
-    .. math::
-      SSIM(x, y) = [l(x, y)]^\alpha \cdot [c(x, y)]^\beta \cdot [s(x, y)]^\gamma
-
-    Where:
-      - Luminance comparison:
-        :math:`l(x, y) = \frac{2\mu_x\mu_y + c_1}{\mu_x^2 + \mu_y^2 + c_1}`
-      - Contrast comparison:
-        :math:`c(x, y) = \frac{2\sigma_x\sigma_y + c_2}{\sigma_x^2 + \sigma_y^2
-        + c_2}`
-      - Structure comparison:
-        :math:`s(x, y) = \frac{\sigma_{xy} + c_3}{\sigma_x\sigma_y + c_3}`
-
-    This implementation uses a common simplified form where :math:`\alpha =
-    \beta = \gamma = 1`
-    and :math:`c_3 = c_2 / 2`. This leads to the combined formula:
-
-    .. math::
-      SSIM(x, y) = \frac{(2\mu_x\mu_y + c_1)(2\sigma_{xy} + c_2)}{(\mu_x^2 +
-      \mu_y^2 + c_1)(\sigma_x^2 + \sigma_y^2 + c_2)}
-
-    In these formulas:
-      - :math:`\mu_x` and :math:`\mu_y` are the local means of :math:`x` and
-      :math:`y`.
-      - :math:`\sigma_x^2` and :math:`\sigma_y^2` are the local variances of
-      :math:`x` and :math:`y`.
-      - :math:`\sigma_{xy}` is the local covariance of :math:`x` and :math:`y`.
-      - :math:`c_1 = (K_1 L)^2` and :math:`c_2 = (K_2 L)^2` are stabilization
-      constants,
-        where :math:`L` is the dynamic range of pixel values, and :math:`K_1,
-        K_2` are
-        small constants (e.g., 0.01 and 0.03).
-
-    Args:
-      x_ch (jnp.ndarray): The first input image channel. Expected shape is
-        ``(batch, Height, Width, 1)``.
-      y_ch (jnp.ndarray): The second input image channel. Expected shape is
-        ``(batch, Height, Width, 1)``.
-      conv_kernel (jnp.ndarray): The 2D Gaussian kernel, reshaped to 4D, used
-        for calculating local windowed statistics (mean, variance, covariance).
-        Expected shape is ``(Kernel_H, Kernel_W, 1, 1)``.
-      c1 (float): Stabilization constant for the luminance and mean component,
-        :math:`(K_1 L)^2`.
-      c2 (float): Stabilization constant for the variance and covariance
-        component, :math:`(K_2 L)^2`.
-
-    Returns:
-      jnp.ndarray: A scalar JAX array (or an array of scalars if batch size > 1)
-      representing the mean SSIM value(s) for the input channel(s).
-    """
-    # x_ch, y_ch are (batch, H, W, 1)
-    dn = lax.conv_dimension_numbers(
-        x_ch.shape, conv_kernel.shape, ('NHWC', 'HWIO', 'NHWC')
-    )
-
-    mu_x = lax.conv_general_dilated(
-        x_ch,
-        conv_kernel,
-        window_strides=(1, 1),
-        padding='VALID',
-        dimension_numbers=dn,
-    )
-    mu_y = lax.conv_general_dilated(
-        y_ch,
-        conv_kernel,
-        window_strides=(1, 1),
-        padding='VALID',
-        dimension_numbers=dn,
-    )
-
-    mu_x_sq = mu_x**2
-    mu_y_sq = mu_y**2
-    mu_x_mu_y = mu_x * mu_y
-
-    sigma_x_sq = (
-        lax.conv_general_dilated(
-            x_ch**2,
-            conv_kernel,
-            window_strides=(1, 1),
-            padding='VALID',
-            dimension_numbers=dn,
-        )
-        - mu_x_sq
-    )
-    sigma_y_sq = (
-        lax.conv_general_dilated(
-            y_ch**2,
-            conv_kernel,
-            window_strides=(1, 1),
-            padding='VALID',
-            dimension_numbers=dn,
-        )
-        - mu_y_sq
-    )
-    sigma_xy = (
-        lax.conv_general_dilated(
-            x_ch * y_ch,
-            conv_kernel,
-            window_strides=(1, 1),
-            padding='VALID',
-            dimension_numbers=dn,
-        )
-        - mu_x_mu_y
-    )
-
-    numerator1 = 2 * mu_x_mu_y + c1
-    numerator2 = 2 * sigma_xy + c2
-    denominator1 = mu_x_sq + mu_y_sq + c1
-    denominator2 = sigma_x_sq + sigma_y_sq + c2
-
-    ssim_map = (numerator1 * numerator2) / (denominator1 * denominator2)
-    return jnp.mean(
-        ssim_map, axis=(1, 2, 3)
-    )  # Mean over H, W, C (which is 1 here for the map)
-
-  ssim_per_channel_list = []
-  for i in range(num_channels):
-    img1_c = lax.dynamic_slice_in_dim(
-        img1, i * 1, 1, axis=3
-    )  # (batch, H, W, 1)
-    img2_c = lax.dynamic_slice_in_dim(
-        img2, i * 1, 1, axis=3
-    )  # (batch, H, W, 1)
-
-    ssim_for_channel = _calculate_ssim_for_channel(
-        img1_c, img2_c, kernel_conv, c1, c2
-    )
-    ssim_per_channel_list.append(ssim_for_channel)
-
-  ssim_scores_stacked = jnp.stack(
-      ssim_per_channel_list, axis=-1
-  )  # (batch, num_channels)
-  return jnp.mean(ssim_scores_stacked, axis=-1)  # (batch,)
-
-
 @flax.struct.dataclass
 class SSIM(base.Average):
-  """SSIM (Structural Similarity Index Measure) Metric.
+  r"""SSIM (Structural Similarity Index Measure) Metric.
 
   This class calculates the structural similarity between predicted and target
   images and averages it over a dataset. SSIM is a perception-based model that
   considers changes in structural information, luminance, and contrast.
+
+  The general SSIM formula considers three components: luminance (l),
+      contrast (c), and structure (s):
+
+      .. math::
+        SSIM(x, y) = [l(x, y)]^\alpha \cdot [c(x, y)]^\beta \cdot [s(x,
+        y)]^\gamma
+
+      Where:
+        - Luminance comparison:
+          :math:`l(x, y) = \frac{2\mu_x\mu_y + c_1}{\mu_x^2 + \mu_y^2 + c_1}`
+        - Contrast comparison:
+          :math:`c(x, y) = \frac{2\sigma_x\sigma_y + c_2}{\sigma_x^2 +
+          \sigma_y^2 + c_2}`
+        - Structure comparison:
+          :math:`s(x, y) = \frac{\sigma_{xy} + c_3}{\sigma_x\sigma_y + c_3}`
+
+      This implementation uses a common simplified form where :math:`\alpha =
+      \beta = \gamma = 1` and :math:`c_3 = c_2 / 2`.
+
+      This leads to the combined formula:
+
+      .. math::
+        SSIM(x, y) = \frac{(2\mu_x\mu_y + c_1)(2\sigma_{xy} + c_2)}{(\mu_x^2 +
+        \mu_y^2 + c_1)(\sigma_x^2 + \sigma_y^2 + c_2)}
+
+      In these formulas:
+        - :math:`\mu_x` and :math:`\mu_y` are the local means of :math:`x` and
+        :math:`y`.
+        - :math:`\sigma_x^2` and :math:`\sigma_y^2` are the local variances of
+        :math:`x` and :math:`y`.
+        - :math:`\sigma_{xy}` is the local covariance of :math:`x` and
+        :math:`y`.
+        - :math:`c_1 = (K_1 L)^2` and :math:`c_2 = (K_2 L)^2` are stabilization
+        constants,
+          where :math:`L` is the dynamic range of pixel values, and :math:`K_1,
+          K_2` are small constants (e.g., 0.01 and 0.03).
   """
+
+  @staticmethod
+  def _calculate_ssim(
+      img1: jnp.ndarray,
+      img2: jnp.ndarray,
+      max_val: float,
+      filter_size: int = 11,
+      filter_sigma: float = 1.5,
+      k1: float = 0.01,
+      k2: float = 0.03,
+  ) -> jnp.ndarray:
+    """Computes SSIM (Structural Similarity Index Measure) values for a batch of images.
+
+    This function calculates the SSIM between two batches of images (`img1` and
+    `img2`). If the images have multiple channels, SSIM is calculated for each
+    channel independently, and then the mean SSIM across channels is returned.
+
+    Args:
+      img1: The first batch of images, expected shape ``(batch, height, width,
+        channels)``.
+      img2: The second batch of images, expected shape ``(batch, height, width,
+        channels)``.
+      max_val: The dynamic range of the pixel values (e.g., 1.0 for images
+        normalized to [0,1] or 255 for uint8 images).
+      filter_size: The size of the Gaussian filter window used for calculating
+        local statistics. Must be an odd integer.
+      filter_sigma: The standard deviation of the Gaussian filter.
+      k1: A small constant used in the SSIM formula to stabilize the luminance
+        comparison.
+      k2: A small constant used in the SSIM formula to stabilize the
+        contrast/structure comparison.
+
+    Returns:
+      A 1D JAX array of shape ``(batch,)`` containing the SSIM value for each
+      image pair in the batch.
+    """
+    if img1.shape != img2.shape:
+      raise ValueError(
+          f'Input images must have the same shape, but got {img1.shape} and'
+          f' {img2.shape}'
+      )
+    if img1.ndim != 4:  # (batch, H, W, C)
+      raise ValueError(
+          'Input images must be 4D tensors (batch, height, width, channels),'
+          f' but got {img1.ndim}D'
+      )
+    if img1.shape[-3] < filter_size or img1.shape[-2] < filter_size:
+      raise ValueError(
+          f'Image dimensions ({img1.shape[-3]}x{img1.shape[-2]}) must be at'
+          f' least filter_size x filter_size ({filter_size}x{filter_size}).'
+      )
+
+    num_channels = img1.shape[-1]
+    img1 = img1.astype(jnp.float32)
+    img2 = img2.astype(jnp.float32)
+
+    gaussian_kernal_1d = _gaussian_kernel1d(
+        filter_sigma, (filter_size - 1) // 2
+    )
+    gaussian_kernel_2d = jnp.outer(gaussian_kernal_1d, gaussian_kernal_1d)
+    # Kernel for convolution: (H_k, W_k, C_in=1, C_out=1)
+    kernel_conv = gaussian_kernel_2d[:, :, jnp.newaxis, jnp.newaxis]
+
+    c1 = (k1 * max_val) ** 2
+    c2 = (k2 * max_val) ** 2
+
+    def _calculate_ssim_for_channel(x_ch, y_ch, conv_kernel, c1, c2):
+      r"""Calculates the Structural Similarity Index (SSIM) for a single channel.
+
+      This function computes the SSIM between two single-channel image arrays
+      (:math:`x_{ch}` and :math:`y_{ch}`) using a precomputed Gaussian kernel
+      for local statistics. The SSIM metric quantifies image quality
+      degradation based on perceived changes in structural information, also
+      incorporating important perceptual phenomena like luminance and contrast
+      masking.
+
+      The general SSIM formula considers three components: luminance (l),
+      contrast (c), and structure (s):
+
+      .. math::
+        SSIM(x, y) = [l(x, y)]^\alpha \cdot [c(x, y)]^\beta \cdot [s(x,
+        y)]^\gamma
+
+      Where:
+        - Luminance comparison:
+          :math:`l(x, y) = \frac{2\mu_x\mu_y + c_1}{\mu_x^2 + \mu_y^2 + c_1}`
+        - Contrast comparison:
+          :math:`c(x, y) = \frac{2\sigma_x\sigma_y + c_2}{\sigma_x^2 +
+          \sigma_y^2 + c_2}`
+        - Structure comparison:
+          :math:`s(x, y) = \frac{\sigma_{xy} + c_3}{\sigma_x\sigma_y + c_3}`
+
+      This implementation uses a common simplified form where :math:`\alpha =
+      \beta = \gamma = 1` and :math:`c_3 = c_2 / 2`.
+
+      This leads to the combined formula:
+
+      .. math::
+        SSIM(x, y) = \frac{(2\mu_x\mu_y + c_1)(2\sigma_{xy} + c_2)}{(\mu_x^2 +
+        \mu_y^2 + c_1)(\sigma_x^2 + \sigma_y^2 + c_2)}
+
+      In these formulas:
+        - :math:`\mu_x` and :math:`\mu_y` are the local means of :math:`x` and
+        :math:`y`.
+        - :math:`\sigma_x^2` and :math:`\sigma_y^2` are the local variances of
+        :math:`x` and :math:`y`.
+        - :math:`\sigma_{xy}` is the local covariance of :math:`x` and
+        :math:`y`.
+        - :math:`c_1 = (K_1 L)^2` and :math:`c_2 = (K_2 L)^2` are stabilization
+        constants,
+          where :math:`L` is the dynamic range of pixel values, and :math:`K_1,
+          K_2` are small constants (e.g., 0.01 and 0.03).
+
+      Args:
+        x_ch (jnp.ndarray): The first input image channel. Expected shape is
+          ``(batch, Height, Width, 1)``.
+        y_ch (jnp.ndarray): The second input image channel. Expected shape is
+          ``(batch, Height, Width, 1)``.
+        conv_kernel (jnp.ndarray): The 2D Gaussian kernel, reshaped to 4D, used
+          for calculating local windowed statistics (mean, variance,
+          covariance). Expected shape is ``(Kernel_H, Kernel_W, 1, 1)``.
+        c1 (float): Stabilization constant for the luminance and mean component,
+          :math:`(K_1 L)^2`.
+        c2 (float): Stabilization constant for the variance and covariance
+          component, :math:`(K_2 L)^2`.
+
+      Returns:
+        jnp.ndarray: A scalar JAX array (or an array of scalars if batch size >
+        1)
+        representing the mean SSIM value(s) for the input channel(s).
+      """
+      # x_ch, y_ch are (batch, H, W, 1)
+      dn = lax.conv_dimension_numbers(
+          x_ch.shape, conv_kernel.shape, ('NHWC', 'HWIO', 'NHWC')
+      )
+
+      mu_x = lax.conv_general_dilated(
+          x_ch,
+          conv_kernel,
+          window_strides=(1, 1),
+          padding='VALID',
+          dimension_numbers=dn,
+      )
+      mu_y = lax.conv_general_dilated(
+          y_ch,
+          conv_kernel,
+          window_strides=(1, 1),
+          padding='VALID',
+          dimension_numbers=dn,
+      )
+
+      mu_x_sq = mu_x**2
+      mu_y_sq = mu_y**2
+      mu_x_mu_y = mu_x * mu_y
+
+      sigma_x_sq = (
+          lax.conv_general_dilated(
+              x_ch**2,
+              conv_kernel,
+              window_strides=(1, 1),
+              padding='VALID',
+              dimension_numbers=dn,
+          )
+          - mu_x_sq
+      )
+      sigma_y_sq = (
+          lax.conv_general_dilated(
+              y_ch**2,
+              conv_kernel,
+              window_strides=(1, 1),
+              padding='VALID',
+              dimension_numbers=dn,
+          )
+          - mu_y_sq
+      )
+      sigma_xy = (
+          lax.conv_general_dilated(
+              x_ch * y_ch,
+              conv_kernel,
+              window_strides=(1, 1),
+              padding='VALID',
+              dimension_numbers=dn,
+          )
+          - mu_x_mu_y
+      )
+
+      numerator1 = 2 * mu_x_mu_y + c1
+      numerator2 = 2 * sigma_xy + c2
+      denominator1 = mu_x_sq + mu_y_sq + c1
+      denominator2 = sigma_x_sq + sigma_y_sq + c2
+
+      ssim_map = (numerator1 * numerator2) / (denominator1 * denominator2)
+      return jnp.mean(
+          ssim_map, axis=(1, 2, 3)
+      )  # Mean over H, W, C (which is 1 here for the map)
+
+    ssim_per_channel_list = []
+    for i in range(num_channels):
+      img1_c = lax.dynamic_slice_in_dim(
+          img1, i * 1, 1, axis=3
+      )  # (batch, H, W, 1)
+      img2_c = lax.dynamic_slice_in_dim(
+          img2, i * 1, 1, axis=3
+      )  # (batch, H, W, 1)
+
+      ssim_for_channel = _calculate_ssim_for_channel(
+          img1_c, img2_c, kernel_conv, c1, c2
+      )
+      ssim_per_channel_list.append(ssim_for_channel)
+
+    ssim_scores_stacked = jnp.stack(
+        ssim_per_channel_list, axis=-1
+    )  # (batch, num_channels)
+    return jnp.mean(ssim_scores_stacked, axis=-1)  # (batch,)
 
   @classmethod
   def from_model_output(  # type: ignore[override]
@@ -307,7 +350,7 @@ class SSIM(base.Average):
         ready for averaging.
     """
     # shape (batch_size,)
-    batch_ssim_values = _calculate_ssim(
+    batch_ssim_values = cls._calculate_ssim(
         predictions,
         targets,
         max_val=max_val,
