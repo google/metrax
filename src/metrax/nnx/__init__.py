@@ -34,6 +34,7 @@ Recall = nnx_metrics.Recall
 RecallAtK = nnx_metrics.RecallAtK
 RougeL = nnx_metrics.RougeL
 RougeN = nnx_metrics.RougeN
+SSIM = nnx_metrics.SSIM
 WER = nnx_metrics.WER
 KID = nnx_metrics.KID
 
@@ -58,6 +59,7 @@ __all__ = [
     "RecallAtK",
     "RougeL",
     "RougeN",
+    "SSIM",
     "WER",
     "KID"
 ]
