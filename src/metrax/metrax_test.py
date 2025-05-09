@@ -30,7 +30,7 @@ OUTPUT_LABELS = np.random.randint(
 ).astype(np.float32)
 OUTPUT_PREDS = np.random.uniform(size=(BATCHES, BATCH_SIZE))
 KS = np.array([3])
-#For nlp_metrics.
+# For nlp_metrics.
 STRING_PREDS = [
     'the cat sat on the mat',
     'a quick brown fox jumps over the lazy dog',
