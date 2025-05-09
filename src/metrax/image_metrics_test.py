@@ -24,7 +24,6 @@ import metrax
 import numpy as np
 import tensorflow as tf
 
-
 np.random.seed(42)
 
 # Default SSIM parameters (matching tf.image.ssim and metrax defaults)
