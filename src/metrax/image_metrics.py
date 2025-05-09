@@ -524,7 +524,7 @@ class PSNR(base.Average):
         img1: jnp.ndarray,
         img2: jnp.ndarray,
         max_val: float,
-        eps: float = 1e-12,
+        eps: float = 0,
   ) -> jnp.ndarray:
     """Computes PSNR (Peak Signal-to-Noise Ratio) values.
     
