@@ -15,9 +15,7 @@
 """Tests for metrax image metrics."""
 
 import os
-
 os.environ['KERAS_BACKEND'] = 'jax'
-from typing import Optional, Sequence
 
 from absl.testing import absltest
 from absl.testing import parameterized
@@ -110,9 +108,9 @@ PREDS_IOU_1 = np.array(
     dtype=np.int32,
 )
 NUM_CLASSES_IOU_1 = 2
-TARGET_CLASS_IDS_IOU_1 = np.array([
-    1
-])  # Expected Keras/Metrax result: mean([2/6, 2/6]) = 1/3
+TARGET_CLASS_IDS_IOU_1 = np.array(
+    [1]
+)  # Expected Keras/Metrax result: mean([2/6, 2/6]) = 1/3
 
 # Case IoU 2: Multi-class (num_classes=3), target_class_ids=[0, 2] (mean over these two)
 TARGETS_IOU_2 = np.array(
