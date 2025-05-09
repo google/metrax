@@ -21,6 +21,7 @@ Average = nnx_metrics.Average
 AveragePrecisionAtK = nnx_metrics.AveragePrecisionAtK
 BLEU = nnx_metrics.BLEU
 DCGAtK = nnx_metrics.DCGAtK
+IoU = nnx_metrics.IoU
 MAE = nnx_metrics.MAE
 MRR = nnx_metrics.MRR
 MSE = nnx_metrics.MSE
@@ -46,6 +47,7 @@ __all__ = [
     "AveragePrecisionAtK",
     "BLEU",
     "DCGAtK",
+    "IoU",
     "MRR",
     "MAE"
     "MSE",

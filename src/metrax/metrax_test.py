@@ -30,7 +30,7 @@ OUTPUT_LABELS = np.random.randint(
 ).astype(np.float32)
 OUTPUT_PREDS = np.random.uniform(size=(BATCHES, BATCH_SIZE))
 KS = np.array([3])
-
+# For nlp_metrics.
 STRING_PREDS = [
     'the cat sat on the mat',
     'a quick brown fox jumps over the lazy dog',
@@ -41,11 +41,21 @@ STRING_REFS = [
     'the quick brown fox jumps over the lazy dog',
     'hello beautiful world',
 ]
-
+# For image_metrics.SSIM.
 IMG_SHAPE = (4, 32, 32, 3)
 PRED_IMGS = np.random.rand(*IMG_SHAPE).astype(np.float32)
 TARGET_IMGS = np.random.rand(*IMG_SHAPE).astype(np.float32)
 MAX_IMG_VAL = 255.0
+# For image_metrics.IoU.
+IOU_NUM_CLASSES = 3
+IOU_TARGETS = np.random.randint(0, IOU_NUM_CLASSES, size=(2, 8, 8)).astype(
+    np.int32
+)
+IOU_PREDICTIONS = np.random.randint(0, IOU_NUM_CLASSES, size=(2, 8, 8)).astype(
+    np.int32
+)
+IOU_TARGET_CLASS_IDS = np.array([0, 1])
+
 
 class MetraxTest(parameterized.TestCase):
 
@@ -86,6 +96,16 @@ class MetraxTest(parameterized.TestCase):
               'predictions': OUTPUT_LABELS,
               'labels': OUTPUT_PREDS,
               'ks': KS,
+          },
+      ),
+      (
+          'iou',
+          metrax.IoU,
+          {
+              'predictions': IOU_PREDICTIONS,
+              'targets': IOU_TARGETS,
+              'num_classes': IOU_NUM_CLASSES,
+              'target_class_ids': IOU_TARGET_CLASS_IDS,
           },
       ),
       (

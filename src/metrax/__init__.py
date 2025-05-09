@@ -25,6 +25,7 @@ Average = base.Average
 AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
 BLEU = nlp_metrics.BLEU
 DCGAtK = ranking_metrics.DCGAtK
+IoU = image_metrics.IoU
 MAE = regression_metrics.MAE
 MRR = ranking_metrics.MRR
 MSE = regression_metrics.MSE
@@ -50,6 +51,7 @@ __all__ = [
     "AveragePrecisionAtK",
     "BLEU",
     "DCGAtK",
+    "IoU",
     "MAE",
     "MRR",
     "MSE",
