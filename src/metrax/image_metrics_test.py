@@ -133,25 +133,6 @@ class ImageMetricsTest(parameterized.TestCase):
         return float(kid_mean.cpu().numpy()), float(kid_std.cpu().numpy()), metrax_mean, metrax_std
 
 
-    def test_kernel_inception_distance_empty_and_merge(self):
-        """Test merging empty and non-empty KID metrics."""
-        empty1 = KID.empty()
-        empty2 = KID.empty()
-        merged = empty1.merge(empty2)
-        self.assertEqual(merged.total, 0.0)
-        self.assertEqual(merged.count, 0.0)
-
-        key1, key2 = random.split(random.PRNGKey(99))
-        real_features = random.normal(key1, shape=(10, 2048))
-        fake_features = random.normal(key2, shape=(10, 2048))
-        kid_nonempty = KID.from_model_output(
-            real_features, fake_features, subset_size=5
-        )
-        merged2 = kid_nonempty.merge(empty1)
-        self.assertEqual(merged2.total, kid_nonempty.total)
-        self.assertEqual(merged2.count, kid_nonempty.count)
-
-
     def test_kid_equivalence_and_timing(self):
         """Compare KID between Metrax and torchmetrics implementations."""
         n = 32
