@@ -20,6 +20,7 @@ os.environ['KERAS_BACKEND'] = 'jax'
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax.numpy as jnp
+import keras
 import metrax
 import numpy as np
 import tensorflow as tf
@@ -359,7 +360,7 @@ class ImageMetricsTest(parameterized.TestCase):
       target_class_ids: np.ndarray,
       from_logits: bool,
   ):
-    """Tests metrax.IoU against tf.keras.metrics.IoU."""
+    """Tests metrax.IoU against keras.metrics.IoU."""
     # Metrax IoU
     metrax_metric = metrax.IoU.from_model_output(
         predictions=jnp.array(predictions),
@@ -371,7 +372,7 @@ class ImageMetricsTest(parameterized.TestCase):
     metrax_result = metrax_metric.compute()
 
     # Keras IoU
-    keras_iou_metric = tf.keras.metrics.IoU(
+    keras_iou_metric = keras.metrics.IoU(
         num_classes=num_classes,
         target_class_ids=target_class_ids,
         name='keras_iou',
