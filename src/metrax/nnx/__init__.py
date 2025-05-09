@@ -37,6 +37,7 @@ RougeL = nnx_metrics.RougeL
 RougeN = nnx_metrics.RougeN
 SSIM = nnx_metrics.SSIM
 WER = nnx_metrics.WER
+KID = nnx_metrics.KID
 
 
 __all__ = [
@@ -62,4 +63,5 @@ __all__ = [
     "RougeN",
     "SSIM",
     "WER",
+    "KID"
 ]

@@ -18,7 +18,6 @@ from metrax import image_metrics
 from metrax import nlp_metrics
 from metrax import ranking_metrics
 from metrax import regression_metrics
-
 AUCPR = classification_metrics.AUCPR
 AUCROC = classification_metrics.AUCROC
 Accuracy = classification_metrics.Accuracy
@@ -42,7 +41,7 @@ RougeL = nlp_metrics.RougeL
 RougeN = nlp_metrics.RougeN
 SSIM = image_metrics.SSIM
 WER = nlp_metrics.WER
-
+KID = image_metrics.KID
 
 __all__ = [
     "AUCPR",
@@ -68,4 +67,5 @@ __all__ = [
     "RougeN",
     "SSIM",
     "WER",
+    "KID",
 ]
