@@ -379,7 +379,7 @@ class ImageMetricsTest(parameterized.TestCase):
         sparse_y_pred=not from_logits,
     )
     keras_iou_metric.update_state(targets, predictions)
-    keras_result = keras_iou_metric.result().numpy()
+    keras_result = keras_iou_metric.result()
 
     np.testing.assert_allclose(
         metrax_result,
