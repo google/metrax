@@ -426,6 +426,62 @@ class ImageMetricsTest(parameterized.TestCase):
             msg=f'Keras IoU failed for {self.id()}',
         )
 
+        (
+            "psnr_basic_norm_single_channel",
+            PREDS_1_NP,
+            TARGETS_1_NP,
+            MAX_VAL_1,
+        ),
+        (
+            "psnr_multichannel_norm",
+            PREDS_2_NP,
+            TARGETS_2_NP,
+            MAX_VAL_2,
+        ),
+        (
+            "psnr_uint8_range_single_channel",
+            PREDS_3_NP,
+            TARGETS_3_NP,
+            MAX_VAL_3,
+        ),
+        (
+            "psnr_identical_images",
+            PREDS_4_NP,
+            TARGETS_4_NP,
+            MAX_VAL_4,
+        ),
+    )
+  def test_psnr_against_tensorflow(
+        self,
+        predictions_np: np.ndarray,
+        targets_np: np.ndarray,
+        max_val: float,
+    ) -> None:
+
+        """Test that metrax.SSIM computes values close to tf.image.ssim.
+
+        Note: TensorFlow returns `inf` for identical images (MSE=0).
+        Metrax returns a very large finite value due to the eps guard. 
+        """
+        # Calculate PNSR using Metrax
+        metrax_psnr = metrax.PSNR.from_model_output(
+            predictions=jnp.array(predictions_np),
+            targets=jnp.array(targets_np),
+            max_val=max_val,
+        ).compute()
+
+        # Calculate PNSR using TensorFlow 
+        tf_psnr = tf.image.psnr(
+            predictions_np.astype(np.float32),
+            targets_np.astype(np.float32),
+            max_val=max_val,
+        )
+        tf_mean = tf.reduce_mean(tf_psnr).numpy()
+
+        if np.isfinite(tf_mean):
+            np.testing.assert_allclose(metrax_psnr, tf_mean, rtol=1e-4, atol=1e-4)
+        else:
+            self.assertTrue(metrax_psnr > 120.0)  # ~120 dB for mse=1e-12, max_val=1
 
 if __name__ == '__main__':
   absltest.main()
