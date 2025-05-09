@@ -314,11 +314,11 @@ class SSIM(base.Average):
     return jnp.mean(ssim_scores_stacked, axis=-1)  # (batch,)
 
   @classmethod
-  def from_model_output(  # type: ignore[override]
+  def from_model_output(
       cls,
-      predictions: jax.Array,  # Represents predicted images (y_pred)
-      targets: jax.Array,  # Represents ground truth images (y_true)
-      max_val: float,  # Dynamic range of pixel values
+      predictions: jax.Array,
+      targets: jax.Array,
+      max_val: float,
       filter_size: int = 11,
       filter_sigma: float = 1.5,
       k1: float = 0.01,
@@ -360,3 +360,151 @@ class SSIM(base.Average):
         k2=k2,
     )
     return super().from_model_output(values=batch_ssim_values)
+
+
+@flax.struct.dataclass
+class IoU(base.Average):
+  r"""Measures Intersection over Union (IoU) for semantic segmentation.
+
+  The general formula for IoU for a single class is:
+  $IoU_{class} = \frac{TP}{TP + FP + FN}$
+  where TP, FP, FN are True Positives, False Positives, and False Negatives.
+
+  **Per-Batch Processing:**
+  For each input batch, a mean IoU is calculated. This involves:
+  1. Aggregating TP, FP, and FN pixel counts for each specified target class
+     (from the required `target_class_ids` list) across all samples within the
+     batch.
+  2. Computing IoU for each of these classes using the batch-aggregated counts:
+     $IoU_{class} = \frac{TP}{TP + FP + FN + \epsilon}$.
+  3. Averaging these per-class IoU scores to get a single value for the batch.
+     - If `target_class_ids` is empty, an array of zeros of shape `(B,)`
+       (where `B` is batch size) is produced by `_calculate_iou`.
+     - Otherwise, a scalar `jnp.ndarray` (shape `()`) representing the mean
+       IoU is produced.
+
+  **Accumulation & Final Metric:**
+  This class inherits from `base.Average`. It accumulates the results from
+  per-batch processing and `compute()` returns the final mean IoU as a scalar
+  `jnp.ndarray` (shape `()`).
+  """
+
+  @staticmethod
+  def _calculate_iou(
+      targets: jnp.ndarray,
+      predictions: jnp.ndarray,
+      target_class_ids: jnp.ndarray,
+      epsilon: float = 1e-7,
+  ) -> jnp.ndarray:
+    r"""Computes mean IoU for a processed batch by class-wise aggregation using jax.vmap.
+
+    Per-batch processing: For each target class in the provided
+    `target_class_ids` list, True Positives (TP), False Positives (FP), and
+    False Negatives (FN) are summed across all items in the input batch.
+    The IoU for that class is $TP / (TP + FP + FN + \epsilon)$.
+    These per-class IoU scores are then averaged. If `target_class_ids` is
+    empty, a scalar 0.0 is returned.
+
+    Args:
+      targets: Ground truth segmentation masks. Shape is `(B, H, W)`, integer
+        class labels. (B: batch size, H: height, W: width)
+      predictions: Predicted segmentation masks. Shape is `(B, H, W)`, integer
+        class labels.
+      target_class_ids: An array of integer class IDs for which to compute IoU.
+      epsilon: Small float added to the denominator for numerical stability.
+        Default is `1e-7`.
+
+    Returns:
+      scalar `jnp.ndarray` (shape `()`) mean IoU for the batch. Returns 0.0
+      if `target_class_ids` is empty.
+    """
+    if target_class_ids.shape[0] == 0:
+      return jnp.array(0.0, dtype=jnp.float32)
+
+    def _calculate_iou_for_single_class(
+        class_id: jnp.ndarray,
+    ) -> jnp.ndarray:
+      target_is_class = (targets == class_id)
+      pred_is_class = (predictions == class_id)
+      intersection = jnp.sum(jnp.logical_and(target_is_class, pred_is_class))
+      union = jnp.sum(jnp.logical_or(target_is_class, pred_is_class))
+      return intersection / (union + epsilon)
+
+    iou_scores_per_class = jax.vmap(_calculate_iou_for_single_class)(
+        target_class_ids
+    )
+
+    return jnp.mean(iou_scores_per_class)
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      targets: jax.Array,
+      num_classes: int,
+      target_class_ids: jax.Array,
+      from_logits: bool = False,
+      epsilon: float = 1e-7,
+  ) -> 'IoU':
+    """Creates an `IoU` instance from a batch of model outputs.
+
+    Per-batch processing:
+    1. Preprocesses `predictions` and `targets` into integer label masks of
+       shape `(B, H, W)`. (B: batch size, H: height, W: width).
+    2. Calls `_calculate_iou` using the provided `target_class_ids` to compute
+       the batch's mean IoU.
+
+    Args:
+      predictions: `jax.Array`. Model predictions. - If `from_logits` is `True`:
+        shape `(B, H, W, C)` (C: `num_classes`). - If `from_logits` is `False`:
+        shape `(B, H, W)` or `(B, H, W, 1)`.
+      targets: `jax.Array`. Ground truth segmentation masks. Shape `(B, H, W)`
+        or `(B, H, W, 1)`, integer class labels.
+      num_classes: Total number of distinct classes (`C`). Integer.
+      target_class_ids: An array of integer class IDs for which to compute IoU.
+      from_logits: `bool`. If `True`, `predictions` are logits and argmax is
+        applied. Default is `False`.
+      epsilon: `float`. Small value for stable IoU calculation. Default is
+        `1e-7`.
+
+    Returns:
+      An `IoU` metric instance updated with the IoU score from this batch.
+    """
+    # Preprocessing predictions and targets to be (batch, H, W) integer labels
+    if from_logits:
+      if predictions.ndim != 4 or predictions.shape[-1] != num_classes:
+        raise ValueError(
+            'Logit predictions must be 4D (batch, H, W, num_classes) with last'
+            f' dim matching num_classes. Got shape {predictions.shape} and'
+            f' num_classes {num_classes}'
+        )
+      processed_predictions = jnp.argmax(predictions, axis=-1).astype(jnp.int32)
+    else:
+      if predictions.ndim == 4 and predictions.shape[-1] == 1:
+        processed_predictions = jnp.squeeze(predictions, axis=-1).astype(
+            jnp.int32
+        )
+      elif predictions.ndim == 3:
+        processed_predictions = predictions.astype(jnp.int32)
+      else:
+        raise ValueError(
+            'Predictions (if not from_logits) must be 3D (batch, H, W) or '
+            f'4D (batch, H, W, 1). Got shape {predictions.shape}'
+        )
+    if targets.ndim == 4 and targets.shape[-1] == 1:
+      processed_targets = jnp.squeeze(targets, axis=-1).astype(jnp.int32)
+    elif targets.ndim == 3:
+      processed_targets = targets.astype(jnp.int32)
+    else:
+      raise ValueError(
+          'Targets must be 3D (batch, H, W) or 4D (batch, H, W, 1). '
+          f'Got shape {targets.shape}'
+      )
+
+    iou_score = cls._calculate_iou(
+        targets=processed_targets,
+        predictions=processed_predictions,
+        target_class_ids=target_class_ids,
+        epsilon=epsilon,
+    )
+    return super().from_model_output(values=iou_score)
