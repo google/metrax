@@ -61,6 +61,7 @@ __all__ = [
     "Perplexity",
     "Precision",
     "PrecisionAtK",
+    "PSNR",
     "RMSE",
     "RSQUARED",
     "Recall",
@@ -68,6 +69,5 @@ __all__ = [
     "RougeL",
     "RougeN",
     "SSIM",
-    "PSNR",
     "WER",
 ]

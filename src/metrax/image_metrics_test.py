@@ -69,6 +69,12 @@ PREDS_5 = np.random.rand(*IMG_SHAPE_5).astype(np.float32)
 TARGETS_5 = np.copy(PREDS_5)  # Identical images
 MAX_VAL_5 = 1.0
 
+# Case 6: Large batch size 
+IMG_SHAPE_6 = (8, 16, 16, 3)
+PREDS_6 = np.random.rand(*IMG_SHAPE_6).astype(np.float32)
+TARGETS_6 = np.random.rand(*IMG_SHAPE_6).astype(np.float32)
+MAX_VAL_6 = 1.0
+
 B_IOU, H_IOU, W_IOU = 2, 4, 4  # Common batch, height, width for IoU tests
 
 # Case IoU 1: Binary segmentation (num_classes=2), target_class_ids=[1] (foreground)
@@ -450,6 +456,12 @@ class ImageMetricsTest(parameterized.TestCase):
             TARGETS_4,
             MAX_VAL_4,
         ),
+        (
+            "psnr_large_batch",
+            PREDS_6,
+            TARGETS_6,
+            MAX_VAL_6,
+        ),
     )
   def test_psnr_against_tensorflow(
         self,
@@ -463,14 +475,14 @@ class ImageMetricsTest(parameterized.TestCase):
         Note: TensorFlow returns `inf` for identical images (MSE=0).
         Metrax returns a very large finite value due to the eps guard. 
         """
-        # Calculate PNSR using Metrax
+        # Calculate PSNR using Metrax
         metrax_psnr = metrax.PSNR.from_model_output(
             predictions=jnp.array(predictions_np),
             targets=jnp.array(targets_np),
             max_val=max_val,
         ).compute()
 
-        # Calculate PNSR using TensorFlow 
+        # Calculate PSNR using TensorFlow 
         tf_psnr = tf.image.psnr(
             predictions_np.astype(np.float32),
             targets_np.astype(np.float32),
@@ -478,10 +490,15 @@ class ImageMetricsTest(parameterized.TestCase):
         )
         tf_mean = tf.reduce_mean(tf_psnr).numpy()
 
-        if np.isfinite(tf_mean):
-            np.testing.assert_allclose(metrax_psnr, tf_mean, rtol=1e-4, atol=1e-4)
+        if np.isinf(tf_mean):
+            self.assertTrue(np.isinf(metrax_psnr))
         else:
-            self.assertTrue(metrax_psnr > 120.0)  # ~120 dB for mse=1e-12, max_val=1
-
+            np.testing.assert_allclose(
+                metrax_psnr,
+                tf_mean,
+                rtol=1e-4,
+                atol=1e-4,
+                err_msg="PSNR mismatch",
+    )
 if __name__ == '__main__':
   absltest.main()

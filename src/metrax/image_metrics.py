@@ -508,16 +508,24 @@ class IoU(base.Average):
         epsilon=epsilon,
     )
     return super().from_model_output(values=iou_score)
+
+
 @flax.struct.dataclass
 class PSNR(base.Average):
   r"""
-  Peak Signal-to-Noise Ratio (PSNR) Metric.
+  PSNR (Peak Signal-to-Noise Ratio)  Metric.
   
-    Given two images *x* and *y*, PSNR is defined as::
+  This class calculates the Peak Signal-to-Noise Ratio (PSNR) between two images
+  to measure the quality of a reconstructed image compared to a reference.
+  
+  .. math::
 
-      PSNR(x, y) = 20 * log10(max_val) - 10 * log10(MSE(x, y))
+      \text{PSNR}(I, J) = 10 \cdot \log_{10} \left( \frac{\max(I)^2}{\text{MSE}(I, J)} \right)
 
-    where MSE is the mean‑squared error computed over all pixels and channels.
+  Where:
+    - :math:`\max(I)` is the maximum possible pixel value of the input image.
+    - :math:`\text{MSE}(I, J)` is the mean squared error between images :math:`I` and :math:`J`.
+    
   """ 
   @staticmethod
   def _calculate_psnr(
@@ -546,11 +554,10 @@ class PSNR(base.Average):
               f"Inputs must be 4‑D (batch, height, width, channels), got {img1.ndim}‑D."
           )
 
-      # Cast to float32 to avoid overflow/underflow issues in MSE and log.
     img1 = img1.astype(jnp.float32)
     img2 = img2.astype(jnp.float32)
 
-      # Mean‑squared error per image.
+    # Mean‑squared error per image.
     mse = jnp.mean(jnp.square(img1 - img2), axis=(1, 2, 3))
     mse = jnp.maximum(mse, eps)
 
@@ -560,9 +567,9 @@ class PSNR(base.Average):
   @classmethod
   def from_model_output(  
       cls,
-      predictions: jnp.ndarray,   # Represents predicted images (y_pred)
-      targets: jnp.ndarray, # Represents ground truth images (y_true)
-      max_val: float, # Dynamic range of pixel values
+      predictions: jnp.ndarray,
+      targets: jnp.ndarray,
+      max_val: float,
   ) -> 'PSNR':
       """Computes PSNR for a batch of images and creates an PSNR metric instance.
       

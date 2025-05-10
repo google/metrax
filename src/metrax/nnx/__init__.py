@@ -29,6 +29,7 @@ NDCGAtK = nnx_metrics.NDCGAtK
 Perplexity = nnx_metrics.Perplexity
 Precision = nnx_metrics.Precision
 PrecisionAtK = nnx_metrics.PrecisionAtK
+PSNR = nnx_metrics.PSNR
 RMSE = nnx_metrics.RMSE
 RSQUARED = nnx_metrics.RSQUARED
 Recall = nnx_metrics.Recall
@@ -54,6 +55,7 @@ __all__ = [
     "Perplexity",
     "Precision",
     "PrecisionAtK",
+    "PSNR",
     "RMSE",
     "RSQUARED",
     "Recall",

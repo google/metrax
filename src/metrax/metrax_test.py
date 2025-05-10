@@ -41,7 +41,7 @@ STRING_REFS = [
     'the quick brown fox jumps over the lazy dog',
     'hello beautiful world',
 ]
-# For image_metrics.SSIM.
+# For image_metrics.SSIM and image_metrics.PSNR.
 IMG_SHAPE = (4, 32, 32, 3)
 PRED_IMGS = np.random.rand(*IMG_SHAPE).astype(np.float32)
 TARGET_IMGS = np.random.rand(*IMG_SHAPE).astype(np.float32)
@@ -155,6 +155,14 @@ class MetraxTest(parameterized.TestCase):
               'ks': KS,
           },
       ),
+      (
+          'psnr',
+          metrax.PSNR,
+          {
+              'predictions': PRED_IMGS,
+              'targets': TARGET_IMGS,
+              'max_val': MAX_IMG_VAL,
+          },),
       (
           'rmse',
           metrax.RMSE,
