@@ -41,6 +41,7 @@ RecallAtK = ranking_metrics.RecallAtK
 RougeL = nlp_metrics.RougeL
 RougeN = nlp_metrics.RougeN
 SSIM = image_metrics.SSIM
+PSNR = image_metrics.PSNR
 WER = nlp_metrics.WER
 
 
@@ -60,6 +61,7 @@ __all__ = [
     "Perplexity",
     "Precision",
     "PrecisionAtK",
+    "PSNR",
     "RMSE",
     "RSQUARED",
     "Recall",
