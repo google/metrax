@@ -47,6 +47,9 @@ SAMPLE_WEIGHTS = np.tile(
     (BATCHES, 1),
 ).astype(np.float32)
 
+DICE_ALL_ONES = (jnp.array([1, 1, 1, 1]), jnp.array([1, 1, 1, 1]), 0.5)
+DICE_ALL_ZEROS = (jnp.array([0, 0, 0, 0]), jnp.array([0, 0, 0, 0]), 0.5)
+DICE_NO_OVERLAP = (jnp.array([1, 1, 0, 0]), jnp.array([0, 0, 1, 1]), 0.5)
 
 class ClassificationMetricsTest(parameterized.TestCase):
 
@@ -78,7 +81,14 @@ class ClassificationMetricsTest(parameterized.TestCase):
     self.assertEqual(m.false_positives, jnp.array(0, jnp.float32))
     self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
     self.assertEqual(m.num_thresholds, 0)
-
+    
+  def test_dice_empty(self):
+    """Tests the `empty` method of the `Dice` class."""
+    m = metrax.Dice.empty()
+    self.assertEqual(m.intersection, jnp.array(0, jnp.float32))
+    self.assertEqual(m.sum_true, jnp.array(0, jnp.float32))
+    self.assertEqual(m.sum_pred, jnp.array(0, jnp.float32))
+    
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
       ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
@@ -264,6 +274,41 @@ class ClassificationMetricsTest(parameterized.TestCase):
         rtol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-7,
         atol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-7,
     )
+
+  @parameterized.named_parameters(
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.5),
+      ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.3),
+      ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.7),
+      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5),
+      ('all_ones', *DICE_ALL_ONES),
+      ('all_zeros', *DICE_ALL_ZEROS),
+      ('no_overlap', *DICE_NO_OVERLAP)
+  )
+  def test_dice(self, y_true, y_pred, threshold):
+    """Test that Dice metric computes expected values."""
+    y_true = jnp.ravel(jnp.array(y_true))
+    y_pred = jnp.ravel(jnp.array(y_pred))
+    y_pred_bin = (y_pred >= threshold).astype(y_pred.dtype)
+
+    # Manually compute expected Dice
+    intersection = jnp.sum(y_pred_bin * y_true)
+    sum_pred = jnp.sum(y_pred_bin)
+    sum_true = jnp.sum(y_true)
+    epsilon = 1e-7
+    expected = (2.0 * intersection) / (sum_pred + sum_true + epsilon)
+
+    # Compute using the metric class
+    metric = None
+    for preds, labels in zip(y_pred, y_true):
+      update = metrax.Dice.from_model_output(
+          predictions=preds,
+          labels=labels,
+          threshold=threshold,
+      )
+      metric = update if metric is None else metric.merge(update)
+
+    result = metric.compute()
+    np.testing.assert_allclose(result, expected, rtol=1e-5, atol=1e-5)
 
 
 if __name__ == '__main__':

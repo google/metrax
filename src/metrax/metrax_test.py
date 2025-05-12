@@ -99,6 +99,11 @@ class MetraxTest(parameterized.TestCase):
           },
       ),
       (
+          'dice',
+          metrax.Dice,
+          {'predictions': OUTPUT_LABELS, 'labels': OUTPUT_PREDS},
+      ),
+      (
           'iou',
           metrax.IoU,
           {

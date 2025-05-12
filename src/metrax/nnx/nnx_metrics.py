@@ -66,6 +66,13 @@ class DCGAtK(NnxWrapper):
     super().__init__(metrax.DCGAtK)
 
 
+class Dice(NnxWrapper):
+  """An NNX class for the Metrax metric Dice."""
+
+  def __init__(self):
+    super().__init__(metrax.Dice)
+
+
 class IoU(NnxWrapper):
   """An NNX class for the Metrax metric IoU."""
 
