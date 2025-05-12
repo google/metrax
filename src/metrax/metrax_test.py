@@ -191,7 +191,7 @@ class MetraxTest(parameterized.TestCase):
             'gamma': 0.3,
             'coef': 1.0,
         },
-      )
+      ),
       (
           'ssim',
           metrax.SSIM,

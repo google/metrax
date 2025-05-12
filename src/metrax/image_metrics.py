@@ -60,7 +60,7 @@ def _gaussian_kernel1d(sigma, radius):
   return phi_x
 
 
-def polynomial_kernel(x: jax.Array, y: jax.Array, degree: int, gamma: float, coef: float) -> jax.Array:
+def _polynomial_kernel(x: jax.Array, y: jax.Array, degree: int, gamma: float, coef: float) -> jax.Array:
     """
     Compute the polynomial kernel between two sets of features.
     Args:
@@ -157,9 +157,9 @@ class KID(base.Average):
 
     @staticmethod
     def _compute_mmd_static(f_real: jax.Array, f_fake: jax.Array, degree: int, gamma: float, coef: float) -> float:
-        k_11 = polynomial_kernel(f_real, f_real, degree, gamma, coef)
-        k_22 = polynomial_kernel(f_fake, f_fake, degree, gamma, coef)
-        k_12 = polynomial_kernel(f_real, f_fake, degree, gamma, coef)
+        k_11 = _polynomial_kernel(f_real, f_real, degree, gamma, coef)
+        k_22 = _polynomial_kernel(f_fake, f_fake, degree, gamma, coef)
+        k_12 = _polynomial_kernel(f_real, f_fake, degree, gamma, coef)
 
         m = f_real.shape[0]
         diag_x = jnp.diag(k_11)
