@@ -431,6 +431,7 @@ class ImageMetricsTest(parameterized.TestCase):
             delta=1e-6,
             msg=f'Keras IoU failed for {self.id()}',
         )
+        
   @parameterized.named_parameters(
         (
             "psnr_basic_norm_single_channel",
@@ -469,7 +470,6 @@ class ImageMetricsTest(parameterized.TestCase):
         targets_np: np.ndarray,
         max_val: float,
     ) -> None:
-
         """Test that metrax.SSIM computes values close to tf.image.ssim.
 
         Note: TensorFlow returns `inf` for identical images (MSE=0).
