@@ -276,38 +276,40 @@ class ClassificationMetricsTest(parameterized.TestCase):
     )
 
   @parameterized.named_parameters(
-      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.5),
-      ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.3),
-      ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.7),
-      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
+      ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
+      ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
+      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
       ('all_ones', *DICE_ALL_ONES),
       ('all_zeros', *DICE_ALL_ZEROS),
-      ('no_overlap', *DICE_NO_OVERLAP)
+      ('no_overlap', *DICE_NO_OVERLAP),
   )
-  def test_dice(self, y_true, y_pred, threshold):
+  def test_dice(self, y_true, y_pred, sample_weights):
     """Test that Dice metric computes expected values."""
-    y_true = jnp.ravel(jnp.array(y_true))
-    y_pred = jnp.ravel(jnp.array(y_pred))
-    y_pred_bin = (y_pred >= threshold).astype(y_pred.dtype)
+    y_true = jnp.asarray(y_true, jnp.float32)
+    y_pred = jnp.asarray(y_pred, jnp.float32)
 
     # Manually compute expected Dice
-    intersection = jnp.sum(y_pred_bin * y_true)
-    sum_pred = jnp.sum(y_pred_bin)
-    sum_true = jnp.sum(y_true)
-    epsilon = 1e-7
-    expected = (2.0 * intersection) / (sum_pred + sum_true + epsilon)
+    if sample_weights is None:
+      w = jnp.ones_like(y_true)                               
+    else:
+      w = jnp.asarray(sample_weights, jnp.float32)
+      w = jnp.broadcast_to(w, y_true.shape)
+
+    eps = 1e-7
+    intersection = jnp.sum(w * y_true * y_pred)
+    sum_pred     = jnp.sum(w * y_pred)
+    sum_true     = jnp.sum(w * y_true)
+    expected     = (2.0 * intersection) / (sum_pred + sum_true + eps)
 
     # Compute using the metric class
-    metric = None
-    for preds, labels in zip(y_pred, y_true):
-      update = metrax.Dice.from_model_output(
-          predictions=preds,
-          labels=labels,
-          threshold=threshold,
-      )
-      metric = update if metric is None else metric.merge(update)
-
+    metric = metrax.Dice.from_model_output(
+        predictions=y_pred,
+        labels=y_true,
+        sample_weights=None if sample_weights is None else w,  
+    )
     result = metric.compute()
+    
     np.testing.assert_allclose(result, expected, rtol=1e-5, atol=1e-5)
 
 
