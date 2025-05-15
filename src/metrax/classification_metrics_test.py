@@ -47,9 +47,9 @@ SAMPLE_WEIGHTS = np.tile(
     (BATCHES, 1),
 ).astype(np.float32)
 
-DICE_ALL_ONES = (jnp.array([1, 1, 1, 1]), jnp.array([1, 1, 1, 1]), 0.5)
-DICE_ALL_ZEROS = (jnp.array([0, 0, 0, 0]), jnp.array([0, 0, 0, 0]), 0.5)
-DICE_NO_OVERLAP = (jnp.array([1, 1, 0, 0]), jnp.array([0, 0, 1, 1]), 0.5)
+DICE_ALL_ONES = (jnp.array([1, 1, 1, 1]), jnp.array([1, 1, 1, 1]))
+DICE_ALL_ZEROS = (jnp.array([0, 0, 0, 0]), jnp.array([0, 0, 0, 0]))
+DICE_NO_OVERLAP = (jnp.array([1, 1, 0, 0]), jnp.array([0, 0, 1, 1]))
 
 class ClassificationMetricsTest(parameterized.TestCase):
 
@@ -276,37 +276,30 @@ class ClassificationMetricsTest(parameterized.TestCase):
     )
 
   @parameterized.named_parameters(
-      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
-      ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
-      ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
-      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+      ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+      ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1),
       ('all_ones', *DICE_ALL_ONES),
       ('all_zeros', *DICE_ALL_ZEROS),
       ('no_overlap', *DICE_NO_OVERLAP),
   )
-  def test_dice(self, y_true, y_pred, sample_weights):
+  def test_dice(self, y_true, y_pred):
     """Test that Dice metric computes expected values."""
     y_true = jnp.asarray(y_true, jnp.float32)
     y_pred = jnp.asarray(y_pred, jnp.float32)
 
     # Manually compute expected Dice
-    if sample_weights is None:
-      w = jnp.ones_like(y_true)                               
-    else:
-      w = jnp.asarray(sample_weights, jnp.float32)
-      w = jnp.broadcast_to(w, y_true.shape)
-
     eps = 1e-7
-    intersection = jnp.sum(w * y_true * y_pred)
-    sum_pred     = jnp.sum(w * y_pred)
-    sum_true     = jnp.sum(w * y_true)
+    intersection = jnp.sum(y_true * y_pred)
+    sum_pred     = jnp.sum(y_pred)
+    sum_true     = jnp.sum(y_true)
     expected     = (2.0 * intersection) / (sum_pred + sum_true + eps)
 
     # Compute using the metric class
     metric = metrax.Dice.from_model_output(
         predictions=y_pred,
-        labels=y_true,
-        sample_weights=None if sample_weights is None else w,  
+        labels=y_true
     )
     result = metric.compute()
     

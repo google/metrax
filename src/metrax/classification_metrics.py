@@ -43,45 +43,6 @@ def _default_threshold(num_thresholds: int) -> jax.Array:
   return thresholds
 
 
-def _broadcast_weight(values: jax.Array, sample_weight: jax.Array | None) -> jax.Array | None:
-    """Broadcast sample weights to match the shape of `values`.
-    
-    Args:
-      values: JAX array of values. 
-      sample_weight: JAX array of sample weights. 
-
-    Returns:
-      A JAX array of broadcasted sample weights, or None if `sample_weight` is None.
-    """
-    if sample_weight is None:
-        return None
-      
-    # Try to broadcast; if that fails, we need to expand/squeeze dims
-    sample_weight = jnp.asarray(sample_weight, values.dtype)
-    try:
-      return jnp.broadcast_to(sample_weight, values.shape)
-    except ValueError:
-     pass
-    
-    # Squeeze dimensions if dimension of sample_weights is greater than values.
-    while sample_weight.ndim > values.ndim and sample_weight.shape[-1] == 1:
-      sample_weight = jnp.squeeze(sample_weight, axis=-1)
-      
-    while sample_weight.ndim > values.ndim and sample_weight.shape[0] == 1:
-        sample_weight = jnp.squeeze(sample_weight, axis=0)
-        
-    rank_diff = values.ndim - sample_weight.ndim
-    if rank_diff < 0:
-      raise ValueError(
-          f"sample_weight rank ({sample_weight.ndim}) exceeds "
-          f"values rank ({values.ndim}) after squeezing."
-      )
-    
-    # Expand dimensions to match the rank of `values`.
-    sample_weight = jnp.reshape(sample_weight, sample_weight.shape + (1,) * rank_diff)
-    return jnp.broadcast_to(sample_weight, values.shape)
-
-
 @flax.struct.dataclass
 class Accuracy(base.Average):
   r"""Computes accuracy, which is the frequency with which `predictions` match `labels`.
@@ -656,7 +617,6 @@ class Dice(clu_metrics.Metric):
       cls,
       predictions: jax.Array,
       labels: jax.Array,
-      sample_weights: jax.Array | None = None,
   ) -> 'Dice':
       """Updates the metric.
 
@@ -665,8 +625,6 @@ class Dice(clu_metrics.Metric):
             1]. The shape should be (batch_size,).
           labels: True value. The value is expected to be 0 or 1. The shape should
             be (batch_size,).
-          sample_weights: An optional floating point 1D vector representing the
-            weight of each sample. The shape should be (batch_size,).
 
       Returns:
           Updated Dice metric. 
@@ -674,18 +632,10 @@ class Dice(clu_metrics.Metric):
       """
       predictions = jnp.asarray(predictions, jnp.float32)
       labels = jnp.asarray(labels, jnp.float32)
-      sample_weights = _broadcast_weight(
-          predictions, sample_weights
-      )
 
-      if sample_weights is not None:
-          intersection = jnp.sum(sample_weights * predictions * labels)
-          sum_pred = jnp.sum(sample_weights * predictions)
-          sum_true = jnp.sum(sample_weights * labels)
-      else:
-          intersection = jnp.sum(predictions * labels)
-          sum_pred = jnp.sum(predictions)
-          sum_true = jnp.sum(labels)
+      intersection = jnp.sum(predictions * labels)
+      sum_pred = jnp.sum(predictions)
+      sum_true = jnp.sum(labels)
 
       return cls(
           intersection=intersection,
