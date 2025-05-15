@@ -14,6 +14,7 @@
 
 """A collection of different metrics for image models."""
 
+from clu import metrics as clu_metrics
 import flax
 import jax
 from jax import lax
@@ -584,3 +585,82 @@ class PSNR(base.Average):
       """
       batch_psnr = cls._calculate_psnr(predictions, targets, max_val=max_val)
       return super().from_model_output(values=batch_psnr)  
+  
+
+@flax.struct.dataclass
+class Dice(clu_metrics.Metric):
+  r"""Computes the Dice coefficient between `y_true` and `y_pred`.
+
+  Dice is a similarity measure used to measure overlap between two samples.
+  A Dice score of 1 indicates perfect overlap; 0 indicates no overlap.
+
+  The formula is:
+
+  .. math::
+
+      \text{Dice} = \frac{2 \cdot \sum (y_{\text{true}} \cdot y_{\text{pred}})}
+                          {\sum y_{\text{true}} + \sum y_{\text{pred}} + \epsilon}
+
+  Attributes:
+      intersection: Sum of element-wise product between `y_true` and `y_pred`.
+      sum_true: Sum of y_true across all examples.
+      sum_pred: Sum of y_pred across all examples.
+      
+  """
+ 
+  intersection: jax.Array
+  sum_pred: jax.Array
+  sum_true: jax.Array
+  
+  @classmethod
+  def empty(cls) -> 'Dice':
+      return cls(
+          intersection=jnp.array(0.0, jnp.float32),
+          sum_pred=jnp.array(0.0, jnp.float32),
+          sum_true=jnp.array(0.0, jnp.float32),
+      )
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+  ) -> 'Dice':
+      """Updates the metric.
+
+      Args:
+          predictions: A floating point vector whose values are in the range [0,
+            1]. The shape should be (batch_size,).
+          labels: True value. The value is expected to be 0 or 1. The shape should
+            be (batch_size,).
+
+      Returns:
+          Updated Dice metric. 
+          
+      """
+      predictions = jnp.asarray(predictions, jnp.float32)
+      labels = jnp.asarray(labels, jnp.float32)
+
+      intersection = jnp.sum(predictions * labels)
+      sum_pred = jnp.sum(predictions)
+      sum_true = jnp.sum(labels)
+
+      return cls(
+          intersection=intersection,
+          sum_pred=sum_pred,
+          sum_true=sum_true,
+      )
+
+  def merge(self, other: 'Dice') -> 'Dice':
+      return type(self)(
+          intersection=self.intersection + other.intersection,
+          sum_pred=self.sum_pred + other.sum_pred,
+          sum_true=self.sum_true + other.sum_true,
+      )
+
+  def compute(self) -> jax.Array:
+      """Returns the final Dice coefficient."""
+      epsilon = 1e-7
+      return (2.0 * self.intersection) / (
+          self.sum_pred + self.sum_true + epsilon
+      )

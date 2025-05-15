@@ -190,9 +190,38 @@ PREDS_IOU_6 = PREDS_IOU_2
 NUM_CLASSES_IOU_6 = NUM_CLASSES_IOU_2
 TARGET_CLASS_IDS_IOU_6 = np.array(range(NUM_CLASSES_IOU_6))
 
+# Test data for Dice
+BATCHES = 4
+BATCH_SIZE = 8
+OUTPUT_LABELS = np.random.randint(
+    0,
+    2,
+    size=(BATCHES, BATCH_SIZE),
+).astype(np.float32)
+OUTPUT_PREDS = np.random.uniform(size=(BATCHES, BATCH_SIZE))
+OUTPUT_PREDS_F16 = OUTPUT_PREDS.astype(jnp.float16)
+OUTPUT_PREDS_F32 = OUTPUT_PREDS.astype(jnp.float32)
+OUTPUT_PREDS_BF16 = OUTPUT_PREDS.astype(jnp.bfloat16)
+OUTPUT_LABELS_BS1 = np.random.randint(
+    0,
+    2,
+    size=(BATCHES, 1),
+).astype(np.float32)
+OUTPUT_PREDS_BS1 = np.random.uniform(size=(BATCHES, 1)).astype(np.float32)
+
+DICE_ALL_ONES = (jnp.array([1, 1, 1, 1]), jnp.array([1, 1, 1, 1]))
+DICE_ALL_ZEROS = (jnp.array([0, 0, 0, 0]), jnp.array([0, 0, 0, 0]))
+DICE_NO_OVERLAP = (jnp.array([1, 1, 0, 0]), jnp.array([0, 0, 1, 1]))
 
 class ImageMetricsTest(parameterized.TestCase):
-
+    
+  def test_dice_empty(self):
+    """Tests the `empty` method of the `Dice` class."""
+    m = metrax.Dice.empty()
+    self.assertEqual(m.intersection, jnp.array(0, jnp.float32))
+    self.assertEqual(m.sum_true, jnp.array(0, jnp.float32))
+    self.assertEqual(m.sum_pred, jnp.array(0, jnp.float32))
+    
   @parameterized.named_parameters(
       (
           'ssim_basic_norm_single_channel',
@@ -500,5 +529,36 @@ class ImageMetricsTest(parameterized.TestCase):
                 atol=1e-4,
                 err_msg="PSNR mismatch",
     )
+            
+  @parameterized.named_parameters(
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+      ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+      ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1),
+      ('all_ones', *DICE_ALL_ONES),  
+      ('all_zeros', *DICE_ALL_ZEROS),
+      ('no_overlap', *DICE_NO_OVERLAP),
+    )             
+  def test_dice(self, y_true, y_pred):
+    """Test that Dice metric computes expected values."""
+    y_true = jnp.asarray(y_true, jnp.float32)
+    y_pred = jnp.asarray(y_pred, jnp.float32)
+
+    # Manually compute expected Dice
+    eps = 1e-7
+    intersection = jnp.sum(y_true * y_pred)
+    sum_pred     = jnp.sum(y_pred)
+    sum_true     = jnp.sum(y_true)
+    expected     = (2.0 * intersection) / (sum_pred + sum_true + eps)
+
+    # Compute using the metric class
+    metric = metrax.Dice.from_model_output(
+        predictions=y_pred,
+        labels=y_true
+    )
+    result = metric.compute()
+    
+    np.testing.assert_allclose(result, expected, rtol=1e-5, atol=1e-5)
+    
 if __name__ == '__main__':
   absltest.main()
