@@ -19,6 +19,7 @@ import flax
 import jax
 import jax.numpy as jnp
 from metrax import base
+from tensorflow.python.ops.metrics_impl import precision
 
 
 def _default_threshold(num_thresholds: int) -> jax.Array:
@@ -577,3 +578,82 @@ class AUCROC(clu_metrics.Metric):
     )
     # Threshold goes from 0 to 1, so trapezoid is negative.
     return jnp.trapezoid(tp_rate, fp_rate) * -1
+
+  @classmethod
+  class FBetaScore(clu_metrics.Metric):
+
+      """
+      F-Beta score Metric class
+
+      Computes the F-Beta score for the binary classification given 'predictions' and 'labels'.
+
+      Formula for F-Beta Score:
+          b2 = beta ** 2
+          f_beta_score = ((1 + b2) * (precision * recall)) / (precision * b2 + recall)
+
+      F-Beta turns into the F1 Score when beta = 1
+
+      Attributes:
+          beta: The beta value used in the F-Score metric
+          precision: The precision value used in the F-Score metric
+          recall: The recall value used in the F-Score metric
+      """
+
+      beta: 1.0
+      precision: jax.Array
+      recall: jax.Array
+
+      @classmethod
+      def empty(cls) -> 'FBetaScore':
+          return cls(
+              precision=jnp.array(0, jnp.float32),
+              recall=jnp.array(0, jnp.float32),
+              beta=1.0,
+          )
+
+      @classmethod
+      def from_model_output(cls, predictions: jax.Array, labels: jax.Array,
+                            sample_weights: jax.Array | None = None, ) -> 'FBetaScore':
+          """Updates the metric.
+
+              Args:
+                predictions: A floating point 1D vector whose values are in the range [0,
+                  1]. The shape should be (batch_size,).
+                labels: True value. The value is expected to be 0 or 1. The shape should
+                  be (batch_size,).
+                sample_weights: An optional floating point 1D vector representing the
+                  weight of each sample. The shape should be (batch_size,).
+
+              Returns:
+                The Precision and Recall values.
+
+              Raises:
+                ValueError: If type of `labels` is wrong or the shapes of `predictions`
+                and `labels` are incompatible.
+              """
+
+      # Updates the Beta value to be something other than 1
+      def update_beta(self, beta: float):
+
+          # Make sure the Beta is not an invalid number
+          if beta <= 0.0:
+              return ValueError("Beta must not be 0 or less")
+          else:
+              self.beta = beta
+
+      # Unsure if this should be used
+      def merge(self, other: 'FBetaScore') -> 'FBetaScore':
+          return type(self)(
+              precision=self.precision + other.precision,
+              recall=self.recall + other.recall,
+          )
+
+      # Compute the F-Beta score metric
+      def compute(self) -> jax.Array:
+
+          numerator = (1 + self.beta) * (self.precision * self.recall)
+          denominator = (self.beta ** 2 * self.precision) * self.recall
+
+          return base.divide_no_nan(
+              numerator, denominator
+          )
