@@ -22,6 +22,7 @@ AveragePrecisionAtK = nnx_metrics.AveragePrecisionAtK
 BLEU = nnx_metrics.BLEU
 DCGAtK = nnx_metrics.DCGAtK
 IoU = nnx_metrics.IoU
+KID = nnx_metrics.KID
 MAE = nnx_metrics.MAE
 MRR = nnx_metrics.MRR
 MSE = nnx_metrics.MSE
@@ -37,7 +38,6 @@ RougeL = nnx_metrics.RougeL
 RougeN = nnx_metrics.RougeN
 SSIM = nnx_metrics.SSIM
 WER = nnx_metrics.WER
-KID = nnx_metrics.KID
 
 
 __all__ = [
@@ -48,8 +48,9 @@ __all__ = [
     "BLEU",
     "DCGAtK",
     "IoU",
+    "KID",
     "MRR",
-    "MAE"
+    "MAE",
     "MSE",
     "NDCGAtK",
     "Perplexity",
@@ -63,5 +64,4 @@ __all__ = [
     "RougeN",
     "SSIM",
     "WER",
-    "KID"
 ]

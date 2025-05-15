@@ -26,6 +26,7 @@ AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
 BLEU = nlp_metrics.BLEU
 DCGAtK = ranking_metrics.DCGAtK
 IoU = image_metrics.IoU
+KID = image_metrics.KID
 MAE = regression_metrics.MAE
 MRR = ranking_metrics.MRR
 MSE = regression_metrics.MSE
@@ -41,7 +42,6 @@ RougeL = nlp_metrics.RougeL
 RougeN = nlp_metrics.RougeN
 SSIM = image_metrics.SSIM
 WER = nlp_metrics.WER
-KID = image_metrics.KID
 
 __all__ = [
     "AUCPR",

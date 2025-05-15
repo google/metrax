@@ -18,14 +18,7 @@ import jax.numpy as jnp
 from jax import random, lax
 import flax
 import jax
-from clu import metrics as clu_metrics
 from metrax import base
-
-KID_DEFAULT_SUBSETS = 100
-KID_DEFAULT_SUBSET_SIZE = 1000
-KID_DEFAULT_DEGREE = 3
-KID_DEFAULT_GAMMA = None
-KID_DEFAULT_COEF = 1.0
 
 
 def _gaussian_kernel1d(sigma, radius):
@@ -60,7 +53,7 @@ def _gaussian_kernel1d(sigma, radius):
   return phi_x
 
 
-def polynomial_kernel(x: jax.Array, y: jax.Array, degree: int, gamma: float, coef: float) -> jax.Array:
+def _polynomial_kernel(x: jax.Array, y: jax.Array, degree: int, gamma: float, coef: float) -> jax.Array:
     """
     Compute the polynomial kernel between two sets of features.
     Args:
@@ -106,26 +99,60 @@ class KID(base.Average):
         coef: Independent term in the polynomial kernel.
     """
 
-    subsets: int = KID_DEFAULT_SUBSETS
-    subset_size: int = KID_DEFAULT_SUBSET_SIZE
-    degree: int = KID_DEFAULT_DEGREE
-    gamma: float = KID_DEFAULT_GAMMA
-    coef: float = KID_DEFAULT_COEF
+    @staticmethod
+    def _compute_mmd_static(f_real: jax.Array, f_fake: jax.Array, degree: int, gamma: float, coef: float) -> float:
+        k_11 = _polynomial_kernel(f_real, f_real, degree, gamma, coef)
+        k_22 = _polynomial_kernel(f_fake, f_fake, degree, gamma, coef)
+        k_12 = _polynomial_kernel(f_real, f_fake, degree, gamma, coef)
+
+        m = f_real.shape[0]
+        diag_x = jnp.diag(k_11)
+        diag_y = jnp.diag(k_22)
+
+        kt_xx_sum = jnp.sum(k_11, axis=-1) - diag_x
+        kt_yy_sum = jnp.sum(k_22, axis=-1) - diag_y
+        k_xy_sum = jnp.sum(k_12, axis=0)
+
+        value = (jnp.sum(kt_xx_sum) + jnp.sum(kt_yy_sum)) / (m * (m - 1))
+        value -= 2 * jnp.sum(k_xy_sum) / (m**2)
+        return value
 
     @classmethod
     def from_model_output(
         cls,
         real_features: jax.Array,
         fake_features: jax.Array,
-        subsets: int = KID_DEFAULT_SUBSETS,
-        subset_size: int = KID_DEFAULT_SUBSET_SIZE,
-        degree: int = KID_DEFAULT_DEGREE,
-        gamma: float = KID_DEFAULT_GAMMA,
-        coef: float = KID_DEFAULT_COEF,
+        subsets: int = 100,
+        subset_size: int = 1000,
+        degree: int = 3,
+        gamma: float = None,
+        coef: float = 1.0,
     ):
         """
         Create a KID instance from model output.
-        also it computes average output and then store it in the instance.        
+        Also computes the average KID value and stores it in the instance.
+
+        Args:
+            real_features (jax.Array):
+                Feature representations of real images. Shape: (N, D), where N is the number of real images and D is the feature dimension.
+            fake_features (jax.Array):
+                Feature representations of generated (fake) images. Shape: (M, D), where M is the number of fake images and D is the feature dimension.
+            subsets (int, optional):
+                Number of random subsets to use for KID calculation. Default is 100.
+            subset_size (int, optional):
+                Number of samples in each subset. Must be <= min(N, M). Default is 1000.
+            degree (int, optional):
+                Degree of the polynomial kernel. Default is 3.
+            gamma (float, optional):
+                Kernel coefficient for the polynomial kernel. If None, uses 1 / D. Default is None.
+            coef (float, optional):
+                Independent term in the polynomial kernel. Default is 1.0.
+
+        Returns:
+            KID: An instance of the KID metric with the computed mean KID value for the given features.
+
+        Raises:
+            ValueError: If any parameter is non-positive, or if subset_size is greater than the number of samples in real or fake features.
         """
         if subsets <= 0 or subset_size <= 0 or degree <= 0 or (gamma is not None and gamma <= 0) or coef <= 0:
             raise ValueError("All parameters must be positive and non-zero.")
@@ -154,24 +181,6 @@ class KID(base.Average):
             coef=coef,
         )
 
-
-    @staticmethod
-    def _compute_mmd_static(f_real: jax.Array, f_fake: jax.Array, degree: int, gamma: float, coef: float) -> float:
-        k_11 = polynomial_kernel(f_real, f_real, degree, gamma, coef)
-        k_22 = polynomial_kernel(f_fake, f_fake, degree, gamma, coef)
-        k_12 = polynomial_kernel(f_real, f_fake, degree, gamma, coef)
-
-        m = f_real.shape[0]
-        diag_x = jnp.diag(k_11)
-        diag_y = jnp.diag(k_22)
-
-        kt_xx_sum = jnp.sum(k_11, axis=-1) - diag_x
-        kt_yy_sum = jnp.sum(k_22, axis=-1) - diag_y
-        k_xy_sum = jnp.sum(k_12, axis=0)
-
-        value = (jnp.sum(kt_xx_sum) + jnp.sum(kt_yy_sum)) / (m * (m - 1))
-        value -= 2 * jnp.sum(k_xy_sum) / (m**2)
-        return value
 
 @flax.struct.dataclass
 class SSIM(base.Average):
@@ -480,7 +489,6 @@ class SSIM(base.Average):
         k2=k2,
     )
     return super().from_model_output(values=batch_ssim_values)
-
 
 @flax.struct.dataclass
 class IoU(base.Average):
