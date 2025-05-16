@@ -602,13 +602,16 @@ class FBetaScore(clu_metrics.Metric):
     beta: 1.0
     precision: jax.Array
     recall: jax.Array
+    threshold: 0.5
 
+    # Reset the variables for the class
     @classmethod
     def empty(cls) -> 'FBetaScore':
         return cls(
-            precision=jnp.array(0, jnp.float32),
-            recall=jnp.array(0, jnp.float32),
-            beta=1.0,
+            precision = jnp.array(0, jnp.float32),
+            recall = jnp.array(0, jnp.float32),
+            beta = 1.0,
+            threshold = 0.5,
         )
 
     @classmethod
@@ -632,16 +635,25 @@ class FBetaScore(clu_metrics.Metric):
                 and `labels` are incompatible.
         """
 
-      # Updates the Beta value to be something other than 1
+    # Updates the Beta value to be something other than 1
     def update_beta(self, beta: float):
 
         # Make sure the Beta is not an invalid number
-        if beta <= 0.0:
-            return ValueError("Beta must not be 0 or less")
-        else:
+        if not beta <= 0.0:
             self.beta = beta
+        else:
+            return ValueError("Beta must not be 0 or less")
 
-    # Unsure if this should be used
+    # Updates the Beta value to be something other than 1
+    def update_threshold(self, threshold: float):
+
+        # Make sure the Beta is not an invalid number
+        if threshold <= 0.0 or threshold > 1.0:
+            return ValueError("threshold must not be 0 or less or more than 1")
+        else:
+            self.threshold = threshold
+
+    # Unsure if this should be used, at least in this form
     def merge(self, other: 'FBetaScore') -> 'FBetaScore':
         return type(self)(
             precision=self.precision + other.precision,
@@ -651,8 +663,9 @@ class FBetaScore(clu_metrics.Metric):
     # Compute the F-Beta score metric
     def compute(self) -> jax.Array:
 
-        numerator = (1 + self.beta) * (self.precision * self.recall)
-        denominator = (self.beta ** 2 * self.precision) * self.recall
+        b2 = self.beta ** 2
+        numerator = (1 + b2) * (self.precision * self.recall)
+        denominator = (b2 * self.precision) * self.recall
 
         return base.divide_no_nan(
             numerator, denominator
