@@ -77,6 +77,14 @@ class ClassificationMetricsTest(parameterized.TestCase):
     self.assertEqual(m.false_positives, jnp.array(0, jnp.float32))
     self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
     self.assertEqual(m.num_thresholds, 0)
+
+  def test_fbeta_empty(self):
+    """Tests the `empty` method of the `FBetaScore` class."""
+    m = metrax.FBetaScore.empty()
+    self.assertEqual(m.precision, jnp.array(0, jnp.float32))
+    self.assertEqual(m.recall, jnp.array(0, jnp.float32))
+    self.assertEqual(m.beta, 1.0)
+    self.assertEqual(m.threshold, 0.5)
     
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
