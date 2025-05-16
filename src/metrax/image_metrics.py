@@ -513,30 +513,31 @@ class IoU(base.Average):
 
 @flax.struct.dataclass
 class PSNR(base.Average):
-  r"""
-  PSNR (Peak Signal-to-Noise Ratio)  Metric.
-  
+  r"""PSNR (Peak Signal-to-Noise Ratio)  Metric.
+
   This class calculates the Peak Signal-to-Noise Ratio (PSNR) between two images
   to measure the quality of a reconstructed image compared to a reference.
-  
+
   .. math::
 
-      \text{PSNR}(I, J) = 10 \cdot \log_{10} \left( \frac{\max(I)^2}{\text{MSE}(I, J)} \right)
+      \text{PSNR}(I, J) = 10 \cdot \log_{10} \left(
+      \frac{\max(I)^2}{\text{MSE}(I, J)} \right)
 
   Where:
     - :math:`\max(I)` is the maximum possible pixel value of the input image.
-    - :math:`\text{MSE}(I, J)` is the mean squared error between images :math:`I` and :math:`J`.
-    
-  """ 
+    - :math:`\text{MSE}(I, J)` is the mean squared error between images
+    :math:`I` and :math:`J`.
+  """
+
   @staticmethod
   def _calculate_psnr(
-        img1: jnp.ndarray,
-        img2: jnp.ndarray,
-        max_val: float,
-        eps: float = 0,
+      img1: jnp.ndarray,
+      img2: jnp.ndarray,
+      max_val: float,
+      eps: float = 0,
   ) -> jnp.ndarray:
     """Computes PSNR (Peak Signal-to-Noise Ratio) values.
-    
+
     Args:
             img1: Predicted images, shape ``(batch, H, W, C)``.
             img2: Ground‑truth images, same shape as ``img1``.
@@ -547,13 +548,15 @@ class PSNR(base.Average):
           A 1D JAX array of shape ``(batch,)`` containing PSNR in dB.
     """
     if img1.shape != img2.shape:
-          raise ValueError(
-              f"Input images must have the same shape, got {img1.shape} and {img2.shape}."
-          )
+      raise ValueError(
+          f'Input images must have the same shape, got {img1.shape} and'
+          f' {img2.shape}.'
+      )
     if img1.ndim != 4:  # (batch, H, W, C)
-          raise ValueError(
-              f"Inputs must be 4‑D (batch, height, width, channels), got {img1.ndim}‑D."
-          )
+      raise ValueError(
+          'Inputs must be 4‑D (batch, height, width, channels), got'
+          f' {img1.ndim}‑D.'
+      )
 
     img1 = img1.astype(jnp.float32)
     img2 = img2.astype(jnp.float32)
@@ -563,29 +566,31 @@ class PSNR(base.Average):
     mse = jnp.maximum(mse, eps)
 
     psnr = 20.0 * jnp.log10(max_val) - 10.0 * jnp.log10(mse)
-    return psnr  
-  
+    return psnr
+
   @classmethod
-  def from_model_output(  
+  def from_model_output(
       cls,
       predictions: jnp.ndarray,
       targets: jnp.ndarray,
       max_val: float,
   ) -> 'PSNR':
-      """Computes PSNR for a batch of images and creates an PSNR metric instance.
-      
-      Args:
-          predictions: A JAX array of predicted images, with shape ``(batch, H, W, C)``.
-          targets: A JAX array of ground truth images, with shape ``(batch, H, W, C)``.
-          max_val: The maximum possible pixel value (dynamic range) of the images
-            (e.g., 1.0 for float images in [0,1], 255 for uint8 images).
+    """Computes PSNR for a batch of images and creates an PSNR metric instance.
 
-      Returns:
-          A ``PSNR`` instance containing per‑image PSNR values.
-      """
-      batch_psnr = cls._calculate_psnr(predictions, targets, max_val=max_val)
-      return super().from_model_output(values=batch_psnr)  
-  
+    Args:
+        predictions: A JAX array of predicted images, with shape ``(batch, H, W,
+          C)``.
+        targets: A JAX array of ground truth images, with shape ``(batch, H, W,
+          C)``.
+        max_val: The maximum possible pixel value (dynamic range) of the images
+          (e.g., 1.0 for float images in [0,1], 255 for uint8 images).
+
+    Returns:
+        A ``PSNR`` instance containing per‑image PSNR values.
+    """
+    batch_psnr = cls._calculate_psnr(predictions, targets, max_val=max_val)
+    return super().from_model_output(values=batch_psnr)
+
 
 @flax.struct.dataclass
 class Dice(clu_metrics.Metric):
@@ -599,26 +604,26 @@ class Dice(clu_metrics.Metric):
   .. math::
 
       \text{Dice} = \frac{2 \cdot \sum (y_{\text{true}} \cdot y_{\text{pred}})}
-                          {\sum y_{\text{true}} + \sum y_{\text{pred}} + \epsilon}
+                          {\sum y_{\text{true}} + \sum y_{\text{pred}} +
+                          \epsilon}
 
   Attributes:
       intersection: Sum of element-wise product between `y_true` and `y_pred`.
       sum_true: Sum of y_true across all examples.
       sum_pred: Sum of y_pred across all examples.
-      
   """
- 
+
   intersection: jax.Array
   sum_pred: jax.Array
   sum_true: jax.Array
-  
+
   @classmethod
   def empty(cls) -> 'Dice':
-      return cls(
-          intersection=jnp.array(0.0, jnp.float32),
-          sum_pred=jnp.array(0.0, jnp.float32),
-          sum_true=jnp.array(0.0, jnp.float32),
-      )
+    return cls(
+        intersection=jnp.array(0.0, jnp.float32),
+        sum_pred=jnp.array(0.0, jnp.float32),
+        sum_true=jnp.array(0.0, jnp.float32),
+    )
 
   @classmethod
   def from_model_output(
@@ -626,41 +631,38 @@ class Dice(clu_metrics.Metric):
       predictions: jax.Array,
       labels: jax.Array,
   ) -> 'Dice':
-      """Updates the metric.
+    """Updates the metric.
 
-      Args:
-          predictions: A floating point vector whose values are in the range [0,
-            1]. The shape should be (batch_size,).
-          labels: True value. The value is expected to be 0 or 1. The shape should
-            be (batch_size,).
+    Args:
+        predictions: A floating point vector whose values are in the range [0,
+          1]. The shape should be (batch_size,).
+        labels: True value. The value is expected to be 0 or 1. The shape should
+          be (batch_size,).
 
-      Returns:
-          Updated Dice metric. 
-          
-      """
-      predictions = jnp.asarray(predictions, jnp.float32)
-      labels = jnp.asarray(labels, jnp.float32)
+    Returns:
+        Updated Dice metric.
+    """
+    predictions = jnp.asarray(predictions, jnp.float32)
+    labels = jnp.asarray(labels, jnp.float32)
 
-      intersection = jnp.sum(predictions * labels)
-      sum_pred = jnp.sum(predictions)
-      sum_true = jnp.sum(labels)
+    intersection = jnp.sum(predictions * labels)
+    sum_pred = jnp.sum(predictions)
+    sum_true = jnp.sum(labels)
 
-      return cls(
-          intersection=intersection,
-          sum_pred=sum_pred,
-          sum_true=sum_true,
-      )
+    return cls(
+        intersection=intersection,
+        sum_pred=sum_pred,
+        sum_true=sum_true,
+    )
 
   def merge(self, other: 'Dice') -> 'Dice':
-      return type(self)(
-          intersection=self.intersection + other.intersection,
-          sum_pred=self.sum_pred + other.sum_pred,
-          sum_true=self.sum_true + other.sum_true,
-      )
+    return type(self)(
+        intersection=self.intersection + other.intersection,
+        sum_pred=self.sum_pred + other.sum_pred,
+        sum_true=self.sum_true + other.sum_true,
+    )
 
   def compute(self) -> jax.Array:
-      """Returns the final Dice coefficient."""
-      epsilon = 1e-7
-      return (2.0 * self.intersection) / (
-          self.sum_pred + self.sum_true + epsilon
-      )
+    """Returns the final Dice coefficient."""
+    epsilon = 1e-7
+    return (2.0 * self.intersection) / (self.sum_pred + self.sum_true + epsilon)

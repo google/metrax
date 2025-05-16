@@ -51,7 +51,7 @@ __all__ = [
     "Dice",
     "IoU",
     "MRR",
-    "MAE"
+    "MAE",
     "MSE",
     "NDCGAtK",
     "Perplexity",

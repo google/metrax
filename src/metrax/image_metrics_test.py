@@ -69,7 +69,7 @@ PREDS_5 = np.random.rand(*IMG_SHAPE_5).astype(np.float32)
 TARGETS_5 = np.copy(PREDS_5)  # Identical images
 MAX_VAL_5 = 1.0
 
-# Case 6: Large batch size 
+# Case 6: Large batch size
 IMG_SHAPE_6 = (8, 16, 16, 3)
 PREDS_6 = np.random.rand(*IMG_SHAPE_6).astype(np.float32)
 TARGETS_6 = np.random.rand(*IMG_SHAPE_6).astype(np.float32)
@@ -199,9 +199,8 @@ OUTPUT_LABELS = np.random.randint(
     size=(BATCHES, BATCH_SIZE),
 ).astype(np.float32)
 OUTPUT_PREDS = np.random.uniform(size=(BATCHES, BATCH_SIZE))
-OUTPUT_PREDS_F16 = OUTPUT_PREDS.astype(jnp.float16)
-OUTPUT_PREDS_F32 = OUTPUT_PREDS.astype(jnp.float32)
-OUTPUT_PREDS_BF16 = OUTPUT_PREDS.astype(jnp.bfloat16)
+OUTPUT_PREDS_F16 = OUTPUT_PREDS.astype(np.float16)
+OUTPUT_PREDS_F32 = OUTPUT_PREDS.astype(np.float32)
 OUTPUT_LABELS_BS1 = np.random.randint(
     0,
     2,
@@ -209,19 +208,20 @@ OUTPUT_LABELS_BS1 = np.random.randint(
 ).astype(np.float32)
 OUTPUT_PREDS_BS1 = np.random.uniform(size=(BATCHES, 1)).astype(np.float32)
 
-DICE_ALL_ONES = (jnp.array([1, 1, 1, 1]), jnp.array([1, 1, 1, 1]))
-DICE_ALL_ZEROS = (jnp.array([0, 0, 0, 0]), jnp.array([0, 0, 0, 0]))
-DICE_NO_OVERLAP = (jnp.array([1, 1, 0, 0]), jnp.array([0, 0, 1, 1]))
+DICE_ALL_ONES = (np.array([1, 1, 1, 1]), np.array([1, 1, 1, 1]))
+DICE_ALL_ZEROS = (np.array([0, 0, 0, 0]), np.array([0, 0, 0, 0]))
+DICE_NO_OVERLAP = (np.array([1, 1, 0, 0]), np.array([0, 0, 1, 1]))
+
 
 class ImageMetricsTest(parameterized.TestCase):
-    
+
   def test_dice_empty(self):
     """Tests the `empty` method of the `Dice` class."""
     m = metrax.Dice.empty()
     self.assertEqual(m.intersection, jnp.array(0, jnp.float32))
     self.assertEqual(m.sum_true, jnp.array(0, jnp.float32))
     self.assertEqual(m.sum_pred, jnp.array(0, jnp.float32))
-    
+
   @parameterized.named_parameters(
       (
           'ssim_basic_norm_single_channel',
@@ -460,85 +460,81 @@ class ImageMetricsTest(parameterized.TestCase):
             delta=1e-6,
             msg=f'Keras IoU failed for {self.id()}',
         )
-        
+
   @parameterized.named_parameters(
-        (
-            "psnr_basic_norm_single_channel",
-            PREDS_1,
-            TARGETS_1,
-            MAX_VAL_1,
-        ),
-        (
-            "psnr_multichannel_norm",
-            PREDS_2,
-            TARGETS_2,
-            MAX_VAL_2,
-        ),
-        (
-            "psnr_uint8_range_single_channel",
-            PREDS_3,
-            TARGETS_3,
-            MAX_VAL_3,
-        ),
-        (
-            "psnr_identical_images",
-            PREDS_4,
-            TARGETS_4,
-            MAX_VAL_4,
-        ),
-        (
-            "psnr_large_batch",
-            PREDS_6,
-            TARGETS_6,
-            MAX_VAL_6,
-        ),
-    )
+      (
+          'psnr_basic_norm_single_channel',
+          PREDS_1,
+          TARGETS_1,
+          MAX_VAL_1,
+      ),
+      (
+          'psnr_multichannel_norm',
+          PREDS_2,
+          TARGETS_2,
+          MAX_VAL_2,
+      ),
+      (
+          'psnr_uint8_range_single_channel',
+          PREDS_3,
+          TARGETS_3,
+          MAX_VAL_3,
+      ),
+      (
+          'psnr_identical_images',
+          PREDS_4,
+          TARGETS_4,
+          MAX_VAL_4,
+      ),
+      (
+          'psnr_large_batch',
+          PREDS_6,
+          TARGETS_6,
+          MAX_VAL_6,
+      ),
+  )
   def test_psnr_against_tensorflow(
-        self,
-        predictions_np: np.ndarray,
-        targets_np: np.ndarray,
-        max_val: float,
-    ) -> None:
-        """Test that metrax.SSIM computes values close to tf.image.ssim.
+      self,
+      predictions_np: np.ndarray,
+      targets_np: np.ndarray,
+      max_val: float,
+  ) -> None:
+    """Test that metrax.SSIM computes values close to tf.image.ssim."""
+    # Calculate PSNR using Metrax
+    metrax_psnr = metrax.PSNR.from_model_output(
+        predictions=jnp.array(predictions_np),
+        targets=jnp.array(targets_np),
+        max_val=max_val,
+    ).compute()
 
-        Note: TensorFlow returns `inf` for identical images (MSE=0).
-        Metrax returns a very large finite value due to the eps guard. 
-        """
-        # Calculate PSNR using Metrax
-        metrax_psnr = metrax.PSNR.from_model_output(
-            predictions=jnp.array(predictions_np),
-            targets=jnp.array(targets_np),
-            max_val=max_val,
-        ).compute()
-
-        # Calculate PSNR using TensorFlow 
-        tf_psnr = tf.image.psnr(
-            predictions_np.astype(np.float32),
-            targets_np.astype(np.float32),
-            max_val=max_val,
-        )
-        tf_mean = tf.reduce_mean(tf_psnr).numpy()
-
-        if np.isinf(tf_mean):
-            self.assertTrue(np.isinf(metrax_psnr))
-        else:
-            np.testing.assert_allclose(
-                metrax_psnr,
-                tf_mean,
-                rtol=1e-4,
-                atol=1e-4,
-                err_msg="PSNR mismatch",
+    # Calculate PSNR using TensorFlow
+    tf_psnr = tf.image.psnr(
+        predictions_np.astype(np.float32),
+        targets_np.astype(np.float32),
+        max_val=max_val,
     )
-            
+    tf_mean = tf.reduce_mean(tf_psnr).numpy()
+
+    if np.isinf(tf_mean):
+      self.assertTrue(np.isinf(metrax_psnr))
+    else:
+      np.testing.assert_allclose(
+          metrax_psnr,
+          tf_mean,
+          rtol=1e-4,
+          atol=1e-4,
+          err_msg='PSNR mismatch',
+      )
+
   @parameterized.named_parameters(
       ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32),
       ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32),
       ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32),
       ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1),
-      ('all_ones', *DICE_ALL_ONES),  
+      ('all_ones', *DICE_ALL_ONES),
       ('all_zeros', *DICE_ALL_ZEROS),
       ('no_overlap', *DICE_NO_OVERLAP),
-    )             
+  )
   def test_dice(self, y_true, y_pred):
     """Test that Dice metric computes expected values."""
     y_true = jnp.asarray(y_true, jnp.float32)
@@ -547,18 +543,16 @@ class ImageMetricsTest(parameterized.TestCase):
     # Manually compute expected Dice
     eps = 1e-7
     intersection = jnp.sum(y_true * y_pred)
-    sum_pred     = jnp.sum(y_pred)
-    sum_true     = jnp.sum(y_true)
-    expected     = (2.0 * intersection) / (sum_pred + sum_true + eps)
+    sum_pred = jnp.sum(y_pred)
+    sum_true = jnp.sum(y_true)
+    expected = (2.0 * intersection) / (sum_pred + sum_true + eps)
 
     # Compute using the metric class
-    metric = metrax.Dice.from_model_output(
-        predictions=y_pred,
-        labels=y_true
-    )
+    metric = metrax.Dice.from_model_output(predictions=y_pred, labels=y_true)
     result = metric.compute()
-    
+
     np.testing.assert_allclose(result, expected, rtol=1e-5, atol=1e-5)
-    
+
+
 if __name__ == '__main__':
   absltest.main()

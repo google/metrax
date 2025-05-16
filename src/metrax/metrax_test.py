@@ -167,7 +167,8 @@ class MetraxTest(parameterized.TestCase):
               'predictions': PRED_IMGS,
               'targets': TARGET_IMGS,
               'max_val': MAX_IMG_VAL,
-          },),
+          },
+    ),
       (
           'rmse',
           metrax.RMSE,
