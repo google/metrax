@@ -3,13 +3,14 @@ metrax Documentation
 
 **metrax** provides common evaluation metric implementations for JAX.
 
-Available Metrics
+Table of Contents
 -----------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   Metrax metrics: <metrax>
+   Metrax metrics <metrax>
+
 
 Getting Started
 ---------------

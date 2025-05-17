@@ -21,6 +21,7 @@ Average = nnx_metrics.Average
 AveragePrecisionAtK = nnx_metrics.AveragePrecisionAtK
 BLEU = nnx_metrics.BLEU
 DCGAtK = nnx_metrics.DCGAtK
+Dice = nnx_metrics.Dice
 IoU = nnx_metrics.IoU
 KID = nnx_metrics.KID
 MAE = nnx_metrics.MAE
@@ -30,6 +31,7 @@ NDCGAtK = nnx_metrics.NDCGAtK
 Perplexity = nnx_metrics.Perplexity
 Precision = nnx_metrics.Precision
 PrecisionAtK = nnx_metrics.PrecisionAtK
+PSNR = nnx_metrics.PSNR
 RMSE = nnx_metrics.RMSE
 RSQUARED = nnx_metrics.RSQUARED
 Recall = nnx_metrics.Recall
@@ -47,6 +49,7 @@ __all__ = [
     "AveragePrecisionAtK",
     "BLEU",
     "DCGAtK",
+    "Dice",
     "IoU",
     "KID",
     "MRR",
@@ -56,6 +59,7 @@ __all__ = [
     "Perplexity",
     "Precision",
     "PrecisionAtK",
+    "PSNR",
     "RMSE",
     "RSQUARED",
     "Recall",

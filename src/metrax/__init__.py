@@ -25,6 +25,7 @@ Average = base.Average
 AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
 BLEU = nlp_metrics.BLEU
 DCGAtK = ranking_metrics.DCGAtK
+Dice = image_metrics.Dice
 IoU = image_metrics.IoU
 KID = image_metrics.KID
 MAE = regression_metrics.MAE
@@ -34,6 +35,7 @@ NDCGAtK = ranking_metrics.NDCGAtK
 Perplexity = nlp_metrics.Perplexity
 Precision = classification_metrics.Precision
 PrecisionAtK = ranking_metrics.PrecisionAtK
+PSNR = image_metrics.PSNR
 RMSE = regression_metrics.RMSE
 RSQUARED = regression_metrics.RSQUARED
 Recall = classification_metrics.Recall
@@ -51,6 +53,7 @@ __all__ = [
     "AveragePrecisionAtK",
     "BLEU",
     "DCGAtK",
+    "Dice",
     "IoU",
     "MAE",
     "MRR",
@@ -59,6 +62,7 @@ __all__ = [
     "Perplexity",
     "Precision",
     "PrecisionAtK",
+    "PSNR",
     "RMSE",
     "RSQUARED",
     "Recall",
