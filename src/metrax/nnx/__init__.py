@@ -23,6 +23,7 @@ BLEU = nnx_metrics.BLEU
 DCGAtK = nnx_metrics.DCGAtK
 Dice = nnx_metrics.Dice
 IoU = nnx_metrics.IoU
+KID = nnx_metrics.KID
 MAE = nnx_metrics.MAE
 MRR = nnx_metrics.MRR
 MSE = nnx_metrics.MSE
@@ -50,6 +51,7 @@ __all__ = [
     "DCGAtK",
     "Dice",
     "IoU",
+    "KID",
     "MRR",
     "MAE",
     "MSE",

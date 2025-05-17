@@ -14,11 +14,10 @@
 
 """A collection of different metrics for image models."""
 
-from clu import metrics as clu_metrics
+import jax.numpy as jnp
+from jax import random, lax
 import flax
 import jax
-from jax import lax
-import jax.numpy as jnp
 from metrax import base
 
 
@@ -52,6 +51,135 @@ def _gaussian_kernel1d(sigma, radius):
   phi_x = jnp.exp(-0.5 / sigma2 * x**2)
   phi_x = phi_x / phi_x.sum()
   return phi_x
+
+
+def _polynomial_kernel(x: jax.Array, y: jax.Array, degree: int, gamma: float, coef: float) -> jax.Array:
+    """
+    Compute the polynomial kernel between two sets of features.
+    Args:
+        x: First set of features.
+        y: Another set of features to be computed with.
+        degree: Degree of the polynomial kernel.
+        gamma: Kernel coefficient for the polynomial kernel. If None, uses 1 / x.shape[1].
+        coef: Independent term in the polynomial kernel.
+    Returns:
+        Polynomial kernel value of Array type.
+    """
+    if gamma is None:
+        gamma = 1.0 / x.shape[1]
+    return (jnp.dot(x, y.T) * gamma + coef) ** degree
+
+
+@flax.struct.dataclass
+class KID(base.Average):
+    r"""Computes Kernel Inception Distance (KID) for asses quality of generated images.
+    KID is a metric used to evaluate the quality of generated images by comparing
+    the distribution of generated images to the distribution of real images.
+    It is based on the Inception Score (IS) and uses a kernelized version of the
+    Maximum Mean Discrepancy (MMD) to measure the distance between two
+    distributions.
+
+    The KID is computed as follows:
+
+    .. math::
+        KID = MMD(f_{real}, f_{fake})^2
+
+    Where :math:`MMD` is the maximum mean discrepancy and :math:`I_{real}, I_{fake}` are extracted features
+    from real and fake images, see `kid ref1`_ for more details. In particular, calculating the MMD requires the
+    evaluation of a polynomial kernel function :math:`k`.
+
+    .. math::
+        k(x,y) = (\gamma * x^T y + coef)^{degree}
+
+    Args:
+        subsets: Number of subsets to use for KID calculation.
+        subset_size: Number of samples in each subset.
+        degree: Degree of the polynomial kernel.
+        gamma: Kernel coefficient for the polynomial kernel.
+        coef: Independent term in the polynomial kernel.
+    """
+
+    @staticmethod
+    def _compute_mmd_static(f_real: jax.Array, f_fake: jax.Array, degree: int, gamma: float, coef: float) -> float:
+        k_11 = _polynomial_kernel(f_real, f_real, degree, gamma, coef)
+        k_22 = _polynomial_kernel(f_fake, f_fake, degree, gamma, coef)
+        k_12 = _polynomial_kernel(f_real, f_fake, degree, gamma, coef)
+
+        m = f_real.shape[0]
+        diag_x = jnp.diag(k_11)
+        diag_y = jnp.diag(k_22)
+
+        kt_xx_sum = jnp.sum(k_11, axis=-1) - diag_x
+        kt_yy_sum = jnp.sum(k_22, axis=-1) - diag_y
+        k_xy_sum = jnp.sum(k_12, axis=0)
+
+        value = (jnp.sum(kt_xx_sum) + jnp.sum(kt_yy_sum)) / (m * (m - 1))
+        value -= 2 * jnp.sum(k_xy_sum) / (m**2)
+        return value
+
+    @classmethod
+    def from_model_output(
+        cls,
+        real_features: jax.Array,
+        fake_features: jax.Array,
+        subsets: int = 100,
+        subset_size: int = 1000,
+        degree: int = 3,
+        gamma: float = None,
+        coef: float = 1.0,
+    ):
+        """
+        Create a KID instance from model output.
+        Also computes the average KID value and stores it in the instance.
+
+        Args:
+            real_features (jax.Array):
+                Feature representations of real images. Shape: (N, D), where N is the number of real images and D is the feature dimension.
+            fake_features (jax.Array):
+                Feature representations of generated (fake) images. Shape: (M, D), where M is the number of fake images and D is the feature dimension.
+            subsets (int, optional):
+                Number of random subsets to use for KID calculation. Default is 100.
+            subset_size (int, optional):
+                Number of samples in each subset. Must be <= min(N, M). Default is 1000.
+            degree (int, optional):
+                Degree of the polynomial kernel. Default is 3.
+            gamma (float, optional):
+                Kernel coefficient for the polynomial kernel. If None, uses 1 / D. Default is None.
+            coef (float, optional):
+                Independent term in the polynomial kernel. Default is 1.0.
+
+        Returns:
+            KID: An instance of the KID metric with the computed mean KID value for the given features.
+
+        Raises:
+            ValueError: If any parameter is non-positive, or if subset_size is greater than the number of samples in real or fake features.
+        """
+        if subsets <= 0 or subset_size <= 0 or degree <= 0 or (gamma is not None and gamma <= 0) or coef <= 0:
+            raise ValueError("All parameters must be positive and non-zero.")
+        # Compute KID for this batch and then store the aggregated response.
+        if real_features.shape[0] < subset_size or fake_features.shape[0] < subset_size:
+            raise ValueError("Subset size must be smaller than the number of samples.")
+        master_key = random.PRNGKey(42)
+        kid_scores = []
+        for i in range(subsets):
+            key_real, key_fake = random.split(random.fold_in(master_key, i))
+            real_indices = random.choice(key_real, real_features.shape[0], (subset_size,), replace=False)
+            fake_indices = random.choice(key_fake, fake_features.shape[0], (subset_size,), replace=False)
+            f_real_subset = real_features[real_indices]
+            f_fake_subset = fake_features[fake_indices]
+            kid = cls._compute_mmd_static(f_real_subset, f_fake_subset, degree, gamma, coef)
+            kid_scores.append(kid)
+        kid_mean = jnp.mean(jnp.array(kid_scores))
+
+        return cls(
+            total=kid_mean,
+            count=1.0,
+            subsets=subsets,
+            subset_size=subset_size,
+            degree=degree,
+            gamma=gamma,
+            coef=coef,
+        )
 
 
 @flax.struct.dataclass
@@ -361,7 +489,6 @@ class SSIM(base.Average):
         k2=k2,
     )
     return super().from_model_output(values=batch_ssim_values)
-
 
 @flax.struct.dataclass
 class IoU(base.Average):
