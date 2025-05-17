@@ -135,7 +135,7 @@ class PSNR(NnxWrapper):
   def __init__(self):
     super().__init__(metrax.PSNR)
 
-    
+
 class Recall(NnxWrapper):
   """An NNX class for the Metrax metric Recall."""
 

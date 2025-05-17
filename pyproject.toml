@@ -31,3 +31,11 @@ packages = ["src/metrax"]
 [project.urls]
 Homepage = "https://github.com/google/metrax"
 Issues = "https://github.com/google/metrax/issues"
+
+[tool.ruff]
+indent-width = 2
+line-length = 120
+
+[tool.ruff.lint]
+# TODO(jeffcarp): Add "I", "NPY"
+select = ["B", "E", "F", "N", "PYI", "T20", "TID", "SIM", "W"]

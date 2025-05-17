@@ -136,7 +136,9 @@ class NDCGAtK(DCGAtK):
   where
 
     - If :math:`IDCG@k` is 0, then :math:`NDCG@k` is defined as 0.
-    - The :math:`DCG@k` calculation uses :math:`exp2` gain (:math:`2^{\text{relevance}} - 1`) and standard logarithmic discount (:math:`\frac{1}{\log_2(\text{rank} + 1)}`).
+    - The :math:`DCG@k` calculation uses :math:`exp2` gain
+      (:math:`2^{\text{relevance}} - 1`) and standard logarithmic discount
+      (:math:`\frac{1}{\log_2(\text{rank} + 1)}`).
   """
 
   @classmethod

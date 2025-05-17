@@ -19,7 +19,6 @@ import sys
 
 # Import local version of metrax.
 sys.path.insert(0, os.path.abspath('../src'))
-print('DEBUG: PATH', sys.path)
 
 # -- Project information
 
