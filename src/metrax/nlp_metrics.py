@@ -700,10 +700,7 @@ class WER(base.Average):
     # Fill the matrix
     for i in range(1, m + 1):
       for j in range(1, n + 1):
-        if prediction[i - 1] == reference[j - 1]:
-          cost = 0
-        else:
-          cost = 1
+        cost = 0 if prediction[i - 1] == reference[j - 1] else 1
 
         distance_matrix[i][j] = min(
             distance_matrix[i - 1][j] + 1,  # deletion

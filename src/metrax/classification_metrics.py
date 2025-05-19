@@ -454,16 +454,14 @@ class AUCPR(clu_metrics.Metric):
 
 @flax.struct.dataclass
 class AUCROC(clu_metrics.Metric):
-  r"""Computes area under the receiver operation characteristic curve for binary classification given `predictions` and `labels`.
+  r"""Computes area under the receiver operation characteristic curve for
+  binary classification given `predictions` and `labels`.
 
   The ROC curve shows the tradeoff between the true positive rate (TPR) and
-  false positive
-  rate (FPR) at different classification thresholds. The area under this curve
-  (AUC-ROC)
-  provides a single score that represents the model's ability to discriminate
-  between
-  positive and negative cases across all possible classification thresholds,
-  regardless of class imbalance.
+  false positive rate (FPR) at different classification thresholds. The area
+  under this curve (AUC-ROC) provides a single score that represents the
+  model's ability to discriminate between positive and negative cases across
+  all possible classification thresholds, regardless of class imbalance.
 
   For each threshold :math:`t`, TPR and FPR are calculated as:
 
