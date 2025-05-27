@@ -1,6 +1,7 @@
 absl-py
 clu
 jax[cpu]
+jax_tpu_embedding
 keras-hub
 keras-rs
 pytest
