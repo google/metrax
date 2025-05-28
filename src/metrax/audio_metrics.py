@@ -32,8 +32,8 @@ class SNR(base.Average):
 
   .. math::
 
-      SNR_{dB} = 10 \\cdot \\log_{10} \\left( \\frac{P_{signal}}{P_{noise}}
-      \\right)
+      SNR_{dB} = 10 \cdot \log_{10} \left( \frac{P_{signal}}{P_{noise}}
+      \right)
 
   Where:
     - :math:`P_{signal}` is the power of the ground truth signal (`target`).
