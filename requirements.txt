@@ -8,3 +8,4 @@ pytest
 rouge-score
 scikit-learn
 tensorflow
+torchmetrics
