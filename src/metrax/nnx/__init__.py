@@ -39,6 +39,7 @@ RougeL = nnx_metrics.RougeL
 RougeN = nnx_metrics.RougeN
 SNR = nnx_metrics.SNR
 SSIM = nnx_metrics.SSIM
+TotalVariation = nnx_metrics.TotalVariation
 WER = nnx_metrics.WER
 
 
