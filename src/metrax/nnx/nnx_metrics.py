@@ -193,6 +193,13 @@ class SSIM(NnxWrapper):
     super().__init__(metrax.SSIM)
 
 
+class TotalVariation(NnxWrapper):
+  """An NNX class for the Metrax metric TotalVariation."""
+
+  def __init__(self):
+    super().__init__(metrax.TotalVariation)
+
+
 class WER(NnxWrapper):
   """An NNX class for the Metrax metric WER."""
 
