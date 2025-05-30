@@ -41,7 +41,7 @@ STRING_REFS = [
     'the quick brown fox jumps over the lazy dog',
     'hello beautiful world',
 ]
-# For image_metrics.SSIM and image_metrics.PSNR.
+# For image_metrics.SSIM, image_metrics.PSNR and image_metrics.TotalVariation.
 IMG_SHAPE = (4, 32, 32, 3)
 PRED_IMGS = np.random.rand(*IMG_SHAPE).astype(np.float32)
 TARGET_IMGS = np.random.rand(*IMG_SHAPE).astype(np.float32)
@@ -214,6 +214,13 @@ class MetraxTest(parameterized.TestCase):
               'zero_mean': False,
           },
       ),
+      (
+        'total_variation',
+        metrax.TotalVariation,
+        {
+            'predictions': PRED_IMGS
+        }
+      )
   )
   def test_metrics_jittable(self, metric, kwargs):
     """Tests that jitted metrax metric yields the same result as non-jitted metric."""

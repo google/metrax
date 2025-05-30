@@ -578,39 +578,41 @@ class ImageMetricsTest(parameterized.TestCase):
       (
           'tv_single_channel_3d',
           TV_IMG_1,
-          False,  # is_batch
       ),
       (
           'tv_multichannel_3d',
           TV_IMG_2,
-          False,  # is_batch
       ),
       (
           'tv_batch_single_channel_4d',
           TV_IMG_3,
-          True,  # is_batch
       ),
       (
           'tv_batch_multichannel_4d',
           TV_IMG_4,
-          True,  # is_batch
       ),
       (
           'tv_constant_image',
           TV_IMG_5,
-          False,  # is_batch
       ),
   )
   def test_total_variation_against_tensorflow(
       self,
       images_np: np.ndarray,
-      is_batch: bool,
-  ):
+  ) -> None:
     """Test that TotalVariation metric computes values close to tf.image.total_variation."""
+
     # Calculate TV using Metrax
-    metrax_tv = metrax.TotalVariation.from_model_output(
-        predictions=jnp.array(images_np)
-    ).compute()
+    # convert to uniform [B, H, W, C] otherwise `for image in images_np` will be 2D 
+    # if input is 3D
+    images_np = images_np if images_np.ndim == 4 else np.expand_dims(images_np, axis=0)
+    metric = None
+    for image in images_np:
+        update = metrax.TotalVariation.from_model_output(
+            predictions=jnp.array(image)
+        )
+        metric = update if metric is None else metric.merge(update)
+    metrax_tv = metric.compute()
 
     # Calculate TV using TensorFlow
     tf_tv = tf.image.total_variation(tf.convert_to_tensor(images_np))
