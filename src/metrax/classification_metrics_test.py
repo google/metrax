@@ -77,7 +77,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
     self.assertEqual(m.false_positives, jnp.array(0, jnp.float32))
     self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
     self.assertEqual(m.num_thresholds, 0)
-    
+
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
       ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),

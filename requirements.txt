@@ -1,8 +1,8 @@
 absl-py
 clu
 jax[cpu]
+jax_tpu_embedding
 keras-hub
-keras-nlp
 keras-rs
 pytest
 rouge-score

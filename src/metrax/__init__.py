@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from metrax import audio_metrics
 from metrax import base
 from metrax import classification_metrics
 from metrax import image_metrics
@@ -42,6 +43,7 @@ Recall = classification_metrics.Recall
 RecallAtK = ranking_metrics.RecallAtK
 RougeL = nlp_metrics.RougeL
 RougeN = nlp_metrics.RougeN
+SNR = audio_metrics.SNR
 SSIM = image_metrics.SSIM
 WER = nlp_metrics.WER
 
@@ -69,6 +71,7 @@ __all__ = [
     "RecallAtK",
     "RougeL",
     "RougeN",
+    "SNR",
     "SSIM",
     "WER",
     "KID",

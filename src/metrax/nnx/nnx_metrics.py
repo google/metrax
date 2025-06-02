@@ -38,6 +38,7 @@ class Accuracy(NnxWrapper):
   def __init__(self):
     super().__init__(metrax.Accuracy)
 
+
 class Average(NnxWrapper):
   """An NNX class for the Metrax metric Average."""
 
@@ -141,7 +142,7 @@ class PSNR(NnxWrapper):
   def __init__(self):
     super().__init__(metrax.PSNR)
 
-    
+
 class Recall(NnxWrapper):
   """An NNX class for the Metrax metric Recall."""
 
@@ -182,6 +183,13 @@ class RSQUARED(NnxWrapper):
 
   def __init__(self):
     super().__init__(metrax.RSQUARED)
+
+
+class SNR(NnxWrapper):
+  """An NNX class for the Metrax metric SNR."""
+
+  def __init__(self):
+    super().__init__(metrax.SNR)
 
 
 class SSIM(NnxWrapper):

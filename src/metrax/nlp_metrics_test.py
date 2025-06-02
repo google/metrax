@@ -21,7 +21,6 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import jax.numpy as jnp
 import keras_hub
-import keras_nlp
 import metrax
 import numpy as np
 
@@ -64,7 +63,7 @@ class NlpMetricsTest(parameterized.TestCase):
         "He He He eats sweet apple which is a fruit",
         "I love Silicon Valley it is one of my favourite shows",
     ]
-    keras_metric = keras_nlp.metrics.Bleu()
+    keras_metric = keras_hub.metrics.Bleu()
     keras_metric.update_state(references, predictions)
     metrax_metric = metrax.BLEU.from_model_output(predictions, references)
 
@@ -88,7 +87,7 @@ class NlpMetricsTest(parameterized.TestCase):
         "He He He eats sweet apple which is a fruit",
         "I love Silicon Valley it is one of my favourite shows",
     ]
-    keras_metric = keras_nlp.metrics.Bleu()
+    keras_metric = keras_hub.metrics.Bleu()
     keras_metric.update_state(references, predictions)
     metrax_metric = None
     for ref_list, pred in zip(references, predictions):
@@ -127,12 +126,12 @@ class NlpMetricsTest(parameterized.TestCase):
       (
           "rougeL",
           metrax.RougeL,
-          keras_nlp.metrics.RougeL,
+          keras_hub.metrics.RougeL,
       ),
       (
           "rougeN",
           metrax.RougeN,
-          keras_nlp.metrics.RougeN,
+          keras_hub.metrics.RougeN,
       ),
   )
   def test_rouge(self, metrax_rouge, keras_rouge):
@@ -161,12 +160,12 @@ class NlpMetricsTest(parameterized.TestCase):
       (
           "rougeL",
           metrax.RougeL,
-          keras_nlp.metrics.RougeL,
+          keras_hub.metrics.RougeL,
       ),
       (
           "rougeN",
           metrax.RougeN,
-          keras_nlp.metrics.RougeN,
+          keras_hub.metrics.RougeN,
       ),
   )
   def test_rouge_merge(self, metrax_rouge, keras_rouge):

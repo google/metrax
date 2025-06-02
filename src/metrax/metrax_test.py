@@ -55,7 +55,10 @@ IOU_PREDICTIONS = np.random.randint(0, IOU_NUM_CLASSES, size=(2, 8, 8)).astype(
     np.int32
 )
 IOU_TARGET_CLASS_IDS = np.array([0, 1])
-
+# For audio_metrics.
+AUDIO_SHAPE = (2, 16000)
+AUDIO_PREDS = np.random.randn(*AUDIO_SHAPE).astype(np.float32)
+AUDIO_TARGETS = np.random.randn(*AUDIO_SHAPE).astype(np.float32)
 
 class MetraxTest(parameterized.TestCase):
 
@@ -168,7 +171,7 @@ class MetraxTest(parameterized.TestCase):
               'targets': TARGET_IMGS,
               'max_val': MAX_IMG_VAL,
           },
-    ),
+      ),
       (
           'rmse',
           metrax.RMSE,
@@ -213,6 +216,15 @@ class MetraxTest(parameterized.TestCase):
               'predictions': PRED_IMGS,
               'targets': TARGET_IMGS,
               'max_val': MAX_IMG_VAL,
+          },
+      ),
+      (
+          'snr',
+          metrax.SNR,
+          {
+              'predictions': AUDIO_PREDS,
+              'targets': AUDIO_TARGETS,
+              'zero_mean': False,
           },
       ),
   )
