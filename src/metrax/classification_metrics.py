@@ -19,7 +19,6 @@ import flax
 import jax
 import jax.numpy as jnp
 from metrax import base
-from tensorflow.python.ops.metrics_impl import precision
 
 
 def _default_threshold(num_thresholds: int) -> jax.Array:
@@ -579,7 +578,7 @@ class AUCROC(clu_metrics.Metric):
     # Threshold goes from 0 to 1, so trapezoid is negative.
     return jnp.trapezoid(tp_rate, fp_rate) * -1
 
-@classmethod
+@flax.struct.dataclass
 class FBetaScore(clu_metrics.Metric):
 
     """
@@ -591,32 +590,36 @@ class FBetaScore(clu_metrics.Metric):
         b2 = beta ** 2
         f_beta_score = ((1 + b2) * (precision * recall)) / (precision * b2 + recall)
 
-    F-Beta turns into the F1 Score when beta = 1
+    F-Beta turns into the F1 Score when beta = 1.0
+
+    WHEN MAKING AN INSTANCE OF THIS CLASS BETA MUST BE MODIFIED FIRST BEFORE THRESHOLD
 
     Attributes:
         beta: The beta value used in the F-Score metric
         precision: The precision value used in the F-Score metric
         recall: The recall value used in the F-Score metric
+        precision_metric: Object that calculates the precision value
+        recall_metric: Object that calculates the recall value
+        threshold: The threshold value used in the F-Score metric
     """
 
-    beta: 1.0
-    precision: jax.Array
-    recall: jax.Array
-    threshold: 0.5
+    precision_metric: Precision.empty()
+    recall_metric: Recall.empty()
+    threshold: float = 0.5
+    beta: float = 1.0
 
     # Reset the variables for the class
     @classmethod
     def empty(cls) -> 'FBetaScore':
         return cls(
-            precision = jnp.array(0, jnp.float32),
-            recall = jnp.array(0, jnp.float32),
             beta = 1.0,
             threshold = 0.5,
+            precision_metric = Precision.empty(),
+            recall_metric = Recall.empty(),
         )
 
     @classmethod
-    def from_model_output(cls, predictions: jax.Array, labels: jax.Array,
-                            sample_weights: jax.Array | None = None, ) -> 'FBetaScore':
+    def from_model_output(cls, predictions: jax.Array, labels: jax.Array,) -> 'FBetaScore':
         """Updates the metric.
 
             Args:
@@ -624,8 +627,6 @@ class FBetaScore(clu_metrics.Metric):
                   1]. The shape should be (batch_size,).
                 labels: True value. The value is expected to be 0 or 1. The shape should
                   be (batch_size,).
-                sample_weights: An optional floating point 1D vector representing the
-                  weight of each sample. The shape should be (batch_size,).
 
             Returns:
                 The Precision and Recall values.
@@ -635,37 +636,31 @@ class FBetaScore(clu_metrics.Metric):
                 and `labels` are incompatible.
         """
 
-    # Updates the Beta value to be something other than 1
-    def update_beta(self, beta: float):
+        # Create a precision and recall object to store into the class variables
+        precision_metric = Precision.from_model_output(predictions, labels, cls.threshold)
+        recall_metric = Recall.from_model_output(predictions, labels, cls.threshold)
 
-        # Make sure the Beta is not an invalid number
-        if not beta <= 0.0:
-            self.beta = beta
-        else:
-            return ValueError("Beta must not be 0 or less")
-
-    # Updates the Beta value to be something other than 1
-    def update_threshold(self, threshold: float):
-
-        # Make sure the Beta is not an invalid number
-        if threshold <= 0.0 or threshold > 1.0:
-            return ValueError("threshold must not be 0 or less or more than 1")
-        else:
-            self.threshold = threshold
+        return cls(precision_metric = precision_metric, recall_metric = recall_metric,
+                   threshold = cls.threshold, beta = cls.beta)
 
     # Unsure if this should be used, at least in this form
     def merge(self, other: 'FBetaScore') -> 'FBetaScore':
         return type(self)(
-            precision=self.precision + other.precision,
-            recall=self.recall + other.recall,
+            precision_metric = self.precision_metric.merge(other.precision_metric),
+            recall_metric = self.recall_metric.merge(other.recall_metric),
         )
 
     # Compute the F-Beta score metric
     def compute(self) -> jax.Array:
 
+        # Calculate the precision and recall values
+        precision = self.precision_metric.compute()
+        recall = self.recall_metric.compute()
+
+        # Compute the numerator and denominator of the F-Score formula
         b2 = self.beta ** 2
-        numerator = (1 + b2) * (self.precision * self.recall)
-        denominator = (b2 * self.precision) * self.recall
+        numerator = (1 + b2) * (precision * recall)
+        denominator = (b2 * precision) * recall
 
         return base.divide_no_nan(
             numerator, denominator
