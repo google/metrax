@@ -248,6 +248,7 @@ class ImageMetricsTest(parameterized.TestCase):
     def test_kid_torchmetrics_and_native(self):
         """
         Compare KID computation using torchmetrics and the native Metrax implementation.
+        Both implementations now use the same input images (converted to appropriate formats).
         Assert that their values are numerically close and result types are equivalent.
         """
         n = 32
@@ -274,18 +275,18 @@ class ImageMetricsTest(parameterized.TestCase):
         kid_mean_torch = float(kid_mean_torch.cpu().numpy())
         kid_std_torch = float(kid_std_torch.cpu().numpy())
 
-        # Compute KID using Metrax implementation with random features
-        real_features = np.random.randn(n, 2048).astype(np.float32)
-        fake_features = np.random.randn(n, 2048).astype(np.float32)
+        # Convert torch images to JAX format (NCHW -> NHWC) for Metrax
+        imgs_real_jax = jnp.array(imgs_real.permute(0, 2, 3, 1).numpy())  # Convert to NHWC
+        imgs_fake_jax = jnp.array(imgs_fake.permute(0, 2, 3, 1).numpy())  # Convert to NHWC
+        
+        # Compute KID using Metrax implementation with actual images
         kid_metric = metrax.KID.from_model_output(
-            jnp.array(real_features), jnp.array(fake_features),
+            real_image=imgs_real_jax,
+            fake_image=imgs_fake_jax,
             subsets=subsets, subset_size=subset_size
         )
-        metrax_result = kid_metric.compute()
-        if isinstance(metrax_result, tuple) and len(metrax_result) == 2:
-            kid_mean_metrax, kid_std_metrax = float(metrax_result[0]), float(metrax_result[1])
-        else:
-            kid_mean_metrax, kid_std_metrax = float(metrax_result), float('nan')
+        kid_mean_metrax, kid_std_metrax = kid_metric.compute_mean_std()
+        kid_mean_metrax, kid_std_metrax = float(kid_mean_metrax), float(kid_std_metrax)
 
         # Assert types are both float
         self.assertIsInstance(kid_mean_torch, float)
@@ -307,7 +308,7 @@ class ImageMetricsTest(parameterized.TestCase):
         real_features = random.normal(key1, shape=(100, 2048))
         fake_features = random.normal(key2, shape=(100, 2048))
 
-        kid = metrax.KID.from_model_output(
+        kid = metrax.KID.from_features(
             real_features, 
             fake_features, 
             subset_size=50
@@ -324,14 +325,14 @@ class ImageMetricsTest(parameterized.TestCase):
         fake_features = random.normal(key2, shape=(100, 2048))
 
         with self.assertRaises(ValueError):
-            metrax.KID.from_model_output(
+            metrax.KID.from_features(
                 real_features,
                 fake_features,
                 subsets=-1,
             )
 
         with self.assertRaises(ValueError):
-            metrax.KID.from_model_output(
+            metrax.KID.from_features(
                 real_features,
                 fake_features,
                 subset_size=0,
@@ -344,7 +345,7 @@ class ImageMetricsTest(parameterized.TestCase):
         real_features = random.normal(key1, shape=(10, 2048))
         fake_features = random.normal(key2, shape=(10, 2048))
 
-        kid = metrax.KID.from_model_output(
+        kid = metrax.KID.from_features(
             real_features,
             fake_features,
             subset_size=5,
@@ -358,7 +359,7 @@ class ImageMetricsTest(parameterized.TestCase):
         key = random.PRNGKey(46)
         features = random.normal(key, shape=(100, 2048))
 
-        kid = metrax.KID.from_model_output(
+        kid = metrax.KID.from_features(
             features,
             features,
             subsets=50,
@@ -458,65 +459,14 @@ class ImageMetricsTest(parameterized.TestCase):
         val_same = float(result_same_dist) if hasattr(result_same_dist, 'shape') and result_same_dist.shape == () else result_same_dist
         self.assertTrue(val > val_same)
 
+    def test_dice_empty(self):
+        """Tests the `empty` method of the `Dice` class."""
+        m = metrax.Dice.empty()
+        self.assertEqual(m.intersection, jnp.array(0, jnp.float32))
+        self.assertEqual(m.sum_true, jnp.array(0, jnp.float32))
+        self.assertEqual(m.sum_pred, jnp.array(0, jnp.float32))
+
     @parameterized.named_parameters(
-        (
-            'ssim_basic_norm_single_channel',
-            PREDS_1,
-            TARGETS_1,
-            MAX_VAL_1,
-            DEFAULT_FILTER_SIZE,
-            DEFAULT_FILTER_SIGMA,
-            DEFAULT_K1,
-            DEFAULT_K2,
-        ),
-        (
-            'ssim_multichannel_norm',
-            PREDS_2,
-            TARGETS_2,
-            MAX_VAL_2,
-            DEFAULT_FILTER_SIZE,
-            DEFAULT_FILTER_SIGMA,
-            DEFAULT_K1,
-            DEFAULT_K2,
-        ),
-        (
-            'ssim_uint8_range_single_channel',
-            PREDS_3,
-            TARGETS_3,
-            MAX_VAL_3,
-            DEFAULT_FILTER_SIZE,
-            DEFAULT_FILTER_SIGMA,
-            DEFAULT_K1,
-            DEFAULT_K2,
-        ),
-        (
-            'ssim_custom_params_norm_single_channel',
-            PREDS_4,
-            TARGETS_4,
-            MAX_VAL_4,
-            FILTER_SIZE_CUSTOM,
-            FILTER_SIGMA_CUSTOM,
-            K1_CUSTOM,
-            K2_CUSTOM,
-        ),
-        (
-            'ssim_identical_images',
-            PREDS_5,
-            TARGETS_5,
-            MAX_VAL_5,
-            DEFAULT_FILTER_SIZE,
-            DEFAULT_FILTER_SIGMA,
-            DEFAULT_K1,
-            DEFAULT_K2,
-
-  def test_dice_empty(self):
-    """Tests the `empty` method of the `Dice` class."""
-    m = metrax.Dice.empty()
-    self.assertEqual(m.intersection, jnp.array(0, jnp.float32))
-    self.assertEqual(m.sum_true, jnp.array(0, jnp.float32))
-    self.assertEqual(m.sum_pred, jnp.array(0, jnp.float32))
-
-  @parameterized.named_parameters(
       (
           'ssim_basic_norm_single_channel',
           PREDS_1,
@@ -568,56 +518,6 @@ class ImageMetricsTest(parameterized.TestCase):
           DEFAULT_K2,
       ),
   )
-  def test_ssim_against_tensorflow(
-      self,
-      predictions: np.ndarray,
-      targets: np.ndarray,
-      max_val: float,
-      filter_size: int,
-      filter_sigma: float,
-      k1: float,
-      k2: float,
-  ):
-    """Test that metrax.SSIM computes values close to tf.image.ssim."""
-    # Calculate SSIM using Metrax
-    predictions_jax = jnp.array(predictions)
-    targets_jax = jnp.array(targets)
-    metrax_metric = metrax.SSIM.from_model_output(
-        predictions=predictions_jax,
-        targets=targets_jax,
-        max_val=max_val,
-        filter_size=filter_size,
-        filter_sigma=filter_sigma,
-        k1=k1,
-        k2=k2,
-    )
-    metrax_result = metrax_metric.compute()
-
-    # Calculate SSIM using TensorFlow
-    predictions_tf = tf.convert_to_tensor(predictions, dtype=tf.float32)
-    targets_tf = tf.convert_to_tensor(targets, dtype=tf.float32)
-    tf_ssim_per_image = tf.image.ssim(
-        img1=predictions_tf,
-        img2=targets_tf,
-        max_val=max_val,
-        filter_size=filter_size,
-        filter_sigma=filter_sigma,
-        k1=k1,
-        k2=k2,
-    )
-    tf_result_mean = tf.reduce_mean(tf_ssim_per_image).numpy()
-
-    np.testing.assert_allclose(
-        metrax_result,
-        tf_result_mean,
-        rtol=1e-5,
-        atol=1e-5,
-        err_msg=(
-            f'SSIM mismatch for params: max_val={max_val}, '
-            f'filter_size={filter_size}, filter_sigma={filter_sigma}, '
-            f'k1={k1}, k2={k2}'
-        ),
-    )
     def test_ssim_against_tensorflow(
         self,
         predictions: np.ndarray,
@@ -804,7 +704,8 @@ class ImageMetricsTest(parameterized.TestCase):
                     delta=1e-6,
                     msg=f'Keras IoU failed for {self.id()}',
                 )
-  @parameterized.named_parameters(
+
+    @parameterized.named_parameters(
       (
           'psnr_basic_norm_single_channel',
           PREDS_1,
@@ -836,65 +737,65 @@ class ImageMetricsTest(parameterized.TestCase):
           MAX_VAL_6,
       ),
   )
-  def test_psnr_against_tensorflow(
-      self,
-      predictions_np: np.ndarray,
-      targets_np: np.ndarray,
-      max_val: float,
-  ) -> None:
-    """Test that metrax.SSIM computes values close to tf.image.ssim."""
-    # Calculate PSNR using Metrax
-    metrax_psnr = metrax.PSNR.from_model_output(
-        predictions=jnp.array(predictions_np),
-        targets=jnp.array(targets_np),
-        max_val=max_val,
-    ).compute()
+    def test_psnr_against_tensorflow(
+        self,
+        predictions_np: np.ndarray,
+        targets_np: np.ndarray,
+        max_val: float,
+    ) -> None:
+        """Test that metrax.SSIM computes values close to tf.image.ssim."""
+        # Calculate PSNR using Metrax
+        metrax_psnr = metrax.PSNR.from_model_output(
+            predictions=jnp.array(predictions_np),
+            targets=jnp.array(targets_np),
+            max_val=max_val,
+        ).compute()
 
-    # Calculate PSNR using TensorFlow
-    tf_psnr = tf.image.psnr(
-        predictions_np.astype(np.float32),
-        targets_np.astype(np.float32),
-        max_val=max_val,
+        # Calculate PSNR using TensorFlow
+        tf_psnr = tf.image.psnr(
+            predictions_np.astype(np.float32),
+            targets_np.astype(np.float32),
+            max_val=max_val,
+        )
+        tf_mean = tf.reduce_mean(tf_psnr).numpy()
+
+        if np.isinf(tf_mean):
+            self.assertTrue(np.isinf(metrax_psnr))
+        else:
+            np.testing.assert_allclose(
+                metrax_psnr,
+                tf_mean,
+                rtol=1e-4,
+                atol=1e-4,
+                err_msg='PSNR mismatch',
+            )
+
+    @parameterized.named_parameters(
+        ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+        ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+        ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+        ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1),
+        ('all_ones', *DICE_ALL_ONES),
+        ('all_zeros', *DICE_ALL_ZEROS),
+        ('no_overlap', *DICE_NO_OVERLAP),
     )
-    tf_mean = tf.reduce_mean(tf_psnr).numpy()
+    def test_dice(self, y_true, y_pred):
+        """Test that Dice metric computes expected values."""
+        y_true = jnp.asarray(y_true, jnp.float32)
+        y_pred = jnp.asarray(y_pred, jnp.float32)
 
-    if np.isinf(tf_mean):
-      self.assertTrue(np.isinf(metrax_psnr))
-    else:
-      np.testing.assert_allclose(
-          metrax_psnr,
-          tf_mean,
-          rtol=1e-4,
-          atol=1e-4,
-          err_msg='PSNR mismatch',
-      )
+        # Manually compute expected Dice
+        eps = 1e-7
+        intersection = jnp.sum(y_true * y_pred)
+        sum_pred = jnp.sum(y_pred)
+        sum_true = jnp.sum(y_true)
+        expected = (2.0 * intersection) / (sum_pred + sum_true + eps)
 
-  @parameterized.named_parameters(
-      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32),
-      ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32),
-      ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS_F32),
-      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1),
-      ('all_ones', *DICE_ALL_ONES),
-      ('all_zeros', *DICE_ALL_ZEROS),
-      ('no_overlap', *DICE_NO_OVERLAP),
-  )
-  def test_dice(self, y_true, y_pred):
-    """Test that Dice metric computes expected values."""
-    y_true = jnp.asarray(y_true, jnp.float32)
-    y_pred = jnp.asarray(y_pred, jnp.float32)
+        # Compute using the metric class
+        metric = metrax.Dice.from_model_output(predictions=y_pred, labels=y_true)
+        result = metric.compute()
 
-    # Manually compute expected Dice
-    eps = 1e-7
-    intersection = jnp.sum(y_true * y_pred)
-    sum_pred = jnp.sum(y_pred)
-    sum_true = jnp.sum(y_true)
-    expected = (2.0 * intersection) / (sum_pred + sum_true + eps)
-
-    # Compute using the metric class
-    metric = metrax.Dice.from_model_output(predictions=y_pred, labels=y_true)
-    result = metric.compute()
-
-    np.testing.assert_allclose(result, expected, rtol=1e-5, atol=1e-5)
+        np.testing.assert_allclose(result, expected, rtol=1e-5, atol=1e-5)
 
 
 if __name__ == '__main__':

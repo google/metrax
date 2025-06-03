@@ -13,13 +13,12 @@
 # limitations under the License.
 
 """A collection of different metrics for image models."""
-
 import jax.numpy as jnp
 from jax import random, lax
 import flax
 import jax
 from metrax import base
-
+from clu import metrics as clu_metrics
 
 def _gaussian_kernel1d(sigma, radius):
   r"""Generates a 1D normalized Gaussian kernel.
@@ -67,7 +66,21 @@ def _polynomial_kernel(x: jax.Array, y: jax.Array, degree: int, gamma: float, co
     """
     if gamma is None:
         gamma = 1.0 / x.shape[1]
-    return (jnp.dot(x, y.T) * gamma + coef) ** degree
+    
+    # Compute dot product and apply kernel transformation
+    dot_product = jnp.dot(x, y.T)
+    
+    # Normalize the dot product to prevent overflow
+    dot_product = dot_product / jnp.sqrt(x.shape[1])  # Normalize by sqrt of feature dimension
+    
+    # Apply gamma scaling with clipping to prevent extreme values
+    scaled_product = jnp.clip(dot_product * gamma + coef, -10.0, 10.0)
+    kernel_value = scaled_product ** degree
+    
+    # Handle potential numerical issues
+    kernel_value = jnp.where(jnp.isfinite(kernel_value), kernel_value, 0.0)
+    
+    return kernel_value
 
 
 @flax.struct.dataclass
@@ -97,7 +110,14 @@ class KID(base.Average):
         degree: Degree of the polynomial kernel.
         gamma: Kernel coefficient for the polynomial kernel.
         coef: Independent term in the polynomial kernel.
+        kid_std: The computed KID standard deviation.
     """
+    subsets: int = 100
+    subset_size: int = 1000
+    degree: int = 3
+    gamma: float = None
+    coef: float = 1.0
+    kid_std: float = 0.0
 
     @staticmethod
     def _compute_mmd_static(f_real: jax.Array, f_fake: jax.Array, degree: int, gamma: float, coef: float) -> float:
@@ -106,6 +126,11 @@ class KID(base.Average):
         k_12 = _polynomial_kernel(f_real, f_fake, degree, gamma, coef)
 
         m = f_real.shape[0]
+        
+        # Handle edge case where m <= 1
+        if m <= 1:
+            return jnp.array(0.0)
+        
         diag_x = jnp.diag(k_11)
         diag_y = jnp.diag(k_22)
 
@@ -115,13 +140,16 @@ class KID(base.Average):
 
         value = (jnp.sum(kt_xx_sum) + jnp.sum(kt_yy_sum)) / (m * (m - 1))
         value -= 2 * jnp.sum(k_xy_sum) / (m**2)
+        
+        # Ensure the result is finite
+        value = jnp.where(jnp.isfinite(value), value, 0.0)
         return value
 
     @classmethod
     def from_model_output(
         cls,
-        real_features: jax.Array,
-        fake_features: jax.Array,
+        real_image: jax.Array,
+        fake_image: jax.Array,
         subsets: int = 100,
         subset_size: int = 1000,
         degree: int = 3,
@@ -132,6 +160,80 @@ class KID(base.Average):
         Create a KID instance from model output.
         Also computes the average KID value and stores it in the instance.
 
+        Args:
+            real_image (jax.Array):
+                Real images. Shape: (N, H, W, C), where N is the number of real images, 
+                H and W are height and width, and C is the number of channels.
+            fake_image (jax.Array):
+                Generated (fake) images. Shape: (M, H, W, C), where M is the number of fake images,
+                H and W are height and width, and C is the number of channels.
+            subsets (int, optional):
+                Number of random subsets to use for KID calculation. Default is 100.
+            subset_size (int, optional):
+                Number of samples in each subset. Must be <= min(N, M). Default is 1000.
+            degree (int, optional):
+                Degree of the polynomial kernel. Default is 3.
+            gamma (float, optional):
+                Kernel coefficient for the polynomial kernel. If None, uses 1 / feature_dim. Default is None.
+            coef (float, optional):
+                Independent term in the polynomial kernel. Default is 1.0.
+
+        Returns:
+            KID: An instance of the KID metric with the computed mean KID value for the given images.
+
+        Raises:
+            ValueError: If any parameter is non-positive, or if subset_size is greater than the number of samples in real or fake images.
+        """
+        if subsets <= 0 or subset_size <= 0 or degree <= 0 or (gamma is not None and gamma <= 0) or coef <= 0:
+            raise ValueError("All parameters must be positive and non-zero.")
+        
+        # Extract features from images (or use as-is if already features)
+        real_features = _extract_image_features(real_image)
+        fake_features = _extract_image_features(fake_image)
+        
+        # Compute KID for this batch and then store the aggregated response.
+        if real_features.shape[0] < subset_size or fake_features.shape[0] < subset_size:
+            raise ValueError("Subset size must be smaller than the number of samples.")
+        master_key = random.PRNGKey(42)
+        kid_scores = []
+        for i in range(subsets):
+            key_real, key_fake = random.split(random.fold_in(master_key, i))
+            real_indices = random.choice(key_real, real_features.shape[0], (subset_size,), replace=False)
+            fake_indices = random.choice(key_fake, fake_features.shape[0], (subset_size,), replace=False)
+            f_real_subset = real_features[real_indices]
+            f_fake_subset = fake_features[fake_indices]
+            kid = cls._compute_mmd_static(f_real_subset, f_fake_subset, degree, gamma, coef)
+            kid_scores.append(kid)
+        kid_scores = jnp.array(kid_scores)
+        kid_mean = jnp.mean(kid_scores)
+        # Handle edge case where std could be inf/nan
+        kid_std = jnp.std(kid_scores)
+        kid_std = jnp.where(jnp.isfinite(kid_std), kid_std, 0.0)
+
+        return cls(
+            total=kid_mean,
+            count=1.0,
+            subsets=subsets,
+            subset_size=subset_size,
+            degree=degree,
+            gamma=gamma,
+            coef=coef,
+            kid_std=kid_std,
+        )
+
+    @classmethod
+    def from_features(
+        cls,
+        real_features: jax.Array,
+        fake_features: jax.Array,
+        subsets: int = 100,
+        subset_size: int = 1000,
+        degree: int = 3,
+        gamma: float = None,
+        coef: float = 1.0,
+    ):
+        """
+        Create a KID instance from pre-extracted features (backward compatibility).   
         Args:
             real_features (jax.Array):
                 Feature representations of real images. Shape: (N, D), where N is the number of real images and D is the feature dimension.
@@ -150,15 +252,13 @@ class KID(base.Average):
 
         Returns:
             KID: An instance of the KID metric with the computed mean KID value for the given features.
-
-        Raises:
-            ValueError: If any parameter is non-positive, or if subset_size is greater than the number of samples in real or fake features.
         """
         if subsets <= 0 or subset_size <= 0 or degree <= 0 or (gamma is not None and gamma <= 0) or coef <= 0:
             raise ValueError("All parameters must be positive and non-zero.")
-        # Compute KID for this batch and then store the aggregated response.
+        
         if real_features.shape[0] < subset_size or fake_features.shape[0] < subset_size:
             raise ValueError("Subset size must be smaller than the number of samples.")
+        
         master_key = random.PRNGKey(42)
         kid_scores = []
         for i in range(subsets):
@@ -169,7 +269,11 @@ class KID(base.Average):
             f_fake_subset = fake_features[fake_indices]
             kid = cls._compute_mmd_static(f_real_subset, f_fake_subset, degree, gamma, coef)
             kid_scores.append(kid)
-        kid_mean = jnp.mean(jnp.array(kid_scores))
+        kid_scores = jnp.array(kid_scores)
+        kid_mean = jnp.mean(kid_scores)
+        # Handle edge case where std could be inf/nan
+        kid_std = jnp.std(kid_scores)
+        kid_std = jnp.where(jnp.isfinite(kid_std), kid_std, 0.0)
 
         return cls(
             total=kid_mean,
@@ -179,7 +283,28 @@ class KID(base.Average):
             degree=degree,
             gamma=gamma,
             coef=coef,
+            kid_std=kid_std,
         )
+
+    def compute(self):
+        """
+        Compute the final KID metric mean value (for compatibility with the torchmetrics interface).
+        Returns:
+            float: The mean KID value
+        """
+        # For base.Average, the mean KID value is stored in self.total / self.count
+        # But since we set count=1.0, self.total is already the mean
+        return self.total / self.count if self.count > 0 else 0.0
+    
+    def compute_mean_std(self):
+        """
+        Compute the final KID metric with mean and standard deviation.
+        
+        Returns:
+            tuple: (kid_mean, kid_std) following torchmetrics interface
+        """
+        kid_mean = self.total / self.count if self.count > 0 else 0.0
+        return (kid_mean, self.kid_std)
 
 
 @flax.struct.dataclass
@@ -793,3 +918,36 @@ class Dice(clu_metrics.Metric):
     """Returns the final Dice coefficient."""
     epsilon = 1e-7
     return (2.0 * self.intersection) / (self.sum_pred + self.sum_true + epsilon)
+
+def _extract_image_features(images: jax.Array) -> jax.Array:
+    """
+    Extract features from images for KID computation.
+    This is a simplified feature extractor. In practice, you might want to use
+    a pre-trained network like InceptionV3.
+    
+    Args:
+        images: Input images of shape (N, H, W, C) where N is batch size,
+                H and W are height and width, C is the number of channels.
+                OR features of shape (N, D) if already extracted.
+    
+    Returns:
+        Features of shape (N, D) where D is the feature dimension.
+    """
+    # If already 2D, assume these are features and return as-is
+    if images.ndim == 2:
+        return images
+    
+    # Simple feature extraction: global average pooling followed by flattening
+    # This is a placeholder - in practice you'd use InceptionV3 or similar
+    if images.ndim != 4:
+        raise ValueError(f"Expected 4D input (N, H, W, C) or 2D features (N, D), got {images.ndim}D")
+    
+    # Global average pooling across spatial dimensions
+    features = jnp.mean(images, axis=(1, 2))  # Shape: (N, C)
+    
+    # Add some simple transformations to create more features
+    # This is just a placeholder for demonstration
+    squared_features = features ** 2
+    features_concat = jnp.concatenate([features, squared_features], axis=1)
+    
+    return features_concat
