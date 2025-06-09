@@ -660,7 +660,7 @@ class FBetaScore(clu_metrics.Metric):
         # Compute the numerator and denominator of the F-Score formula
         b2 = self.beta ** 2
         numerator = (1 + b2) * (precision * recall)
-        denominator = (b2 * precision) * recall
+        denominator = (b2 * precision) + recall
 
         return base.divide_no_nan(
             numerator, denominator
