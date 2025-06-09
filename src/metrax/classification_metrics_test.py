@@ -292,8 +292,9 @@ class ClassificationMetricsTest(parameterized.TestCase):
     # Test that the FBeta score returns correct values
 
     # Re-format the y values to work with the classes
-    y_true = y_true.reshape((-1,))
-    y_pred = jnp.where(y_pred.reshape((-1,)) >= threshold, 1, 0)
+    y_true_new = y_true.reshape((-1,))
+    y_pred_new = jnp.where(y_pred.reshape((-1,)) >= threshold, 1, 0)
+    y_pred = jnp.where(y_pred >= threshold, 1, 0)
     keras_fbeta = keras.metrics.FBetaScore(beta=beta, threshold=threshold)
     keras_fbeta.update_state(y_true, y_pred)
     expected = keras_fbeta.result()
@@ -303,7 +304,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
 
     # Create and fill the metrax metric
     metric = None
-    for logits, labels in zip(y_pred, y_true):
+    for logits, labels in zip(y_pred_new, y_true_new):
 
         # Make sure the correct threshold and beta values are used
         # BETA MUST BE MODIFIED BEFORE THRESHOLD IS
