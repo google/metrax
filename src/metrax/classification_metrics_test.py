@@ -17,6 +17,7 @@
 import os
 os.environ['KERAS_BACKEND'] = 'jax'
 
+from src.metrax.classification_metrics import FBetaScore
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax.numpy as jnp
@@ -77,6 +78,15 @@ class ClassificationMetricsTest(parameterized.TestCase):
     self.assertEqual(m.false_positives, jnp.array(0, jnp.float32))
     self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
     self.assertEqual(m.num_thresholds, 0)
+
+  # Test the empty method for the FBetsScore class
+  def test_fbeta_empty(self):
+    """Tests the `empty` method of the `FBetaScore` class."""
+    m = metrax.FBetaScore.empty()
+    self.assertEqual(m.precision_metric, metrax.Precision.empty())
+    self.assertEqual(m.recall_metric, metrax.Recall.empty())
+    self.assertEqual(m.beta, 1.0)
+    self.assertEqual(m.threshold, 0.5)
 
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
@@ -262,6 +272,60 @@ class ClassificationMetricsTest(parameterized.TestCase):
         # Use lower tolerance for lower precision dtypes.
         rtol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-7,
         atol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-7,
+    )
+
+# Testing function for F-Beta classification
+  # name, output true, output prediction, threshold, beta
+  @parameterized.named_parameters(
+      ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.5, 1.0),
+      ('high_threshold_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.7, 2.0),
+      ('low_threshold_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.1, 3.0),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.5, 1.0),
+      ('high_threshold_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.7, 2.0),
+      ('low_threshold_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.1, 1.0),
+      ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.5, 3.0),
+      ('high_threshold_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.7, 1.0),
+      ('low_threshold_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.1, 2.0),
+      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5, 1.0),
+  )
+  def test_fbetascore(self, y_true, y_pred, threshold, beta):
+    # Test that the FBeta score returns correct values
+
+    # Re-format the y values to work with the classes
+    # Incase needed for later, the original reshaping was ,,,.reshape((-1,))
+    y_true = y_true.reshape((-1, 1))
+    y_pred = jnp.where(y_pred.reshape((-1, 1)) >= threshold, 1, 0)
+
+    # Define the Keras FBeta class to be tested against
+    keras_fbeta = keras.metrics.FBetaScore(beta=beta, threshold=threshold)
+    keras_fbeta.update_state(y_true, y_pred)
+    expected = keras_fbeta.result()
+
+    # Create and fill the metrax metric
+    metric = None
+    for logits, labels in zip(y_pred, y_true):
+
+        # Make sure the correct threshold and beta values are used
+        # BETA MUST BE MODIFIED BEFORE THRESHOLD IS
+        update = FBetaScore
+        update.beta = beta
+        update.threshold = threshold
+
+        # Update the precision and recall values
+        update = update.from_model_output(
+            predictions=logits,
+            labels=labels,
+        )
+        metric = update if metric is None else metric.merge(update)
+
+    # Use lower tolerance for lower precision dtypes.
+    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    np.testing.assert_allclose(
+        metric.compute(),
+        expected,
+        rtol=rtol,
+        atol=atol,
     )
 
 
