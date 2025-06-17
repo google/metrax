@@ -137,8 +137,8 @@ class RegressionMetricsTest(parameterized.TestCase):
     # TODO(jiwonshin): Use `keras.metrics.MeanAbsoluteError` once it supports
     # sample weights.
     expected = sklearn_metrics.mean_absolute_error(
-        y_true.flatten('float32'),
-        y_pred.flatten('float32'),
+        y_true.astype('float32').flatten(),
+        y_pred.astype('float32').flatten(),
         sample_weight=sample_weights.flatten(),
     )
     # Use lower tolerance for lower precision dtypes.
@@ -179,8 +179,8 @@ class RegressionMetricsTest(parameterized.TestCase):
     # TODO(jiwonshin): Use `keras.metrics.MeanSquaredError` once it supports
     # sample weights.
     expected = sklearn_metrics.mean_squared_error(
-        y_true.flatten('float32'),
-        y_pred.flatten('float32'),
+        y_true.astype('float32').flatten(),
+        y_pred.astype('float32').flatten(),
         sample_weight=sample_weights.flatten(),
     )
     # Use lower tolerance for lower precision dtypes.
