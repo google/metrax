@@ -139,7 +139,7 @@ class RegressionMetricsTest(parameterized.TestCase):
     expected = sklearn_metrics.mean_absolute_error(
         y_true.astype('float32').flatten(),
         y_pred.astype('float32').flatten(),
-        sample_weight=sample_weights.flatten(),
+        sample_weight=sample_weights.astype('float32').flatten(),
     )
     # Use lower tolerance for lower precision dtypes.
     rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
@@ -181,7 +181,7 @@ class RegressionMetricsTest(parameterized.TestCase):
     expected = sklearn_metrics.mean_squared_error(
         y_true.astype('float32').flatten(),
         y_pred.astype('float32').flatten(),
-        sample_weight=sample_weights.flatten(),
+        sample_weight=sample_weights.astype('float32').flatten(),
     )
     # Use lower tolerance for lower precision dtypes.
     rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
