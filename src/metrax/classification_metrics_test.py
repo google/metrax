@@ -306,15 +306,14 @@ class ClassificationMetricsTest(parameterized.TestCase):
     for logits, labels in zip(y_pred, y_true):
 
         # Make sure the correct threshold and beta values are used
-        # BETA MUST BE MODIFIED BEFORE THRESHOLD IS
         update = FBetaScore
-        update.beta = beta
-        update.threshold = threshold
 
         # Update the precision and recall values
         update = update.from_model_output(
             predictions=logits,
             labels=labels,
+            beta=beta,
+            threshold=threshold,
         )
         metric = update if metric is None else metric.merge(update)
 

@@ -603,8 +603,8 @@ class FBetaScore(clu_metrics.Metric):
         threshold: The threshold value used in the F-Score metric
     """
 
-    precision_metric: Precision.empty()
-    recall_metric: Recall.empty()
+    precision_metric: Precision
+    recall_metric: Recall
     threshold: float = 0.5
     beta: float = 1.0
 
@@ -619,10 +619,12 @@ class FBetaScore(clu_metrics.Metric):
         )
 
     @classmethod
-    def from_model_output(cls, predictions: jax.Array, labels: jax.Array,) -> 'FBetaScore':
+    def from_model_output(cls, predictions: jax.Array, labels: jax.Array, beta = beta, threshold = threshold,) -> 'FBetaScore':
         """Updates the metric.
 
             Args:
+                threshold: threshold value to use in the F-Score metric a floating number.
+                beta: beta value to use in the F-Score metric. A floating number.
                 predictions: A floating point 1D vector whose values are in the range [0,
                   1]. The shape should be (batch_size,).
                 labels: True value. The value is expected to be 0 or 1. The shape should
@@ -636,12 +638,25 @@ class FBetaScore(clu_metrics.Metric):
                 and `labels` are incompatible.
         """
 
+        # Ensure that beta is a floating number and a valid number
+        if not isinstance(beta, float):
+            raise ValueError('The "Beta" value must be a floating number.')
+        if beta <= 0.0:
+            raise ValueError('The "Beta" value must be larger than 0.0.')
+
+        # Ensure that threshold is a floating number and a valid number
+        if not isinstance(threshold, float):
+            raise ValueError('The "Threshold" value must be a floating number.')
+        if threshold < 0.0 or threshold > 1.0:
+            raise ValueError('The "Threshold" value must be between 0 and 1.')
+
+
         # Create a precision and recall object to store into the class variables
-        precision_metric = Precision.from_model_output(predictions, labels, cls.threshold)
-        recall_metric = Recall.from_model_output(predictions, labels, cls.threshold)
+        precision_metric = Precision.from_model_output(predictions, labels, threshold)
+        recall_metric = Recall.from_model_output(predictions, labels, threshold)
 
         return cls(precision_metric = precision_metric, recall_metric = recall_metric,
-                   threshold = cls.threshold, beta = cls.beta)
+                   threshold = threshold, beta = beta)
 
     # Unsure if this should be used, at least in this form
     def merge(self, other: 'FBetaScore') -> 'FBetaScore':
