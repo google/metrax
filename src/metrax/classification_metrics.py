@@ -592,8 +592,6 @@ class FBetaScore(clu_metrics.Metric):
 
     F-Beta turns into the F1 Score when beta = 1.0
 
-    WHEN MAKING AN INSTANCE OF THIS CLASS BETA MUST BE MODIFIED FIRST BEFORE THRESHOLD
-
     Attributes:
         beta: The beta value used in the F-Score metric
         precision: The precision value used in the F-Score metric
@@ -619,7 +617,12 @@ class FBetaScore(clu_metrics.Metric):
         )
 
     @classmethod
-    def from_model_output(cls, predictions: jax.Array, labels: jax.Array, beta = beta, threshold = threshold,) -> 'FBetaScore':
+    def from_model_output(
+            cls,
+            predictions: jax.Array,
+            labels: jax.Array,
+            beta = beta,
+            threshold = threshold,) -> 'FBetaScore':
         """Updates the metric.
 
             Args:
