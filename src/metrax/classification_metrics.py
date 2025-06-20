@@ -575,3 +575,111 @@ class AUCROC(clu_metrics.Metric):
     )
     # Threshold goes from 0 to 1, so trapezoid is negative.
     return jnp.trapezoid(tp_rate, fp_rate) * -1
+
+@flax.struct.dataclass
+class FBetaScore(clu_metrics.Metric):
+
+    """
+    F-Beta score Metric class
+
+    Computes the F-Beta score for the binary classification given 'predictions' and 'labels'.
+
+    Formula for F-Beta Score:
+        b2 = beta ** 2
+        f_beta_score = ((1 + b2) * (precision * recall)) / (precision * b2 + recall)
+
+    F-Beta turns into the F1 Score when beta = 1.0
+
+    Attributes:
+        beta: The beta value used in the F-Score metric
+        precision: The precision value used in the F-Score metric
+        recall: The recall value used in the F-Score metric
+        precision_metric: Object that calculates the precision value
+        recall_metric: Object that calculates the recall value
+        threshold: The threshold value used in the F-Score metric
+    """
+
+    precision_metric: Precision
+    recall_metric: Recall
+    threshold: float = 0.5
+    beta: float = 1.0
+
+    # Reset the variables for the class
+    @classmethod
+    def empty(cls) -> 'FBetaScore':
+        return cls(
+            beta = 1.0,
+            threshold = 0.5,
+            precision_metric = Precision.empty(),
+            recall_metric = Recall.empty(),
+        )
+
+    @classmethod
+    def from_model_output(
+            cls,
+            predictions: jax.Array,
+            labels: jax.Array,
+            beta = beta,
+            threshold = threshold,) -> 'FBetaScore':
+        """Updates the metric.
+
+            Args:
+                threshold: threshold value to use in the F-Score metric a floating number.
+                beta: beta value to use in the F-Score metric. A floating number.
+                predictions: A floating point 1D vector whose values are in the range [0,
+                  1]. The shape should be (batch_size,).
+                labels: True value. The value is expected to be 0 or 1. The shape should
+                  be (batch_size,).
+
+            Returns:
+                The Precision and Recall values.
+
+            Raises:
+                ValueError: If type of `labels` is wrong or the shapes of `predictions`
+                and `labels` are incompatible.
+        """
+
+        # Ensure that beta is a floating number and a valid number
+        if not isinstance(beta, float):
+            raise ValueError('The "Beta" value must be a floating number.')
+        if beta <= 0.0:
+            raise ValueError('The "Beta" value must be larger than 0.0.')
+
+        # Ensure that threshold is a floating number and a valid number
+        if not isinstance(threshold, float):
+            raise ValueError('The "Threshold" value must be a floating number.')
+        if threshold < 0.0 or threshold > 1.0:
+            raise ValueError('The "Threshold" value must be between 0 and 1.')
+
+
+        # Create a precision and recall object to store into the class variables
+        precision_metric = Precision.from_model_output(predictions, labels, threshold)
+        recall_metric = Recall.from_model_output(predictions, labels, threshold)
+
+        return cls(precision_metric = precision_metric, recall_metric = recall_metric,
+                   threshold = threshold, beta = beta)
+
+    # Unsure if this should be used, at least in this form
+    def merge(self, other: 'FBetaScore') -> 'FBetaScore':
+        return type(self)(
+            precision_metric = self.precision_metric.merge(other.precision_metric),
+            recall_metric = self.recall_metric.merge(other.recall_metric),
+            beta=self.beta,
+            threshold=self.threshold
+        )
+
+    # Compute the F-Beta score metric
+    def compute(self) -> jax.Array:
+
+        # Calculate the precision and recall values
+        precision = self.precision_metric.compute()
+        recall = self.recall_metric.compute()
+
+        # Compute the numerator and denominator of the F-Score formula
+        b2 = self.beta ** 2
+        numerator = (1 + b2) * (precision * recall)
+        denominator = (b2 * precision) + recall
+
+        return base.divide_no_nan(
+            numerator, denominator
+        )
