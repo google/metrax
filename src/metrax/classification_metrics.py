@@ -663,6 +663,8 @@ class FBetaScore(clu_metrics.Metric):
         return type(self)(
             precision_metric = self.precision_metric.merge(other.precision_metric),
             recall_metric = self.recall_metric.merge(other.recall_metric),
+            beta=self.beta,
+            threshold=self.threshold
         )
 
     # Compute the F-Beta score metric
