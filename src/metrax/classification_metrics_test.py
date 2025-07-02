@@ -83,11 +83,11 @@ class ClassificationMetricsTest(parameterized.TestCase):
   def test_fbeta_empty(self):
     """Tests the `empty` method of the `FBetaScore` class."""
     m = metrax.FBetaScore.empty()
-    self.assertEqual(m.precision_metric, metrax.Precision.empty())
-    self.assertEqual(m.recall_metric, metrax.Recall.empty())
     self.assertEqual(m.beta, 1.0)
-    self.assertEqual(m.threshold, 0.5)
-    
+    self.assertEqual(m.true_positives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.false_positives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
+
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
       ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
@@ -293,8 +293,8 @@ class ClassificationMetricsTest(parameterized.TestCase):
 
     # Re-format the y values to work with the classes
     # Incase needed for later, the original reshaping was ,,,.reshape((-1,))
-    y_true = y_true.reshape((-1, 1))
-    y_pred = jnp.where(y_pred.reshape((-1, 1)) >= threshold, 1, 0)
+    # y_true = y_true.reshape((-1, 1))
+    # y_pred = jnp.where(y_pred.reshape((-1, 1)) >= threshold, 1, 0)
 
     # Define the Keras FBeta class to be tested against
     keras_fbeta = keras.metrics.FBetaScore(beta=beta, threshold=threshold)
@@ -302,20 +302,24 @@ class ClassificationMetricsTest(parameterized.TestCase):
     expected = keras_fbeta.result()
 
     # Create and fill the metrax metric
-    metric = None
-    for logits, labels in zip(y_pred, y_true):
+    # metric = None
+    # for logits, labels in zip(y_pred, y_true):
+    #
+    #     # Make sure the correct threshold and beta values are used
+    #     update = FBetaScore
+    #
+    #     # Update the precision and recall values
+    #     update = update.from_model_output(
+    #         predictions=logits,
+    #         labels=labels,
+    #         beta=beta,
+    #         threshold=threshold,
+    #     )
+    #     metric = update if metric is None else metric.merge(update)
 
-        # Make sure the correct threshold and beta values are used
-        update = FBetaScore
-
-        # Update the precision and recall values
-        update = update.from_model_output(
-            predictions=logits,
-            labels=labels,
-            beta=beta,
-            threshold=threshold,
-        )
-        metric = update if metric is None else metric.merge(update)
+    # Calculate the F-beta score using the metrax variant
+    metric = FBetaScore
+    metric = metric.from_model_output(y_pred, y_true, beta, threshold)
 
     # Use lower tolerance for lower precision dtypes.
     rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
