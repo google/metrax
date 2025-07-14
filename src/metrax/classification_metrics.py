@@ -592,8 +592,12 @@ class FBetaScore(clu_metrics.Metric):
 
     Attributes:
         beta: The beta value used in the F-Score metric
-        precision_metric: Object that calculates the precision value
-        recall_metric: Object that calculates the recall value
+        true_positives: The count of true positive instances from the given data,
+            label, and threshold.
+        false_positives: The count of false positive instances from the given data,
+            label, and threshold.
+        false_negatives: The count of false negative instances from the given data,
+            label, and threshold.
     """
 
     true_positives: jax.Array
@@ -629,11 +633,12 @@ class FBetaScore(clu_metrics.Metric):
                   be (batch_size,).
 
             Returns:
-                The Precision and Recall values.
+                The true positives, false positives, and false negatives.
 
             Raises:
                 ValueError: If type of `labels` is wrong or the shapes of `predictions`
-                and `labels` are incompatible.
+                and `labels` are incompatible. If the beta or threshold are invalid values
+                an error is raised as well.
         """
 
         # Ensure that beta is a floating number and a valid number
@@ -661,10 +666,6 @@ class FBetaScore(clu_metrics.Metric):
         false_positives = jnp.sum(predictions * (1 - labels), axis = 0)
         false_negatives = jnp.sum((1- predictions) * labels, axis = 0)
 
-        # Create a precision and recall object to store into the class variables
-        precision_metric = Precision.from_model_output(predictions, labels, threshold)
-        recall_metric = Recall.from_model_output(predictions, labels, threshold)
-
         return cls(true_positives = true_positives,
                    false_positives = false_positives,
                    false_negatives = false_negatives,
@@ -672,22 +673,23 @@ class FBetaScore(clu_metrics.Metric):
 
     # Unsure if this should be used, at least in this form
     def merge(self, other: 'FBetaScore') -> 'FBetaScore':
-        return type(self)(
-            true_positives = self.true_positives + other.true_positives,
-            false_positives = self.false_positives + other.false_positives,
-            false_negatives = self.false_negatives + other.false_negatives,
-            beta=self.beta,
-        )
+
+        # Check if the incoming beta is the same value as the current beta
+        if other.beta == self.beta:
+            return type(self)(
+                true_positives = self.true_positives + other.true_positives,
+                false_positives = self.false_positives + other.false_positives,
+                false_negatives = self.false_negatives + other.false_negatives,
+                beta=self.beta,
+            )
+        else:
+            raise ValueError('The "Beta" values between the two are not equal.')
 
     # Compute the F-Beta score metric
     def compute(self) -> jax.Array:
 
         # Epsilon fuz factor required to match with the keras version
         epsilon = 1e-7
-
-        # Calculate the precision and recall values
-        # precision = self.precision_metric.compute()
-        # recall = self.recall_metric.compute()
 
         # Manually calculate precision and recall
         """

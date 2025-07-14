@@ -289,33 +289,11 @@ class ClassificationMetricsTest(parameterized.TestCase):
       ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5, 1.0),
   )
   def test_fbetascore(self, y_true, y_pred, threshold, beta):
-    # Test that the FBeta score returns correct values
-
-    # Re-format the y values to work with the classes
-    # Incase needed for later, the original reshaping was ,,,.reshape((-1,))
-    # y_true = y_true.reshape((-1, 1))
-    # y_pred = jnp.where(y_pred.reshape((-1, 1)) >= threshold, 1, 0)
 
     # Define the Keras FBeta class to be tested against
     keras_fbeta = keras.metrics.FBetaScore(beta=beta, threshold=threshold)
     keras_fbeta.update_state(y_true, y_pred)
     expected = keras_fbeta.result()
-
-    # Create and fill the metrax metric
-    # metric = None
-    # for logits, labels in zip(y_pred, y_true):
-    #
-    #     # Make sure the correct threshold and beta values are used
-    #     update = FBetaScore
-    #
-    #     # Update the precision and recall values
-    #     update = update.from_model_output(
-    #         predictions=logits,
-    #         labels=labels,
-    #         beta=beta,
-    #         threshold=threshold,
-    #     )
-    #     metric = update if metric is None else metric.merge(update)
 
     # Calculate the F-beta score using the metrax variant
     metric = FBetaScore
