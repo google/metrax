@@ -578,10 +578,8 @@ class AUCROC(clu_metrics.Metric):
 
 @flax.struct.dataclass
 class FBetaScore(clu_metrics.Metric):
-
     """
     F-Beta score Metric class
-
     Computes the F-Beta score for the binary classification given 'predictions' and 'labels'.
 
     Formula for F-Beta Score:
@@ -591,13 +589,13 @@ class FBetaScore(clu_metrics.Metric):
     F-Beta turns into the F1 Score when beta = 1.0
 
     Attributes:
-        beta: The beta value used in the F-Score metric
         true_positives: The count of true positive instances from the given data,
             label, and threshold.
         false_positives: The count of false positive instances from the given data,
             label, and threshold.
         false_negatives: The count of false negative instances from the given data,
             label, and threshold.
+        beta: The beta value used in the F-Score metric
     """
 
     true_positives: jax.Array
@@ -609,10 +607,10 @@ class FBetaScore(clu_metrics.Metric):
     @classmethod
     def empty(cls) -> 'FBetaScore':
         return cls(
-            beta = 1.0,
             true_positives = jnp.array(0, jnp.float32),
             false_positives = jnp.array(0, jnp.float32),
             false_negatives = jnp.array(0, jnp.float32),
+            beta=1.0,
         )
 
     @classmethod
@@ -623,17 +621,19 @@ class FBetaScore(clu_metrics.Metric):
             beta = beta,
             threshold = 0.5,) -> 'FBetaScore':
         """Updates the metric.
+            Note: When only predictions and labels are given, the score calculated
+            is the F1 score if the FBetaScore beta value has not been previously modified.
 
             Args:
-                threshold: threshold value to use in the F-Score metric a floating number.
-                beta: beta value to use in the F-Score metric. A floating number.
                 predictions: A floating point 1D vector whose values are in the range [0,
                   1]. The shape should be (batch_size,).
                 labels: True value. The value is expected to be 0 or 1. The shape should
                   be (batch_size,).
+                beta: beta value to use in the F-Score metric. A floating number.
+                threshold: threshold value to use in the F-Score metric. A floating number.
 
             Returns:
-                The true positives, false positives, and false negatives.
+                The updated FBetaScore object.
 
             Raises:
                 ValueError: If type of `labels` is wrong or the shapes of `predictions`

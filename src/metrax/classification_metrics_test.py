@@ -17,9 +17,9 @@
 import os
 os.environ['KERAS_BACKEND'] = 'jax'
 
-from src.metrax.classification_metrics import FBetaScore
 from absl.testing import absltest
 from absl.testing import parameterized
+from metrax import FBetaScore
 import jax.numpy as jnp
 import keras
 import metrax
@@ -83,10 +83,10 @@ class ClassificationMetricsTest(parameterized.TestCase):
   def test_fbeta_empty(self):
     """Tests the `empty` method of the `FBetaScore` class."""
     m = metrax.FBetaScore.empty()
-    self.assertEqual(m.beta, 1.0)
     self.assertEqual(m.true_positives, jnp.array(0, jnp.float32))
     self.assertEqual(m.false_positives, jnp.array(0, jnp.float32))
     self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.beta, 1.0)
 
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
@@ -277,19 +277,18 @@ class ClassificationMetricsTest(parameterized.TestCase):
 # Testing function for F-Beta classification
   # name, output true, output prediction, threshold, beta
   @parameterized.named_parameters(
-      ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.5, 1.0),
-      ('high_threshold_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.7, 2.0),
-      ('low_threshold_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.1, 3.0),
-      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.5, 1.0),
-      ('high_threshold_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.7, 2.0),
-      ('low_threshold_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.1, 1.0),
-      ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.5, 3.0),
-      ('high_threshold_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.7, 1.0),
-      ('low_threshold_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.1, 2.0),
-      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5, 1.0),
+      ('basic_f16_beta_1.0', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.5, 1.0),
+      ('basic_f32_beta_1.0', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.5, 1.0),
+      ('low_threshold_f32_beta_1.0', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.1, 1.0),
+      ('high_threshold_bf16_beta_1.0', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.7, 1.0),
+      ('batch_size_one_beta_1.0', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5, 1.0),
+      ('high_threshold_f16_beta_2.0', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.7, 2.0),
+      ('high_threshold_f32_beta_2.0', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.7, 2.0),
+      ('low_threshold_bf16_beta_2.0', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.1, 2.0),
+      ('low_threshold_f16_beta_3.0', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.1, 3.0),
+      ('basic_bf16_beta_3.0', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.5, 3.0),
   )
   def test_fbetascore(self, y_true, y_pred, threshold, beta):
-
     # Define the Keras FBeta class to be tested against
     keras_fbeta = keras.metrics.FBetaScore(beta=beta, threshold=threshold)
     keras_fbeta.update_state(y_true, y_pred)
