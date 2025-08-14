@@ -454,7 +454,8 @@ class AUCPR(clu_metrics.Metric):
 
 @flax.struct.dataclass
 class AUCROC(clu_metrics.Metric):
-  r"""Computes area under the receiver operation characteristic curve for binary classification given `predictions` and `labels`.
+  r"""Computes area under the receiver operation characteristic curve for binary classification given `predictions`
+  and `labels`.
 
   The ROC curve shows the tradeoff between the true positive rate (TPR) and
   false positive
@@ -673,19 +674,25 @@ class FBetaScore(clu_metrics.Metric):
                    false_negatives = false_negatives,
                    beta = beta)
 
-    # Unsure if this should be used, at least in this form
-    def merge(self, other: 'FBetaScore') -> 'FBetaScore':
-
-        # Check if the incoming beta is the same value as the current beta
-        if other.beta == self.beta:
-            return type(self)(
-                true_positives = self.true_positives + other.true_positives,
-                false_positives = self.false_positives + other.false_positives,
-                false_negatives = self.false_negatives + other.false_negatives,
-                beta=self.beta,
-            )
-        else:
-            raise ValueError('The "Beta" values between the two are not equal.')
+    """
+    This function is currently unused as the 'from_model_output' function can handle the whole
+    dataset without needing to split and merge them. I'm leaving this here for now incase we want to
+    repurpose this or need to change something that requires this function's use again. This function would need
+    to be reworked for it to work with the current implementation of this class.
+    """
+    # # Merge datasets together
+    # def merge(self, other: 'FBetaScore') -> 'FBetaScore':
+    #
+    #     # Check if the incoming beta is the same value as the current beta
+    #     if other.beta == self.beta:
+    #         return type(self)(
+    #             true_positives = self.true_positives + other.true_positives,
+    #             false_positives = self.false_positives + other.false_positives,
+    #             false_negatives = self.false_negatives + other.false_negatives,
+    #             beta=self.beta,
+    #         )
+    #     else:
+    #         raise ValueError('The "Beta" values between the two are not equal.')
 
     # Compute the F-Beta score metric
     def compute(self) -> jax.Array:
