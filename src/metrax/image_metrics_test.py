@@ -212,6 +212,27 @@ DICE_ALL_ONES = (np.array([1, 1, 1, 1]), np.array([1, 1, 1, 1]))
 DICE_ALL_ZEROS = (np.array([0, 0, 0, 0]), np.array([0, 0, 0, 0]))
 DICE_NO_OVERLAP = (np.array([1, 1, 0, 0]), np.array([0, 0, 1, 1]))
 
+# Test data for TotalVariation
+# Case 1: Basic, float normalized [0,1], single channel (3D)
+TV_IMG_SHAPE_1 = (16, 16, 1)  # height, width, channels
+TV_IMG_1 = np.random.rand(*TV_IMG_SHAPE_1).astype(np.float32)
+
+# Case 2: Multi-channel (3), float normalized [0,1] (3D)
+TV_IMG_SHAPE_2 = (32, 32, 3)
+TV_IMG_2 = np.random.rand(*TV_IMG_SHAPE_2).astype(np.float32)
+
+# Case 3: Batch of single channel images (4D)
+TV_IMG_SHAPE_3 = (4, 16, 16, 1)  # batch, height, width, channels
+TV_IMG_3 = np.random.rand(*TV_IMG_SHAPE_3).astype(np.float32)
+
+# Case 4: Batch of multi-channel images (4D)
+TV_IMG_SHAPE_4 = (4, 32, 32, 3)  # batch, height, width, channels
+TV_IMG_4 = np.random.rand(*TV_IMG_SHAPE_4).astype(np.float32)
+
+# Case 5: Constant image (should have zero variation)
+TV_IMG_SHAPE_5 = (16, 16, 1)
+TV_IMG_5 = np.ones(TV_IMG_SHAPE_5, dtype=np.float32)
+
 
 class ImageMetricsTest(parameterized.TestCase):
 
@@ -553,6 +574,62 @@ class ImageMetricsTest(parameterized.TestCase):
 
     np.testing.assert_allclose(result, expected, rtol=1e-5, atol=1e-5)
 
+  @parameterized.named_parameters(
+      (
+          'tv_single_channel_3d',
+          TV_IMG_1,
+      ),
+      (
+          'tv_multichannel_3d',
+          TV_IMG_2,
+      ),
+      (
+          'tv_batch_single_channel_4d',
+          TV_IMG_3,
+      ),
+      (
+          'tv_batch_multichannel_4d',
+          TV_IMG_4,
+      ),
+      (
+          'tv_constant_image',
+          TV_IMG_5,
+      ),
+  )
+  def test_total_variation_against_tensorflow(
+      self,
+      images_np: np.ndarray,
+  ) -> None:
+    """Test that TotalVariation metric computes values close to tf.image.total_variation."""
+
+    # Calculate TV using Metrax
+    # convert to uniform [B, H, W, C] otherwise `for image in images_np` will be 2D 
+    # if input is 3D
+    images_np = images_np if images_np.ndim == 4 else np.expand_dims(images_np, axis=0)
+    metric = None
+    for image in images_np:
+        update = metrax.TotalVariation.from_model_output(
+            predictions=jnp.array(image)
+        )
+        metric = update if metric is None else metric.merge(update)
+    metrax_tv = metric.compute()
+
+    # Calculate TV using TensorFlow
+    tf_tv = tf.image.total_variation(tf.convert_to_tensor(images_np))
+    tf_mean = tf.reduce_mean(tf_tv).numpy()
+
+    # For constant image, TV should be 0
+    if np.array_equal(images_np, TV_IMG_5):
+      np.testing.assert_allclose(metrax_tv, 0.0, rtol=1e-5, atol=1e-5)
+      np.testing.assert_allclose(tf_mean, 0.0, rtol=1e-5, atol=1e-5)
+    else:
+      np.testing.assert_allclose(
+          metrax_tv,
+          tf_mean,
+          rtol=1e-5,
+          atol=1e-5,
+          err_msg='Total Variation mismatch',
+      )
 
 if __name__ == '__main__':
   absltest.main()
