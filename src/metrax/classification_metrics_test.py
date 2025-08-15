@@ -19,7 +19,6 @@ os.environ['KERAS_BACKEND'] = 'jax'
 
 from absl.testing import absltest
 from absl.testing import parameterized
-from metrax import FBetaScore
 import jax.numpy as jnp
 import keras
 import metrax
@@ -295,7 +294,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
     expected = keras_fbeta.result()
 
     # Calculate the F-beta score using the metrax variant
-    metric = FBetaScore
+    metric = metrax.FBetaScore
     metric = metric.from_model_output(y_pred, y_true, beta, threshold)
 
     # Use lower tolerance for lower precision dtypes.
