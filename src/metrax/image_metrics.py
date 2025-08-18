@@ -666,3 +666,69 @@ class Dice(clu_metrics.Metric):
     """Returns the final Dice coefficient."""
     epsilon = 1e-7
     return (2.0 * self.intersection) / (self.sum_pred + self.sum_true + epsilon)
+
+@flax.struct.dataclass
+class TotalVariation(base.Average):
+  r"""Calculates and returns the Total Variation (TV) for one or more images.
+
+  The total variation is the sum of the absolute differences for neighboring
+  pixel-values in the input images. This measures how much noise is in the
+  images.
+
+  This implements the anisotropic 2-D version of the formula described here:
+
+  https://en.wikipedia.org/wiki/Total_variation_denoising
+  """
+
+  @staticmethod
+  def _calculate_total_variation(
+      images: jax.Array,
+  ) -> jax.Array:
+    """Computes Total Variation values.
+
+    Args:
+      images: 4-D Array of shape ``(batch, height, width, channels)`` or
+      3-D Array of shape ``(height, width, channels)``.
+
+    Returns:
+      Total variation of 'images'.
+
+      If `images` was 4-D, return a 1-D float Array of shape `[batch]` with the
+        total variation for each image in the batch.
+      If `images` was 3-D, return a scalar float with the total variation for
+        that image.
+    """
+    ndims = images.ndim 
+    if ndims == 3: # (height, width, channels)
+      # Shift images by one pixel along the height and width.
+      pixel_dif1 = jnp.abs(images[1:, :, :] - images[:-1, :, :])
+      pixel_dif2 = jnp.abs(images[:, 1:, :] - images[:, :-1, :])
+      sum_axis = None
+    elif ndims == 4: # (batch, height, width, channels)
+      # Shift images by one pixel along the height and width.
+      pixel_dif1 = jnp.abs(images[:, 1:, :, :] - images[:, :-1, :, :])
+      pixel_dif2 = jnp.abs(images[:, :, 1:, :] - images[:, :, :-1, :])
+      sum_axis = [1, 2, 3]
+    else:
+      raise ValueError(
+        f'Input images must be either 3 or 4-dimensional, got {ndims} dimensions instead.'
+      )
+    
+    return jnp.sum(pixel_dif1, axis=sum_axis) + jnp.sum(pixel_dif2, axis=sum_axis)
+
+
+  @classmethod
+  def from_model_output(
+    cls,
+    predictions: jax.Array
+  ) -> 'TotalVariation':
+    """Computes the Total Variation for a batch of images and creates a TotalVariation metric instance.
+    
+    Args:
+      predictions: A JAX array of predicted images, with shape ``(batch, H, W, C)``.
+
+    Returns:
+      A ``TotalVariation`` instance containing per‑image total variation values.
+    """
+    total_variation = cls._calculate_total_variation(predictions)
+    return super().from_model_output(values=total_variation)
