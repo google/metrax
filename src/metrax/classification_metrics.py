@@ -45,19 +45,19 @@ def _default_threshold(num_thresholds: int) -> jax.Array:
 
 def _convert_logits_to_probabilities(
     predictions: jax.Array, from_logits: bool )-> jax.Array:
-    """Converts logits to probabilities if `from_logits` is True.   
+    """Converts logits to probabilities if `from_logits` is True
     Args:
         predictions: JAX array of predicted values, expected to be logits if `from_logits` is True.
         from_logits: Boolean indicating whether `predictions` are logits.
     Returns:
         JAX array of probabilities if `from_logits` is True, otherwise returns `predictions` unchanged.
-    """ 
-    print(f"predictions_before.shape: {predictions.shape}, from_logits: {from_logits}")
+    """
+
     if from_logits:
         predictions = jax.nn.softmax(predictions, axis=-1)
         # Assuming binary classification, take the positive class probability.
-    
-    print(f"predictions.shape: {predictions.shape}, from_logits: {from_logits}")
+
+
     return predictions
 
 @flax.struct.dataclass
@@ -120,9 +120,9 @@ class Accuracy(base.Average):
 
     if from_logits:
         predictions = jax.nn.softmax(predictions, axis=-1)
-        
 
-      
+
+
     correct = predictions == labels
     count = jnp.ones_like(labels, dtype=jnp.int32)
     if sample_weights is not None:
@@ -694,12 +694,12 @@ class FBetaScore(clu_metrics.Metric):
             raise ValueError('The "Threshold" value must be between 0 and 1.')
 
         # If the predictions are logits, convert them to probabilities
-        print(f"labels.shape: {labels.shape}, predictions.shape: {predictions.shape}, from_logits: {from_logits}")
+
         predictions = _convert_logits_to_probabilities(predictions, from_logits)
-        
+
         # Modify predictions with the given threshold value
         predictions = jnp.where(predictions >= threshold, 1, 0)
-        
+
         # Assign the true_positive, false_positive, and false_negative their values
         """
         We are calculating these values manually instead of using Metrax's

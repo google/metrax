@@ -99,9 +99,6 @@ class ClassificationMetricsTest(parameterized.TestCase):
   )
   def test_accuracy(self, y_true, y_pred, sample_weights, from_logits=False):
     """Test that `Accuracy` metric computes correct values."""
-
-    print(f"y_true.shape: {y_true}, y_pred.shape: {y_pred}, sample_weights: {sample_weights}, from_logits: {from_logits}")
-
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
     metrax_accuracy = metrax.Accuracy.empty()
@@ -147,7 +144,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       y_pred_keras = jnp.where(probs.reshape((-1,)) >= threshold, 1, 0)
     else:
       y_pred_keras = jnp.where(y_pred.reshape((-1,)) >= threshold, 1, 0)
-    
+
     keras_precision = keras.metrics.Precision(thresholds=threshold)
     keras_precision.update_state(y_true_keras, y_pred_keras)
     expected = keras_precision.result()
@@ -187,14 +184,14 @@ class ClassificationMetricsTest(parameterized.TestCase):
   )
   def test_recall(self, y_true, y_pred, threshold, from_logits=False):
     """Test that `Recall` metric computes correct values."""
-    
+
     y_true_keras = y_true.reshape((-1,))
     if from_logits:
       probs = jax.nn.softmax(y_pred, axis=-1)
       y_pred_keras = jnp.where(probs.reshape((-1,)) >= threshold, 1, 0)
     else:
       y_pred_keras = jnp.where(y_pred.reshape((-1,)) >= threshold, 1, 0)
-    
+
     keras_recall = keras.metrics.Recall(thresholds=threshold)
     keras_recall.update_state(y_true_keras, y_pred_keras)
     expected = keras_recall.result()
@@ -322,10 +319,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       ('batch_size_one_logits_beta_3.0', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5, 3.0, True),
   )
   def test_fbetascore(self, y_true, y_pred, threshold, beta, from_logits=False):
-
-    print(f"y_true.shape: {y_true.shape}, y_pred.shape: {y_pred.shape}, threshold: {threshold}, beta: {beta}")
     # Define the Keras FBeta class to be tested against
-    
     keras_fbeta = keras.metrics.FBetaScore(beta=beta, threshold=threshold)
     if from_logits:
         y_pred_keras = jax.nn.softmax(y_pred, axis=-1)
