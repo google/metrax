@@ -454,14 +454,17 @@ class AUCPR(clu_metrics.Metric):
 
 @flax.struct.dataclass
 class AUCROC(clu_metrics.Metric):
-  r"""Computes area under the receiver operation characteristic curve for
-  binary classification given `predictions` and `labels`.
+  r"""Computes area under the receiver operation characteristic curve for binary classification given `predictions`
+  and `labels`.
 
   The ROC curve shows the tradeoff between the true positive rate (TPR) and
-  false positive rate (FPR) at different classification thresholds. The area
-  under this curve (AUC-ROC) provides a single score that represents the
-  model's ability to discriminate between positive and negative cases across
-  all possible classification thresholds, regardless of class imbalance.
+  false positive
+  rate (FPR) at different classification thresholds. The area under this curve
+  (AUC-ROC)
+  provides a single score that represents the model's ability to discriminate
+  between
+  positive and negative cases across all possible classification thresholds,
+  regardless of class imbalance.
 
   For each threshold :math:`t`, TPR and FPR are calculated as:
 
@@ -575,3 +578,148 @@ class AUCROC(clu_metrics.Metric):
     )
     # Threshold goes from 0 to 1, so trapezoid is negative.
     return jnp.trapezoid(tp_rate, fp_rate) * -1
+
+@flax.struct.dataclass
+class FBetaScore(clu_metrics.Metric):
+    """
+    F-Beta score Metric class
+    Computes the F-Beta score for the binary classification given 'predictions' and 'labels'.
+
+    Formula for F-Beta Score:
+        b2 = beta ** 2
+        f_beta_score = ((1 + b2) * (precision * recall)) / (precision * b2 + recall)
+
+    F-Beta turns into the F1 Score when beta = 1.0
+
+    Attributes:
+        true_positives: The count of true positive instances from the given data,
+            label, and threshold.
+        false_positives: The count of false positive instances from the given data,
+            label, and threshold.
+        false_negatives: The count of false negative instances from the given data,
+            label, and threshold.
+        beta: The beta value used in the F-Score metric
+    """
+
+    true_positives: jax.Array
+    false_positives: jax.Array
+    false_negatives: jax.Array
+    beta: float = 1.0
+
+    # Reset the variables for the class
+    @classmethod
+    def empty(cls) -> 'FBetaScore':
+        return cls(
+            true_positives = jnp.array(0, jnp.float32),
+            false_positives = jnp.array(0, jnp.float32),
+            false_negatives = jnp.array(0, jnp.float32),
+            beta=1.0,
+        )
+
+    @classmethod
+    def from_model_output(
+            cls,
+            predictions: jax.Array,
+            labels: jax.Array,
+            beta = beta,
+            threshold = 0.5,) -> 'FBetaScore':
+        """Updates the metric.
+            Note: When only predictions and labels are given, the score calculated
+            is the F1 score if the FBetaScore beta value has not been previously modified.
+
+            Args:
+                predictions: A floating point 1D vector whose values are in the range [0,
+                  1]. The shape should be (batch_size,).
+                labels: True value. The value is expected to be 0 or 1. The shape should
+                  be (batch_size,).
+                beta: beta value to use in the F-Score metric. A floating number.
+                threshold: threshold value to use in the F-Score metric. A floating number.
+
+            Returns:
+                The updated FBetaScore object.
+
+            Raises:
+                ValueError: If type of `labels` is wrong or the shapes of `predictions`
+                and `labels` are incompatible. If the beta or threshold are invalid values
+                an error is raised as well.
+        """
+
+        # Ensure that beta is a floating number and a valid number
+        if not isinstance(beta, float):
+            raise ValueError('The "Beta" value must be a floating number.')
+        if beta <= 0.0:
+            raise ValueError('The "Beta" value must be larger than 0.0.')
+
+        # Ensure that threshold is a floating number and a valid number
+        if not isinstance(threshold, float):
+            raise ValueError('The "Threshold" value must be a floating number.')
+        if threshold < 0.0 or threshold > 1.0:
+            raise ValueError('The "Threshold" value must be between 0 and 1.')
+
+        # Modify predictions with the given threshold value
+        predictions = jnp.where(predictions >= threshold, 1, 0)
+
+        # Assign the true_positive, false_positive, and false_negative their values
+        """
+        We are calculating these values manually instead of using Metrax's
+        precision and recall classes. This is because the Metrax versions end up
+        outputting a single numerical answer when we need an array of numbers.
+        """
+        true_positives = jnp.sum(predictions * labels, axis = 0)
+        false_positives = jnp.sum(predictions * (1 - labels), axis = 0)
+        false_negatives = jnp.sum((1- predictions) * labels, axis = 0)
+
+        return cls(true_positives = true_positives,
+                   false_positives = false_positives,
+                   false_negatives = false_negatives,
+                   beta = beta)
+
+    """
+    This function is currently unused as the 'from_model_output' function can handle the whole
+    dataset without needing to split and merge them. I'm leaving this here for now incase we want to
+    repurpose this or need to change something that requires this function's use again. This function would need
+    to be reworked for it to work with the current implementation of this class.
+    """
+    # # Merge datasets together
+    # def merge(self, other: 'FBetaScore') -> 'FBetaScore':
+    #
+    #     # Check if the incoming beta is the same value as the current beta
+    #     if other.beta == self.beta:
+    #         return type(self)(
+    #             true_positives = self.true_positives + other.true_positives,
+    #             false_positives = self.false_positives + other.false_positives,
+    #             false_negatives = self.false_negatives + other.false_negatives,
+    #             beta=self.beta,
+    #         )
+    #     else:
+    #         raise ValueError('The "Beta" values between the two are not equal.')
+
+    # Compute the F-Beta score metric
+    def compute(self) -> jax.Array:
+
+        # Epsilon fuz factor required to match with the keras version
+        epsilon = 1e-7
+
+        # Manually calculate precision and recall
+        """
+        This is done in this manner since the metrax variants of precision
+        and recall output only single numbers. To match the keras value
+        we need an array of numbers to work with.
+        """
+        precision = jnp.divide(
+            self.true_positives,
+            self.true_positives + self.false_positives + epsilon,
+        )
+        recall = jnp.divide(
+            self.true_positives,
+            self.true_positives + self.false_negatives + epsilon,
+        )
+
+        # Compute the numerator and denominator of the F-Score formula
+        b2 = self.beta ** 2
+        numerator = (1 + b2) * (precision * recall)
+        denominator = (b2 * precision) + recall
+
+        return base.divide_no_nan(
+            numerator, denominator + epsilon,
+        )

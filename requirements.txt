@@ -1,6 +1,6 @@
 absl-py
 clu
-jax[cpu]
+jax[cpu]==0.6.2
 jax_tpu_embedding
 keras-hub
 keras-rs

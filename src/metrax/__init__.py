@@ -27,6 +27,7 @@ AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
 BLEU = nlp_metrics.BLEU
 DCGAtK = ranking_metrics.DCGAtK
 Dice = image_metrics.Dice
+FBetaScore = classification_metrics.FBetaScore
 IoU = image_metrics.IoU
 KID = image_metrics.KID
 MAE = regression_metrics.MAE
@@ -56,6 +57,7 @@ __all__ = [
     "BLEU",
     "DCGAtK",
     "Dice",
+    "FBetaScore",
     "IoU",
     "MAE",
     "MRR",

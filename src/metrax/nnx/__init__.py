@@ -22,6 +22,7 @@ AveragePrecisionAtK = nnx_metrics.AveragePrecisionAtK
 BLEU = nnx_metrics.BLEU
 DCGAtK = nnx_metrics.DCGAtK
 Dice = nnx_metrics.Dice
+FBetaScore = nnx_metrics.FBetaScore
 IoU = nnx_metrics.IoU
 KID = nnx_metrics.KID
 MAE = nnx_metrics.MAE
@@ -51,6 +52,7 @@ __all__ = [
     "BLEU",
     "DCGAtK",
     "Dice",
+    "FBetaScore",
     "IoU",
     "KID",
     "MRR",

@@ -78,6 +78,15 @@ class ClassificationMetricsTest(parameterized.TestCase):
     self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
     self.assertEqual(m.num_thresholds, 0)
 
+  # Test the empty method for the FBetsScore class
+  def test_fbeta_empty(self):
+    """Tests the `empty` method of the `FBetaScore` class."""
+    m = metrax.FBetaScore.empty()
+    self.assertEqual(m.true_positives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.false_positives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
+    self.assertEqual(m.beta, 1.0)
+
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
       ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
@@ -262,6 +271,40 @@ class ClassificationMetricsTest(parameterized.TestCase):
         # Use lower tolerance for lower precision dtypes.
         rtol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-7,
         atol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-7,
+    )
+
+# Testing function for F-Beta classification
+  # name, output true, output prediction, threshold, beta
+  @parameterized.named_parameters(
+      ('basic_f16_beta_1.0', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.5, 1.0),
+      ('basic_f32_beta_1.0', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.5, 1.0),
+      ('low_threshold_f32_beta_1.0', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.1, 1.0),
+      ('high_threshold_bf16_beta_1.0', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.7, 1.0),
+      ('batch_size_one_beta_1.0', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5, 1.0),
+      ('high_threshold_f16_beta_2.0', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.7, 2.0),
+      ('high_threshold_f32_beta_2.0', OUTPUT_LABELS, OUTPUT_PREDS_F32, 0.7, 2.0),
+      ('low_threshold_bf16_beta_2.0', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.1, 2.0),
+      ('low_threshold_f16_beta_3.0', OUTPUT_LABELS, OUTPUT_PREDS_F16, 0.1, 3.0),
+      ('basic_bf16_beta_3.0', OUTPUT_LABELS, OUTPUT_PREDS_BF16, 0.5, 3.0),
+  )
+  def test_fbetascore(self, y_true, y_pred, threshold, beta):
+    # Define the Keras FBeta class to be tested against
+    keras_fbeta = keras.metrics.FBetaScore(beta=beta, threshold=threshold)
+    keras_fbeta.update_state(y_true, y_pred)
+    expected = keras_fbeta.result()
+
+    # Calculate the F-beta score using the metrax variant
+    metric = metrax.FBetaScore
+    metric = metric.from_model_output(y_pred, y_true, beta, threshold)
+
+    # Use lower tolerance for lower precision dtypes.
+    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    np.testing.assert_allclose(
+        metric.compute(),
+        expected,
+        rtol=rtol,
+        atol=atol,
     )
 
 
