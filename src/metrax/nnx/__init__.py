@@ -24,6 +24,7 @@ DCGAtK = nnx_metrics.DCGAtK
 Dice = nnx_metrics.Dice
 FBetaScore = nnx_metrics.FBetaScore
 IoU = nnx_metrics.IoU
+KID = nnx_metrics.KID
 MAE = nnx_metrics.MAE
 MRR = nnx_metrics.MRR
 MSE = nnx_metrics.MSE
@@ -53,6 +54,7 @@ __all__ = [
     "Dice",
     "FBetaScore",
     "IoU",
+    "KID",
     "MRR",
     "MAE",
     "MSE",

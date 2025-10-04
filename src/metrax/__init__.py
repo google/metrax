@@ -19,7 +19,6 @@ from metrax import image_metrics
 from metrax import nlp_metrics
 from metrax import ranking_metrics
 from metrax import regression_metrics
-
 AUCPR = classification_metrics.AUCPR
 AUCROC = classification_metrics.AUCROC
 Accuracy = classification_metrics.Accuracy
@@ -30,6 +29,7 @@ DCGAtK = ranking_metrics.DCGAtK
 Dice = image_metrics.Dice
 FBetaScore = classification_metrics.FBetaScore
 IoU = image_metrics.IoU
+KID = image_metrics.KID
 MAE = regression_metrics.MAE
 MRR = ranking_metrics.MRR
 MSE = regression_metrics.MSE
@@ -47,7 +47,6 @@ RougeN = nlp_metrics.RougeN
 SNR = audio_metrics.SNR
 SSIM = image_metrics.SSIM
 WER = nlp_metrics.WER
-
 
 __all__ = [
     "AUCPR",
@@ -77,4 +76,5 @@ __all__ = [
     "SNR",
     "SSIM",
     "WER",
+    "KID",
 ]

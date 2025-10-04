@@ -86,6 +86,12 @@ class IoU(NnxWrapper):
     super().__init__(metrax.IoU)
 
 
+class KID(NnxWrapper):
+  """An NNX class for the Metrax metric KernelInceptionMetric."""
+
+  def __init__(self):
+    super().__init__(metrax.KID)
+
 class MAE(NnxWrapper):
   """An NNX class for the Metrax metric MAE."""
 
@@ -203,3 +209,4 @@ class WER(NnxWrapper):
 
   def __init__(self):
     super().__init__(metrax.WER)
+

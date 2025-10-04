@@ -202,6 +202,19 @@ class MetraxTest(parameterized.TestCase):
           },
       ),
       (
+        'kid',
+        metrax.KID,
+        {
+            'real_features': np.random.uniform(size=(BATCHES * BATCH_SIZE, 2048)),
+            'fake_features': np.random.uniform(size=(BATCHES * BATCH_SIZE, 2048)),
+            'subsets': 10,
+            'subset_size': 8,
+            'degree': 3,
+            'gamma': 0.3,
+            'coef': 1.0,
+        },
+      ),
+      (
           'ssim',
           metrax.SSIM,
           {

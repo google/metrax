@@ -9,3 +9,4 @@ rouge-score
 scikit-learn
 tensorflow
 torchmetrics
+torch-fidelity
