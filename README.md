@@ -27,6 +27,12 @@ pip install google-metrax
 
 ## Development
 
+Install the development dependencies:
+
+```sh
+pip install ".[dev]"
+```
+
 Run the tests:
 
 ```sh
@@ -36,7 +42,7 @@ pytest src/metrax
 Develop the docs locally:
 
 ```
-pip install -r ./docs/requirements.txt
+pip install ".[docs]"
 sphinx-build ./docs /tmp/metrax_docs
 python -m http.server --directory /tmp/metrax_docs
 ```
