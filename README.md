@@ -3,6 +3,7 @@
 ![CI status](https://github.com/google/metrax/actions/workflows/ci.yml/badge.svg?branch=main)
 [![Documentation Status](https://app.readthedocs.org/projects/metrax/badge/?version=latest)](http://metrax.readthedocs.io)
 ![pypi](https://img.shields.io/pypi/v/google-metrax)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/google/metrax/blob/main/metrax_example.ipynb)
 
 `metrax` is a library with standard eval metrics implementations in JAX.
 
