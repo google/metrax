@@ -32,3 +32,6 @@ class NnxWrapper(nnx.metrics.Metric):
 
   def compute(self):
     return self.clu_metric.compute()
+
+  def __init_subclass__(cls, **kwargs):
+    super().__init_subclass__(pytree=False, **kwargs)
