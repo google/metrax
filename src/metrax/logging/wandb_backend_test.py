@@ -65,11 +65,12 @@ class WandbBackendTest(absltest.TestCase):
         raise ImportError("Mocked import failure")
       return _real_import(name, *args, **kwargs)
 
-    with mock.patch("builtins.__import__", side_effect=failing_import):
-      with mock.patch("jax.process_index", return_value=0):
-        with self.assertRaises(ImportError) as cm:
-          WandbBackend(project="test-project")
-        self.assertIn("pip install wandb", str(cm.exception))
+    with mock.patch(
+        "builtins.__import__", side_effect=failing_import
+    ), mock.patch("jax.process_index", return_value=0):
+      with self.assertRaises(ImportError) as cm:
+        WandbBackend(project="test-project")
+      self.assertIn("pip install wandb", str(cm.exception))
 
 
 if __name__ == "__main__":
