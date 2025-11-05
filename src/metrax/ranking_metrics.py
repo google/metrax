@@ -51,10 +51,10 @@ class DCGAtK(base.Average):
 
   @classmethod
   def _calculate_dcg_at_ks(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    ks: jax.Array,
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
   ) -> jax.Array:
     """Computes DCG@k for each example and for each k, using 'exp2' gain.
 
@@ -98,26 +98,26 @@ class DCGAtK(base.Average):
       return dcg_at_k
 
     dcg_at_ks = jax.vmap(
-      _compute_dcg_at_k,
-      in_axes=(0, None, None),
-      out_axes=1,  # Place the mapped axis(from ks) as the second axis
+        _compute_dcg_at_k,
+        in_axes=(0, None, None),
+        out_axes=1,  # Place the mapped axis(from ks) as the second axis
     )(ks, item_contributions, score_ranks)
 
     return dcg_at_ks
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    ks: jax.Array,
-  ) -> "DCGAtK":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
+  ) -> 'DCGAtK':
     """Creates a DCGAtK metric instance from model output."""
     dcg_at_ks = cls._calculate_dcg_at_ks(predictions, labels, ks)
     num_examples = jnp.array(labels.shape[0], dtype=jnp.float32)
     return cls(
-      total=jnp.sum(dcg_at_ks, axis=0),
-      count=num_examples,
+        total=jnp.sum(dcg_at_ks, axis=0),
+        count=num_examples,
     )
 
 
@@ -143,10 +143,10 @@ class NDCGAtK(DCGAtK):
 
   @classmethod
   def _calculate_dcg_at_ks(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    ks: jax.Array,
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
   ) -> jax.Array:
     """Computes NDCG@k for each example and for each k.
 
@@ -162,9 +162,9 @@ class NDCGAtK(DCGAtK):
     """
     actual_dcg_at_ks = super()._calculate_dcg_at_ks(predictions, labels, ks)
     ideal_dcg_at_ks = super()._calculate_dcg_at_ks(
-      predictions=labels,  # Use labels to determine ideal DCG.
-      labels=labels,
-      ks=ks,
+        predictions=labels,  # Use labels to determine ideal DCG.
+        labels=labels,
+        ks=ks,
     )
     ndcg_at_ks = base.divide_no_nan(actual_dcg_at_ks, ideal_dcg_at_ks)
     # Ensure NDCG is not greater than 1.
@@ -192,7 +192,9 @@ class AveragePrecisionAtK(base.Average):
   """
 
   @classmethod
-  def average_precision_at_ks(cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array):
+  def average_precision_at_ks(
+      cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array
+  ):
     """Computes AP@k (average precision at k) metrics for each of k in ks.
 
     Args:
@@ -212,41 +214,43 @@ class AveragePrecisionAtK(base.Average):
 
     def compute_ap_at_k_single(relevant_labels, total_relevant, ks):
       cumulative_precision = jnp.where(
-        relevant_labels,
-        base.divide_no_nan(
-          jnp.cumsum(relevant_labels),
-          jnp.arange(1, len(relevant_labels) + 1),
-        ),
-        0,
-      )
-      return jnp.array(
-        [
+          relevant_labels,
           base.divide_no_nan(
-            jnp.sum(
-              jnp.where(
-                jnp.arange(cumulative_precision.shape[0]) < k,
-                cumulative_precision,
-                0.0,
-              )
-            ),
-            total_relevant,
+              jnp.cumsum(relevant_labels),
+              jnp.arange(1, len(relevant_labels) + 1),
+          ),
+          0,
+      )
+      return jnp.array([
+          base.divide_no_nan(
+              jnp.sum(
+                  jnp.where(
+                      jnp.arange(cumulative_precision.shape[0]) < k,
+                      cumulative_precision,
+                      0.0,
+                  )
+              ),
+              total_relevant,
           )
           for k in ks
-        ]
-      )
+      ])
 
-    vmap_compute_ap_at_k = jax.vmap(compute_ap_at_k_single, in_axes=(0, 0, None), out_axes=0)
+    vmap_compute_ap_at_k = jax.vmap(
+        compute_ap_at_k_single, in_axes=(0, 0, None), out_axes=0
+    )
 
-    ap_at_ks = vmap_compute_ap_at_k(jnp.take_along_axis(labels, indices_by_rank, axis=1), total_relevant, ks)
+    ap_at_ks = vmap_compute_ap_at_k(
+        jnp.take_along_axis(labels, indices_by_rank, axis=1), total_relevant, ks
+    )
     return ap_at_ks
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    ks: jax.Array,
-  ) -> "AveragePrecisionAtK":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
+  ) -> 'AveragePrecisionAtK':
     """Updates the metric.
 
     Args:
@@ -267,8 +271,8 @@ class AveragePrecisionAtK(base.Average):
     ap_at_ks = cls.average_precision_at_ks(predictions, labels, ks)
     num_examples = jnp.array(labels.shape[0], dtype=jnp.float32)
     return cls(
-      total=ap_at_ks.sum(axis=0),
-      count=num_examples,
+        total=ap_at_ks.sum(axis=0),
+        count=num_examples,
     )
 
 
@@ -299,10 +303,10 @@ class MRR(base.Average):
 
   @classmethod
   def _calculate_rr_at_ks(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    ks: jax.Array,
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
   ) -> jax.Array:
     """Calculates the Reciprocal Rank@k for each query in a batch, for each k.
 
@@ -324,9 +328,9 @@ class MRR(base.Average):
     first_relevant_ranks = first_relevant_indices + 1
     # Check if a relevant item exists for each query.
     reciprocal_rank = jnp.where(
-      jnp.any(labels_by_rank > 0, axis=1),
-      1.0 / first_relevant_ranks.astype(jnp.float32),
-      0.0,
+        jnp.any(labels_by_rank > 0, axis=1),
+        1.0 / first_relevant_ranks.astype(jnp.float32),
+        0.0,
     )
 
     def _compute_rr_at_k(k, reciprocal_rank, first_relevant_rank):
@@ -334,18 +338,18 @@ class MRR(base.Average):
       return rr_at_k
 
     rr_at_ks = jax.vmap(_compute_rr_at_k, in_axes=(0, None, None), out_axes=1)(
-      ks, reciprocal_rank, first_relevant_ranks
+        ks, reciprocal_rank, first_relevant_ranks
     )
 
     return rr_at_ks
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    ks: jax.Array,
-  ) -> "MRR":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
+  ) -> 'MRR':
     """Creates an MRR metric instance from model output, calculating MRR@k for each k.
 
     Args:
@@ -363,8 +367,8 @@ class MRR(base.Average):
     rr_at_ks = cls._calculate_rr_at_ks(predictions, labels, ks)
     num_queries = jnp.array(labels.shape[0], dtype=jnp.float32)
     return cls(
-      total=rr_at_ks.sum(axis=0),
-      count=num_queries,
+        total=rr_at_ks.sum(axis=0),
+        count=num_queries,
     )
 
 
@@ -382,7 +386,9 @@ class TopKRankingMetric(base.Average, abc.ABC):
   """
 
   @staticmethod
-  def _get_relevant_at_k(predictions: jax.Array, labels: jax.Array, ks: jax.Array) -> jax.Array:
+  def _get_relevant_at_k(
+      predictions: jax.Array, labels: jax.Array, ks: jax.Array
+  ) -> jax.Array:
     """Computes the number of relevant items at each k.
 
     This static method processes predictions and labels to determine the
@@ -415,7 +421,9 @@ class TopKRankingMetric(base.Average, abc.ABC):
 
   @classmethod
   @abc.abstractmethod
-  def _calculate_metric_at_ks(cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array) -> jax.Array:
+  def _calculate_metric_at_ks(
+      cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array
+  ) -> jax.Array:
     """Computes the specific metric (e.g., P@k, R@k) values per example for each k.
 
     This method must be implemented by concrete subclasses (e.g., PrecisionAtK,
@@ -432,15 +440,15 @@ class TopKRankingMetric(base.Average, abc.ABC):
       A rank-2 array of shape (batch_size, |ks|) containing the metric
       values for each example in the batch and each specified k.
     """
-    raise NotImplementedError("Subclasses must implement this method.")
+    raise NotImplementedError('Subclasses must implement this method.')
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    ks: jax.Array,
-  ) -> "TopKRankingMetric":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      ks: jax.Array,
+  ) -> 'TopKRankingMetric':
     """Creates a metric instance from model output.
 
     This class method computes the specific ranking metric (defined by the
@@ -468,8 +476,8 @@ class TopKRankingMetric(base.Average, abc.ABC):
     metric_at_ks = cls._calculate_metric_at_ks(predictions, labels, ks)
     num_examples = jnp.array(labels.shape[0], dtype=jnp.float32)
     return cls(
-      total=metric_at_ks.sum(axis=0),
-      count=num_examples,
+        total=metric_at_ks.sum(axis=0),
+        count=num_examples,
     )
 
 
@@ -488,7 +496,9 @@ class PrecisionAtK(TopKRankingMetric):
   """
 
   @classmethod
-  def _calculate_metric_at_ks(cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array) -> jax.Array:
+  def _calculate_metric_at_ks(
+      cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array
+  ) -> jax.Array:
     """Computes P@k (precision at k) metrics for each of k in ks for each example.
 
     This method implements the core logic for calculating Precision@k.
@@ -533,7 +543,9 @@ class RecallAtK(TopKRankingMetric):
   """
 
   @classmethod
-  def _calculate_metric_at_ks(cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array) -> jax.Array:
+  def _calculate_metric_at_ks(
+      cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array
+  ) -> jax.Array:
     """Computes R@k (recall at k) metrics for each of k in ks for each example.
 
     This method implements the core logic for calculating Recall@k.

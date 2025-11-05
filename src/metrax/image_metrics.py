@@ -102,13 +102,13 @@ class SSIM(base.Average):
 
   @staticmethod
   def _calculate_ssim(
-    img1: jnp.ndarray,
-    img2: jnp.ndarray,
-    max_val: float,
-    filter_size: int = 11,
-    filter_sigma: float = 1.5,
-    k1: float = 0.01,
-    k2: float = 0.03,
+      img1: jnp.ndarray,
+      img2: jnp.ndarray,
+      max_val: float,
+      filter_size: int = 11,
+      filter_sigma: float = 1.5,
+      k1: float = 0.01,
+      k2: float = 0.03,
   ) -> jnp.ndarray:
     """Computes SSIM (Structural Similarity Index Measure) values for a batch of images.
 
@@ -136,20 +136,28 @@ class SSIM(base.Average):
       image pair in the batch.
     """
     if img1.shape != img2.shape:
-      raise ValueError(f"Input images must have the same shape, but got {img1.shape} and {img2.shape}")
+      raise ValueError(
+          f'Input images must have the same shape, but got {img1.shape} and'
+          f' {img2.shape}'
+      )
     if img1.ndim != 4:  # (batch, H, W, C)
-      raise ValueError(f"Input images must be 4D tensors (batch, height, width, channels), but got {img1.ndim}D")
+      raise ValueError(
+          'Input images must be 4D tensors (batch, height, width, channels),'
+          f' but got {img1.ndim}D'
+      )
     if img1.shape[-3] < filter_size or img1.shape[-2] < filter_size:
       raise ValueError(
-        f"Image dimensions ({img1.shape[-3]}x{img1.shape[-2]}) must be at"
-        f" least filter_size x filter_size ({filter_size}x{filter_size})."
+          f'Image dimensions ({img1.shape[-3]}x{img1.shape[-2]}) must be at'
+          f' least filter_size x filter_size ({filter_size}x{filter_size}).'
       )
 
     num_channels = img1.shape[-1]
     img1 = img1.astype(jnp.float32)
     img2 = img2.astype(jnp.float32)
 
-    gaussian_kernal_1d = _gaussian_kernel1d(filter_sigma, (filter_size - 1) // 2)
+    gaussian_kernal_1d = _gaussian_kernel1d(
+        filter_sigma, (filter_size - 1) // 2
+    )
     gaussian_kernel_2d = jnp.outer(gaussian_kernal_1d, gaussian_kernal_1d)
     # Kernel for convolution: (H_k, W_k, C_in=1, C_out=1)
     kernel_conv = gaussian_kernel_2d[:, :, jnp.newaxis, jnp.newaxis]
@@ -223,21 +231,23 @@ class SSIM(base.Average):
         representing the mean SSIM value(s) for the input channel(s).
       """
       # x_ch, y_ch are (batch, H, W, 1)
-      dn = lax.conv_dimension_numbers(x_ch.shape, conv_kernel.shape, ("NHWC", "HWIO", "NHWC"))
+      dn = lax.conv_dimension_numbers(
+          x_ch.shape, conv_kernel.shape, ('NHWC', 'HWIO', 'NHWC')
+      )
 
       mu_x = lax.conv_general_dilated(
-        x_ch,
-        conv_kernel,
-        window_strides=(1, 1),
-        padding="VALID",
-        dimension_numbers=dn,
+          x_ch,
+          conv_kernel,
+          window_strides=(1, 1),
+          padding='VALID',
+          dimension_numbers=dn,
       )
       mu_y = lax.conv_general_dilated(
-        y_ch,
-        conv_kernel,
-        window_strides=(1, 1),
-        padding="VALID",
-        dimension_numbers=dn,
+          y_ch,
+          conv_kernel,
+          window_strides=(1, 1),
+          padding='VALID',
+          dimension_numbers=dn,
       )
 
       mu_x_sq = mu_x**2
@@ -245,34 +255,34 @@ class SSIM(base.Average):
       mu_x_mu_y = mu_x * mu_y
 
       sigma_x_sq = (
-        lax.conv_general_dilated(
-          x_ch**2,
-          conv_kernel,
-          window_strides=(1, 1),
-          padding="VALID",
-          dimension_numbers=dn,
-        )
-        - mu_x_sq
+          lax.conv_general_dilated(
+              x_ch**2,
+              conv_kernel,
+              window_strides=(1, 1),
+              padding='VALID',
+              dimension_numbers=dn,
+          )
+          - mu_x_sq
       )
       sigma_y_sq = (
-        lax.conv_general_dilated(
-          y_ch**2,
-          conv_kernel,
-          window_strides=(1, 1),
-          padding="VALID",
-          dimension_numbers=dn,
-        )
-        - mu_y_sq
+          lax.conv_general_dilated(
+              y_ch**2,
+              conv_kernel,
+              window_strides=(1, 1),
+              padding='VALID',
+              dimension_numbers=dn,
+          )
+          - mu_y_sq
       )
       sigma_xy = (
-        lax.conv_general_dilated(
-          x_ch * y_ch,
-          conv_kernel,
-          window_strides=(1, 1),
-          padding="VALID",
-          dimension_numbers=dn,
-        )
-        - mu_x_mu_y
+          lax.conv_general_dilated(
+              x_ch * y_ch,
+              conv_kernel,
+              window_strides=(1, 1),
+              padding='VALID',
+              dimension_numbers=dn,
+          )
+          - mu_x_mu_y
       )
 
       numerator1 = 2 * mu_x_mu_y + c1
@@ -281,30 +291,40 @@ class SSIM(base.Average):
       denominator2 = sigma_x_sq + sigma_y_sq + c2
 
       ssim_map = (numerator1 * numerator2) / (denominator1 * denominator2)
-      return jnp.mean(ssim_map, axis=(1, 2, 3))  # Mean over H, W, C (which is 1 here for the map)
+      return jnp.mean(
+          ssim_map, axis=(1, 2, 3)
+      )  # Mean over H, W, C (which is 1 here for the map)
 
     ssim_per_channel_list = []
     for i in range(num_channels):
-      img1_c = lax.dynamic_slice_in_dim(img1, i * 1, 1, axis=3)  # (batch, H, W, 1)
-      img2_c = lax.dynamic_slice_in_dim(img2, i * 1, 1, axis=3)  # (batch, H, W, 1)
+      img1_c = lax.dynamic_slice_in_dim(
+          img1, i * 1, 1, axis=3
+      )  # (batch, H, W, 1)
+      img2_c = lax.dynamic_slice_in_dim(
+          img2, i * 1, 1, axis=3
+      )  # (batch, H, W, 1)
 
-      ssim_for_channel = _calculate_ssim_for_channel(img1_c, img2_c, kernel_conv, c1, c2)
+      ssim_for_channel = _calculate_ssim_for_channel(
+          img1_c, img2_c, kernel_conv, c1, c2
+      )
       ssim_per_channel_list.append(ssim_for_channel)
 
-    ssim_scores_stacked = jnp.stack(ssim_per_channel_list, axis=-1)  # (batch, num_channels)
+    ssim_scores_stacked = jnp.stack(
+        ssim_per_channel_list, axis=-1
+    )  # (batch, num_channels)
     return jnp.mean(ssim_scores_stacked, axis=-1)  # (batch,)
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    targets: jax.Array,
-    max_val: float,
-    filter_size: int = 11,
-    filter_sigma: float = 1.5,
-    k1: float = 0.01,
-    k2: float = 0.03,
-  ) -> "SSIM":
+      cls,
+      predictions: jax.Array,
+      targets: jax.Array,
+      max_val: float,
+      filter_size: int = 11,
+      filter_sigma: float = 1.5,
+      k1: float = 0.01,
+      k2: float = 0.03,
+  ) -> 'SSIM':
     """Computes SSIM for a batch of images and creates an SSIM metric instance.
 
     This method takes batches of predicted and target images, calculates their
@@ -332,13 +352,13 @@ class SSIM(base.Average):
     """
     # shape (batch_size,)
     batch_ssim_values = cls._calculate_ssim(
-      predictions,
-      targets,
-      max_val=max_val,
-      filter_size=filter_size,
-      filter_sigma=filter_sigma,
-      k1=k1,
-      k2=k2,
+        predictions,
+        targets,
+        max_val=max_val,
+        filter_size=filter_size,
+        filter_sigma=filter_sigma,
+        k1=k1,
+        k2=k2,
     )
     return super().from_model_output(values=batch_ssim_values)
 
@@ -372,10 +392,10 @@ class IoU(base.Average):
 
   @staticmethod
   def _calculate_iou(
-    targets: jnp.ndarray,
-    predictions: jnp.ndarray,
-    target_class_ids: jnp.ndarray,
-    epsilon: float = 1e-7,
+      targets: jnp.ndarray,
+      predictions: jnp.ndarray,
+      target_class_ids: jnp.ndarray,
+      epsilon: float = 1e-7,
   ) -> jnp.ndarray:
     r"""Computes mean IoU for a processed batch by class-wise aggregation using jax.vmap.
 
@@ -403,28 +423,30 @@ class IoU(base.Average):
       return jnp.array(0.0, dtype=jnp.float32)
 
     def _calculate_iou_for_single_class(
-      class_id: jnp.ndarray,
+        class_id: jnp.ndarray,
     ) -> jnp.ndarray:
-      target_is_class = targets == class_id
-      pred_is_class = predictions == class_id
+      target_is_class = (targets == class_id)
+      pred_is_class = (predictions == class_id)
       intersection = jnp.sum(jnp.logical_and(target_is_class, pred_is_class))
       union = jnp.sum(jnp.logical_or(target_is_class, pred_is_class))
       return intersection / (union + epsilon)
 
-    iou_scores_per_class = jax.vmap(_calculate_iou_for_single_class)(target_class_ids)
+    iou_scores_per_class = jax.vmap(_calculate_iou_for_single_class)(
+        target_class_ids
+    )
 
     return jnp.mean(iou_scores_per_class)
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    targets: jax.Array,
-    num_classes: int,
-    target_class_ids: jax.Array,
-    from_logits: bool = False,
-    epsilon: float = 1e-7,
-  ) -> "IoU":
+      cls,
+      predictions: jax.Array,
+      targets: jax.Array,
+      num_classes: int,
+      target_class_ids: jax.Array,
+      from_logits: bool = False,
+      epsilon: float = 1e-7,
+  ) -> 'IoU':
     """Creates an `IoU` instance from a batch of model outputs.
 
     Per-batch processing:
@@ -453,33 +475,38 @@ class IoU(base.Average):
     if from_logits:
       if predictions.ndim != 4 or predictions.shape[-1] != num_classes:
         raise ValueError(
-          "Logit predictions must be 4D (batch, H, W, num_classes) with last"
-          f" dim matching num_classes. Got shape {predictions.shape} and"
-          f" num_classes {num_classes}"
+            'Logit predictions must be 4D (batch, H, W, num_classes) with last'
+            f' dim matching num_classes. Got shape {predictions.shape} and'
+            f' num_classes {num_classes}'
         )
       processed_predictions = jnp.argmax(predictions, axis=-1).astype(jnp.int32)
     else:
       if predictions.ndim == 4 and predictions.shape[-1] == 1:
-        processed_predictions = jnp.squeeze(predictions, axis=-1).astype(jnp.int32)
+        processed_predictions = jnp.squeeze(predictions, axis=-1).astype(
+            jnp.int32
+        )
       elif predictions.ndim == 3:
         processed_predictions = predictions.astype(jnp.int32)
       else:
         raise ValueError(
-          "Predictions (if not from_logits) must be 3D (batch, H, W) or "
-          f"4D (batch, H, W, 1). Got shape {predictions.shape}"
+            'Predictions (if not from_logits) must be 3D (batch, H, W) or '
+            f'4D (batch, H, W, 1). Got shape {predictions.shape}'
         )
     if targets.ndim == 4 and targets.shape[-1] == 1:
       processed_targets = jnp.squeeze(targets, axis=-1).astype(jnp.int32)
     elif targets.ndim == 3:
       processed_targets = targets.astype(jnp.int32)
     else:
-      raise ValueError(f"Targets must be 3D (batch, H, W) or 4D (batch, H, W, 1). Got shape {targets.shape}")
+      raise ValueError(
+          'Targets must be 3D (batch, H, W) or 4D (batch, H, W, 1). '
+          f'Got shape {targets.shape}'
+      )
 
     iou_score = cls._calculate_iou(
-      targets=processed_targets,
-      predictions=processed_predictions,
-      target_class_ids=target_class_ids,
-      epsilon=epsilon,
+        targets=processed_targets,
+        predictions=processed_predictions,
+        target_class_ids=target_class_ids,
+        epsilon=epsilon,
     )
     return super().from_model_output(values=iou_score)
 
@@ -504,10 +531,10 @@ class PSNR(base.Average):
 
   @staticmethod
   def _calculate_psnr(
-    img1: jnp.ndarray,
-    img2: jnp.ndarray,
-    max_val: float,
-    eps: float = 0,
+      img1: jnp.ndarray,
+      img2: jnp.ndarray,
+      max_val: float,
+      eps: float = 0,
   ) -> jnp.ndarray:
     """Computes PSNR (Peak Signal-to-Noise Ratio) values.
 
@@ -521,9 +548,15 @@ class PSNR(base.Average):
           A 1D JAX array of shape ``(batch,)`` containing PSNR in dB.
     """
     if img1.shape != img2.shape:
-      raise ValueError(f"Input images must have the same shape, got {img1.shape} and {img2.shape}.")
+      raise ValueError(
+          f'Input images must have the same shape, got {img1.shape} and'
+          f' {img2.shape}.'
+      )
     if img1.ndim != 4:  # (batch, H, W, C)
-      raise ValueError(f"Inputs must be 4‑D (batch, height, width, channels), got {img1.ndim}‑D.")
+      raise ValueError(
+          'Inputs must be 4‑D (batch, height, width, channels), got'
+          f' {img1.ndim}‑D.'
+      )
 
     img1 = img1.astype(jnp.float32)
     img2 = img2.astype(jnp.float32)
@@ -537,11 +570,11 @@ class PSNR(base.Average):
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jnp.ndarray,
-    targets: jnp.ndarray,
-    max_val: float,
-  ) -> "PSNR":
+      cls,
+      predictions: jnp.ndarray,
+      targets: jnp.ndarray,
+      max_val: float,
+  ) -> 'PSNR':
     """Computes PSNR for a batch of images and creates an PSNR metric instance.
 
     Args:
@@ -585,19 +618,19 @@ class Dice(clu_metrics.Metric):
   sum_true: jax.Array
 
   @classmethod
-  def empty(cls) -> "Dice":
+  def empty(cls) -> 'Dice':
     return cls(
-      intersection=jnp.array(0.0, jnp.float32),
-      sum_pred=jnp.array(0.0, jnp.float32),
-      sum_true=jnp.array(0.0, jnp.float32),
+        intersection=jnp.array(0.0, jnp.float32),
+        sum_pred=jnp.array(0.0, jnp.float32),
+        sum_true=jnp.array(0.0, jnp.float32),
     )
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-  ) -> "Dice":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+  ) -> 'Dice':
     """Updates the metric.
 
     Args:
@@ -617,16 +650,16 @@ class Dice(clu_metrics.Metric):
     sum_true = jnp.sum(labels)
 
     return cls(
-      intersection=intersection,
-      sum_pred=sum_pred,
-      sum_true=sum_true,
+        intersection=intersection,
+        sum_pred=sum_pred,
+        sum_true=sum_true,
     )
 
-  def merge(self, other: "Dice") -> "Dice":
+  def merge(self, other: 'Dice') -> 'Dice':
     return type(self)(
-      intersection=self.intersection + other.intersection,
-      sum_pred=self.sum_pred + other.sum_pred,
-      sum_true=self.sum_true + other.sum_true,
+        intersection=self.intersection + other.intersection,
+        sum_pred=self.sum_pred + other.sum_pred,
+        sum_true=self.sum_true + other.sum_true,
     )
 
   def compute(self) -> jax.Array:

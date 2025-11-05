@@ -31,9 +31,13 @@ def _default_threshold(num_thresholds: int) -> jax.Array:
     Evently distributed `num_thresholds` between 0.0 and 1.0.
   """
   if num_thresholds < 2:
-    raise ValueError(f"num_thresholds must be at least 2, but got {num_thresholds}.")
+    raise ValueError(
+        f'num_thresholds must be at least 2, but got {num_thresholds}.'
+    )
   epsilon = 1e-5
-  thresholds = jnp.arange(num_thresholds, dtype=jnp.float32) / (num_thresholds - 1)
+  thresholds = jnp.arange(num_thresholds, dtype=jnp.float32) / (
+      num_thresholds - 1
+  )
   thresholds = thresholds.at[0].set(-epsilon)
   thresholds = thresholds.at[-1].set(1.0 + epsilon)
   return thresholds
@@ -61,11 +65,11 @@ class Accuracy(base.Average):
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    sample_weights: jax.Array | None = None,
-  ) -> "Accuracy":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+  ) -> 'Accuracy':
     """Updates the metric state with new `predictions` and `labels`.
 
     This method computes element-wise equality between `predictions` and
@@ -101,8 +105,8 @@ class Accuracy(base.Average):
       correct = correct * sample_weights
       count = count * sample_weights
     return cls(
-      total=correct.sum(),
-      count=count.sum(),
+        total=correct.sum(),
+        count=count.sum(),
     )
 
 
@@ -133,19 +137,19 @@ class Precision(clu_metrics.Metric):
   false_positives: jax.Array
 
   @classmethod
-  def empty(cls) -> "Precision":
+  def empty(cls) -> 'Precision':
     return cls(
-      true_positives=jnp.array(0, jnp.float32),
-      false_positives=jnp.array(0, jnp.float32),
+        true_positives=jnp.array(0, jnp.float32),
+        false_positives=jnp.array(0, jnp.float32),
     )
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    threshold: float = 0.5,
-  ) -> "Precision":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      threshold: float = 0.5,
+  ) -> 'Precision':
     """Updates the metric.
 
     Args:
@@ -168,14 +172,16 @@ class Precision(clu_metrics.Metric):
 
     return cls(true_positives=true_positives, false_positives=false_positives)
 
-  def merge(self, other: "Precision") -> "Precision":
+  def merge(self, other: 'Precision') -> 'Precision':
     return type(self)(
-      true_positives=self.true_positives + other.true_positives,
-      false_positives=self.false_positives + other.false_positives,
+        true_positives=self.true_positives + other.true_positives,
+        false_positives=self.false_positives + other.false_positives,
     )
 
   def compute(self) -> jax.Array:
-    return base.divide_no_nan(self.true_positives, (self.true_positives + self.false_positives))
+    return base.divide_no_nan(
+        self.true_positives, (self.true_positives + self.false_positives)
+    )
 
 
 @flax.struct.dataclass
@@ -205,14 +211,16 @@ class Recall(clu_metrics.Metric):
   false_negatives: jax.Array
 
   @classmethod
-  def empty(cls) -> "Recall":
+  def empty(cls) -> 'Recall':
     return cls(
-      true_positives=jnp.array(0, jnp.float32),
-      false_negatives=jnp.array(0, jnp.float32),
+        true_positives=jnp.array(0, jnp.float32),
+        false_negatives=jnp.array(0, jnp.float32),
     )
 
   @classmethod
-  def from_model_output(cls, predictions: jax.Array, labels: jax.Array, threshold: float = 0.5) -> "Recall":
+  def from_model_output(
+      cls, predictions: jax.Array, labels: jax.Array, threshold: float = 0.5
+  ) -> 'Recall':
     """Updates the metric.
 
     Args:
@@ -235,14 +243,16 @@ class Recall(clu_metrics.Metric):
 
     return cls(true_positives=true_positives, false_negatives=false_negatives)
 
-  def merge(self, other: "Recall") -> "Recall":
+  def merge(self, other: 'Recall') -> 'Recall':
     return type(self)(
-      true_positives=self.true_positives + other.true_positives,
-      false_negatives=self.false_negatives + other.false_negatives,
+        true_positives=self.true_positives + other.true_positives,
+        false_negatives=self.false_negatives + other.false_negatives,
     )
 
   def compute(self) -> jax.Array:
-    return base.divide_no_nan(self.true_positives, (self.true_positives + self.false_negatives))
+    return base.divide_no_nan(
+        self.true_positives, (self.true_positives + self.false_negatives)
+    )
 
 
 @flax.struct.dataclass
@@ -300,22 +310,22 @@ class AUCPR(clu_metrics.Metric):
   num_thresholds: int
 
   @classmethod
-  def empty(cls) -> "AUCPR":
+  def empty(cls) -> 'AUCPR':
     return cls(
-      true_positives=jnp.array(0, jnp.float32),
-      false_positives=jnp.array(0, jnp.float32),
-      false_negatives=jnp.array(0, jnp.float32),
-      num_thresholds=0,
+        true_positives=jnp.array(0, jnp.float32),
+        false_positives=jnp.array(0, jnp.float32),
+        false_negatives=jnp.array(0, jnp.float32),
+        num_thresholds=0,
     )
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    sample_weights: jax.Array | None = None,
-    num_thresholds: int = 200,
-  ) -> "AUCPR":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+      num_thresholds: int = 200,
+  ) -> 'AUCPR':
     """Updates the metric.
 
     Args:
@@ -336,8 +346,8 @@ class AUCPR(clu_metrics.Metric):
       and `labels` are incompatible.
     """
     pred_is_pos = jnp.greater(
-      predictions,
-      _default_threshold(num_thresholds=num_thresholds)[..., None],
+        predictions,
+        _default_threshold(num_thresholds=num_thresholds)[..., None],
     )
     pred_is_neg = jnp.logical_not(pred_is_pos)
     label_is_pos = jnp.equal(labels, 1)
@@ -353,18 +363,18 @@ class AUCPR(clu_metrics.Metric):
       false_negatives = false_negatives * sample_weights
 
     return cls(
-      true_positives=true_positives.sum(axis=-1),
-      false_positives=false_positives.sum(axis=-1),
-      false_negatives=false_negatives.sum(axis=-1),
-      num_thresholds=num_thresholds,
+        true_positives=true_positives.sum(axis=-1),
+        false_positives=false_positives.sum(axis=-1),
+        false_negatives=false_negatives.sum(axis=-1),
+        num_thresholds=num_thresholds,
     )
 
-  def merge(self, other: "AUCPR") -> "AUCPR":
+  def merge(self, other: 'AUCPR') -> 'AUCPR':
     return type(self)(
-      true_positives=self.true_positives + other.true_positives,
-      false_positives=self.false_positives + other.false_positives,
-      false_negatives=self.false_negatives + other.false_negatives,
-      num_thresholds=self.num_thresholds,
+        true_positives=self.true_positives + other.true_positives,
+        false_positives=self.false_positives + other.false_positives,
+        false_negatives=self.false_negatives + other.false_negatives,
+        num_thresholds=self.num_thresholds,
     )
 
   def interpolate_pr_auc(self) -> jax.Array:
@@ -413,7 +423,9 @@ class AUCPR(clu_metrics.Metric):
       pr_auc: A float scalar jax.Array that is an approximation of the area
       under the P-R curve.
     """
-    dtp = self.true_positives[: self.num_thresholds - 1] - self.true_positives[1:]
+    dtp = (
+        self.true_positives[: self.num_thresholds - 1] - self.true_positives[1:]
+    )
     p = self.true_positives + self.false_positives
     dp = p[: self.num_thresholds - 1] - p[1:]
     prec_slope = base.divide_no_nan(dtp, jnp.maximum(dp, 0))
@@ -421,17 +433,17 @@ class AUCPR(clu_metrics.Metric):
 
     # recall_relative_ratio
     safe_p_ratio = jnp.where(
-      jnp.multiply(p[: self.num_thresholds - 1] > 0, p[1:] > 0),
-      base.divide_no_nan(
-        p[: self.num_thresholds - 1],
-        jnp.maximum(p[1:], 0),
-      ),
-      jnp.ones_like(p[1:]),
+        jnp.multiply(p[: self.num_thresholds - 1] > 0, p[1:] > 0),
+        base.divide_no_nan(
+            p[: self.num_thresholds - 1],
+            jnp.maximum(p[1:], 0),
+        ),
+        jnp.ones_like(p[1:]),
     )
     # pr_auc_increment
     pr_auc_increment = base.divide_no_nan(
-      prec_slope * (dtp + intercept * jnp.log(safe_p_ratio)),
-      jnp.maximum(self.true_positives[1:] + self.false_negatives[1:], 0),
+        prec_slope * (dtp + intercept * jnp.log(safe_p_ratio)),
+        jnp.maximum(self.true_positives[1:] + self.false_negatives[1:], 0),
     )
     return jnp.sum(pr_auc_increment)
 
@@ -485,23 +497,23 @@ class AUCROC(clu_metrics.Metric):
   num_thresholds: int
 
   @classmethod
-  def empty(cls) -> "AUCROC":
+  def empty(cls) -> 'AUCROC':
     return cls(
-      true_positives=jnp.array(0, jnp.float32),
-      true_negatives=jnp.array(0, jnp.float32),
-      false_positives=jnp.array(0, jnp.float32),
-      false_negatives=jnp.array(0, jnp.float32),
-      num_thresholds=0,
+        true_positives=jnp.array(0, jnp.float32),
+        true_negatives=jnp.array(0, jnp.float32),
+        false_positives=jnp.array(0, jnp.float32),
+        false_negatives=jnp.array(0, jnp.float32),
+        num_thresholds=0,
     )
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    sample_weights: jax.Array | None = None,
-    num_thresholds: int = 200,
-  ) -> "AUCROC":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+      num_thresholds: int = 200,
+  ) -> 'AUCROC':
     """Updates the metric.
 
     Args:
@@ -522,8 +534,8 @@ class AUCROC(clu_metrics.Metric):
       and `labels` are incompatible.
     """
     pred_is_pos = jnp.greater(
-      predictions,
-      _default_threshold(num_thresholds=num_thresholds)[..., None],
+        predictions,
+        _default_threshold(num_thresholds=num_thresholds)[..., None],
     )
     pred_is_neg = jnp.logical_not(pred_is_pos)
     label_is_pos = jnp.equal(labels, 1)
@@ -541,170 +553,173 @@ class AUCROC(clu_metrics.Metric):
       false_negatives = false_negatives * sample_weights
 
     return cls(
-      true_positives=true_positives.sum(axis=-1),
-      true_negatives=true_negatives.sum(axis=-1),
-      false_positives=false_positives.sum(axis=-1),
-      false_negatives=false_negatives.sum(axis=-1),
-      num_thresholds=num_thresholds,
+        true_positives=true_positives.sum(axis=-1),
+        true_negatives=true_negatives.sum(axis=-1),
+        false_positives=false_positives.sum(axis=-1),
+        false_negatives=false_negatives.sum(axis=-1),
+        num_thresholds=num_thresholds,
     )
 
-  def merge(self, other: "AUCROC") -> "AUCROC":
+  def merge(self, other: 'AUCROC') -> 'AUCROC':
     return type(self)(
-      true_positives=self.true_positives + other.true_positives,
-      true_negatives=self.true_negatives + other.true_negatives,
-      false_positives=self.false_positives + other.false_positives,
-      false_negatives=self.false_negatives + other.false_negatives,
-      num_thresholds=self.num_thresholds,
+        true_positives=self.true_positives + other.true_positives,
+        true_negatives=self.true_negatives + other.true_negatives,
+        false_positives=self.false_positives + other.false_positives,
+        false_negatives=self.false_negatives + other.false_negatives,
+        num_thresholds=self.num_thresholds,
     )
 
   def compute(self) -> jax.Array:
-    tp_rate = base.divide_no_nan(self.true_positives, self.true_positives + self.false_negatives)
-    fp_rate = base.divide_no_nan(self.false_positives, self.false_positives + self.true_negatives)
+    tp_rate = base.divide_no_nan(
+        self.true_positives, self.true_positives + self.false_negatives
+    )
+    fp_rate = base.divide_no_nan(
+        self.false_positives, self.false_positives + self.true_negatives
+    )
     # Threshold goes from 0 to 1, so trapezoid is negative.
     return jnp.trapezoid(tp_rate, fp_rate) * -1
 
-
 @flax.struct.dataclass
 class FBetaScore(clu_metrics.Metric):
-  """
-  F-Beta score Metric class
-  Computes the F-Beta score for the binary classification given 'predictions' and 'labels'.
+    """
+    F-Beta score Metric class
+    Computes the F-Beta score for the binary classification given 'predictions' and 'labels'.
 
-  Formula for F-Beta Score:
-      b2 = beta ** 2
-      f_beta_score = ((1 + b2) * (precision * recall)) / (precision * b2 + recall)
+    Formula for F-Beta Score:
+        b2 = beta ** 2
+        f_beta_score = ((1 + b2) * (precision * recall)) / (precision * b2 + recall)
 
-  F-Beta turns into the F1 Score when beta = 1.0
+    F-Beta turns into the F1 Score when beta = 1.0
 
-  Attributes:
-      true_positives: The count of true positive instances from the given data,
-          label, and threshold.
-      false_positives: The count of false positive instances from the given data,
-          label, and threshold.
-      false_negatives: The count of false negative instances from the given data,
-          label, and threshold.
-      beta: The beta value used in the F-Score metric
-  """
-
-  true_positives: jax.Array
-  false_positives: jax.Array
-  false_negatives: jax.Array
-  beta: float = 1.0
-
-  # Reset the variables for the class
-  @classmethod
-  def empty(cls) -> "FBetaScore":
-    return cls(
-      true_positives=jnp.array(0, jnp.float32),
-      false_positives=jnp.array(0, jnp.float32),
-      false_negatives=jnp.array(0, jnp.float32),
-      beta=1.0,
-    )
-
-  @classmethod
-  def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    beta=beta,
-    threshold=0.5,
-  ) -> "FBetaScore":
-    """Updates the metric.
-    Note: When only predictions and labels are given, the score calculated
-    is the F1 score if the FBetaScore beta value has not been previously modified.
-
-    Args:
-        predictions: A floating point 1D vector whose values are in the range [0,
-          1]. The shape should be (batch_size,).
-        labels: True value. The value is expected to be 0 or 1. The shape should
-          be (batch_size,).
-        beta: beta value to use in the F-Score metric. A floating number.
-        threshold: threshold value to use in the F-Score metric. A floating number.
-
-    Returns:
-        The updated FBetaScore object.
-
-    Raises:
-        ValueError: If type of `labels` is wrong or the shapes of `predictions`
-        and `labels` are incompatible. If the beta or threshold are invalid values
-        an error is raised as well.
+    Attributes:
+        true_positives: The count of true positive instances from the given data,
+            label, and threshold.
+        false_positives: The count of false positive instances from the given data,
+            label, and threshold.
+        false_negatives: The count of false negative instances from the given data,
+            label, and threshold.
+        beta: The beta value used in the F-Score metric
     """
 
-    # Ensure that beta is a floating number and a valid number
-    if not isinstance(beta, float):
-      raise ValueError('The "Beta" value must be a floating number.')
-    if beta <= 0.0:
-      raise ValueError('The "Beta" value must be larger than 0.0.')
+    true_positives: jax.Array
+    false_positives: jax.Array
+    false_negatives: jax.Array
+    beta: float = 1.0
 
-    # Ensure that threshold is a floating number and a valid number
-    if not isinstance(threshold, float):
-      raise ValueError('The "Threshold" value must be a floating number.')
-    if threshold < 0.0 or threshold > 1.0:
-      raise ValueError('The "Threshold" value must be between 0 and 1.')
+    # Reset the variables for the class
+    @classmethod
+    def empty(cls) -> 'FBetaScore':
+        return cls(
+            true_positives = jnp.array(0, jnp.float32),
+            false_positives = jnp.array(0, jnp.float32),
+            false_negatives = jnp.array(0, jnp.float32),
+            beta=1.0,
+        )
 
-    # Modify predictions with the given threshold value
-    predictions = jnp.where(predictions >= threshold, 1, 0)
+    @classmethod
+    def from_model_output(
+            cls,
+            predictions: jax.Array,
+            labels: jax.Array,
+            beta = beta,
+            threshold = 0.5,) -> 'FBetaScore':
+        """Updates the metric.
+            Note: When only predictions and labels are given, the score calculated
+            is the F1 score if the FBetaScore beta value has not been previously modified.
 
-    # Assign the true_positive, false_positive, and false_negative their values
-    """
+            Args:
+                predictions: A floating point 1D vector whose values are in the range [0,
+                  1]. The shape should be (batch_size,).
+                labels: True value. The value is expected to be 0 or 1. The shape should
+                  be (batch_size,).
+                beta: beta value to use in the F-Score metric. A floating number.
+                threshold: threshold value to use in the F-Score metric. A floating number.
+
+            Returns:
+                The updated FBetaScore object.
+
+            Raises:
+                ValueError: If type of `labels` is wrong or the shapes of `predictions`
+                and `labels` are incompatible. If the beta or threshold are invalid values
+                an error is raised as well.
+        """
+
+        # Ensure that beta is a floating number and a valid number
+        if not isinstance(beta, float):
+            raise ValueError('The "Beta" value must be a floating number.')
+        if beta <= 0.0:
+            raise ValueError('The "Beta" value must be larger than 0.0.')
+
+        # Ensure that threshold is a floating number and a valid number
+        if not isinstance(threshold, float):
+            raise ValueError('The "Threshold" value must be a floating number.')
+        if threshold < 0.0 or threshold > 1.0:
+            raise ValueError('The "Threshold" value must be between 0 and 1.')
+
+        # Modify predictions with the given threshold value
+        predictions = jnp.where(predictions >= threshold, 1, 0)
+
+        # Assign the true_positive, false_positive, and false_negative their values
+        """
         We are calculating these values manually instead of using Metrax's
         precision and recall classes. This is because the Metrax versions end up
         outputting a single numerical answer when we need an array of numbers.
         """
-    true_positives = jnp.sum(predictions * labels, axis=0)
-    false_positives = jnp.sum(predictions * (1 - labels), axis=0)
-    false_negatives = jnp.sum((1 - predictions) * labels, axis=0)
+        true_positives = jnp.sum(predictions * labels, axis = 0)
+        false_positives = jnp.sum(predictions * (1 - labels), axis = 0)
+        false_negatives = jnp.sum((1- predictions) * labels, axis = 0)
 
-    return cls(
-      true_positives=true_positives, false_positives=false_positives, false_negatives=false_negatives, beta=beta
-    )
+        return cls(true_positives = true_positives,
+                   false_positives = false_positives,
+                   false_negatives = false_negatives,
+                   beta = beta)
 
-  """
+    """
     This function is currently unused as the 'from_model_output' function can handle the whole
     dataset without needing to split and merge them. I'm leaving this here for now incase we want to
     repurpose this or need to change something that requires this function's use again. This function would need
     to be reworked for it to work with the current implementation of this class.
     """
-  # # Merge datasets together
-  # def merge(self, other: 'FBetaScore') -> 'FBetaScore':
-  #
-  #     # Check if the incoming beta is the same value as the current beta
-  #     if other.beta == self.beta:
-  #         return type(self)(
-  #             true_positives = self.true_positives + other.true_positives,
-  #             false_positives = self.false_positives + other.false_positives,
-  #             false_negatives = self.false_negatives + other.false_negatives,
-  #             beta=self.beta,
-  #         )
-  #     else:
-  #         raise ValueError('The "Beta" values between the two are not equal.')
+    # # Merge datasets together
+    # def merge(self, other: 'FBetaScore') -> 'FBetaScore':
+    #
+    #     # Check if the incoming beta is the same value as the current beta
+    #     if other.beta == self.beta:
+    #         return type(self)(
+    #             true_positives = self.true_positives + other.true_positives,
+    #             false_positives = self.false_positives + other.false_positives,
+    #             false_negatives = self.false_negatives + other.false_negatives,
+    #             beta=self.beta,
+    #         )
+    #     else:
+    #         raise ValueError('The "Beta" values between the two are not equal.')
 
-  # Compute the F-Beta score metric
-  def compute(self) -> jax.Array:
-    # Epsilon fuz factor required to match with the keras version
-    epsilon = 1e-7
+    # Compute the F-Beta score metric
+    def compute(self) -> jax.Array:
 
-    # Manually calculate precision and recall
-    """
+        # Epsilon fuz factor required to match with the keras version
+        epsilon = 1e-7
+
+        # Manually calculate precision and recall
+        """
         This is done in this manner since the metrax variants of precision
         and recall output only single numbers. To match the keras value
         we need an array of numbers to work with.
         """
-    precision = jnp.divide(
-      self.true_positives,
-      self.true_positives + self.false_positives + epsilon,
-    )
-    recall = jnp.divide(
-      self.true_positives,
-      self.true_positives + self.false_negatives + epsilon,
-    )
+        precision = jnp.divide(
+            self.true_positives,
+            self.true_positives + self.false_positives + epsilon,
+        )
+        recall = jnp.divide(
+            self.true_positives,
+            self.true_positives + self.false_negatives + epsilon,
+        )
 
-    # Compute the numerator and denominator of the F-Score formula
-    b2 = self.beta**2
-    numerator = (1 + b2) * (precision * recall)
-    denominator = (b2 * precision) + recall
+        # Compute the numerator and denominator of the F-Score formula
+        b2 = self.beta ** 2
+        numerator = (1 + b2) * (precision * recall)
+        denominator = (b2 * precision) + recall
 
-    return base.divide_no_nan(
-      numerator,
-      denominator + epsilon,
-    )
+        return base.divide_no_nan(
+            numerator, denominator + epsilon,
+        )

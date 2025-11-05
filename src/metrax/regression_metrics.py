@@ -45,11 +45,11 @@ class MAE(base.Average):
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    sample_weights: jax.Array | None = None,
-  ) -> "MAE":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+  ) -> 'MAE':
     """Updates the metric.
 
     Args:
@@ -72,8 +72,8 @@ class MAE(base.Average):
       absolute_error = absolute_error * sample_weights
       count = count * sample_weights
     return cls(
-      total=absolute_error.sum(),
-      count=count.sum(),
+        total=absolute_error.sum(),
+        count=count.sum(),
     )
 
 
@@ -101,11 +101,11 @@ class MSE(base.Average):
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    sample_weights: jax.Array | None = None,
-  ) -> "MSE":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+  ) -> 'MSE':
     """Updates the metric.
 
     Args:
@@ -128,8 +128,8 @@ class MSE(base.Average):
       squared_error = squared_error * sample_weights
       count = count * sample_weights
     return cls(
-      total=squared_error.sum(),
-      count=count.sum(),
+        total=squared_error.sum(),
+        count=count.sum(),
     )
 
 
@@ -202,21 +202,21 @@ class RSQUARED(clu_metrics.Metric):
   sum_of_squared_label: jax.Array
 
   @classmethod
-  def empty(cls) -> "RSQUARED":
+  def empty(cls) -> 'RSQUARED':
     return cls(
-      total=jnp.array(0, jnp.float32),
-      count=jnp.array(0, jnp.float32),
-      sum_of_squared_error=jnp.array(0, jnp.float32),
-      sum_of_squared_label=jnp.array(0, jnp.float32),
+        total=jnp.array(0, jnp.float32),
+        count=jnp.array(0, jnp.float32),
+        sum_of_squared_error=jnp.array(0, jnp.float32),
+        sum_of_squared_label=jnp.array(0, jnp.float32),
     )
 
   @classmethod
   def from_model_output(
-    cls,
-    predictions: jax.Array,
-    labels: jax.Array,
-    sample_weights: jax.Array | None = None,
-  ) -> "RSQUARED":
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+  ) -> 'RSQUARED':
     """Updates the metric.
 
     Args:
@@ -242,18 +242,20 @@ class RSQUARED(clu_metrics.Metric):
       squared_error = squared_error * sample_weights
       squared_label = squared_label * sample_weights
     return cls(
-      total=labels.sum(),
-      count=count.sum(),
-      sum_of_squared_error=squared_error.sum(),
-      sum_of_squared_label=squared_label.sum(),
+        total=labels.sum(),
+        count=count.sum(),
+        sum_of_squared_error=squared_error.sum(),
+        sum_of_squared_label=squared_label.sum(),
     )
 
-  def merge(self, other: "RSQUARED") -> "RSQUARED":
+  def merge(self, other: 'RSQUARED') -> 'RSQUARED':
     return type(self)(
-      total=self.total + other.total,
-      count=self.count + other.count,
-      sum_of_squared_error=self.sum_of_squared_error + other.sum_of_squared_error,
-      sum_of_squared_label=self.sum_of_squared_label + other.sum_of_squared_label,
+        total=self.total + other.total,
+        count=self.count + other.count,
+        sum_of_squared_error=self.sum_of_squared_error
+        + other.sum_of_squared_error,
+        sum_of_squared_label=self.sum_of_squared_label
+        + other.sum_of_squared_label,
     )
 
   def compute(self) -> jax.Array:
