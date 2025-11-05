@@ -44,8 +44,7 @@ class WandbBackend:
       import wandb
     except ImportError as e:
       raise ImportError(
-          "The 'wandb' library is not installed. Please install it with "
-          "'pip install wandb' to use the WandbBackend."
+        "The 'wandb' library is not installed. Please install it with 'pip install wandb' to use the WandbBackend."
       ) from e
     self.wandb = wandb
     if jax.process_index() != 0:

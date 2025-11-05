@@ -25,20 +25,17 @@ import metrax.nnx
 
 
 class NnxMetricsTest(parameterized.TestCase):
-
   def test_nnx_metrics_exists(self):
     """Tests that every metrax CLU metric has an NNX counterpart."""
-    metrax_metric_keys = [
-        key for key, metric in inspect.getmembers(metrax)
-        if dataclasses.is_dataclass(metric)
-    ]
+    metrax_metric_keys = [key for key, metric in inspect.getmembers(metrax) if dataclasses.is_dataclass(metric)]
     metrax_nnx_metric_keys = [
-        key for key, metric in inspect.getmembers(metrax.nnx)
-        if inspect.isclass(metric) and issubclass(metric, nnx.Metric)
+      key
+      for key, metric in inspect.getmembers(metrax.nnx)
+      if inspect.isclass(metric) and issubclass(metric, nnx.Metric)
     ]
     self.assertNotEmpty(metrax_metric_keys)
     self.assertSameElements(metrax_metric_keys, metrax_nnx_metric_keys)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   absltest.main()

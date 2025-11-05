@@ -15,7 +15,8 @@
 """Tests for metrax base utilities."""
 
 import os
-os.environ['KERAS_BACKEND'] = 'jax'
+
+os.environ["KERAS_BACKEND"] = "jax"
 
 from absl.testing import absltest
 from absl.testing import parameterized
@@ -34,63 +35,62 @@ OUTPUT_F32 = OUTPUT.astype(jnp.float32)
 OUTPUT_BF16 = OUTPUT.astype(jnp.bfloat16)
 OUTPUT_BS1 = np.random.uniform(size=(BATCHES, 1)).astype(jnp.float32)
 SAMPLE_WEIGHTS = np.tile(
-    [0.5, 1, 0, 0, 0, 0, 0, 0],
-    (BATCHES, 1),
+  [0.5, 1, 0, 0, 0, 0, 0, 0],
+  (BATCHES, 1),
 )
 
 
 class BaseTest(parameterized.TestCase):
-
   @parameterized.named_parameters(
-      (
-          'basic_division',
-          np.array([10.0, 20.0, 30.0]),
-          np.array([2.0, 4.0, 5.0]),
-          np.array([5.0, 5.0, 6.0]),
-      ),
-      (
-          'division_by_zero',
-          np.array([10.0, 20.0, 30.0]),
-          np.array([2.0, 0.0, 5.0]),
-          np.array([5.0, 0.0, 6.0]),
-      ),
-      (
-          'all_zeros_denominator',
-          np.array([10.0, 20.0, 30.0]),
-          np.array([0.0, 0.0, 0.0]),
-          np.array([0.0, 0.0, 0.0]),
-      ),
-      (
-          'all_zeros_numerator',
-          np.array([0.0, 0.0, 0.0]),
-          np.array([2.0, 4.0, 5.0]),
-          np.array([0.0, 0.0, 0.0]),
-      ),
-      (
-          'mixed_zeros',
-          np.array([10.0, 0.0, 30.0, 0.0]),
-          np.array([2.0, 0.0, 5.0, 4.0]),
-          np.array([5.0, 0.0, 6.0, 0.0]),
-      ),
-      ('scalar_inputs', np.array(10.0), np.array(2.0), np.array(5.0)),
-      (
-          'scalar_denominator_zero',
-          np.array(10.0),
-          np.array(0.0),
-          np.array(0.0),
-      ),
-      (
-          'negative_values',
-          np.array([-10.0, 20.0, -30.0]),
-          np.array([2.0, -4.0, 5.0]),
-          np.array([-5.0, -5.0, -6.0]),
-      ),
-      (
-          'negative_and_zero_values',
-          np.array([-10.0, 20.0, -30.0, 10.0]),
-          np.array([2.0, -4.0, 0.0, 0.0]),
-          np.array([-5.0, -5.0, 0.0, 0.0]),
-      ),
+    (
+      "basic_division",
+      np.array([10.0, 20.0, 30.0]),
+      np.array([2.0, 4.0, 5.0]),
+      np.array([5.0, 5.0, 6.0]),
+    ),
+    (
+      "division_by_zero",
+      np.array([10.0, 20.0, 30.0]),
+      np.array([2.0, 0.0, 5.0]),
+      np.array([5.0, 0.0, 6.0]),
+    ),
+    (
+      "all_zeros_denominator",
+      np.array([10.0, 20.0, 30.0]),
+      np.array([0.0, 0.0, 0.0]),
+      np.array([0.0, 0.0, 0.0]),
+    ),
+    (
+      "all_zeros_numerator",
+      np.array([0.0, 0.0, 0.0]),
+      np.array([2.0, 4.0, 5.0]),
+      np.array([0.0, 0.0, 0.0]),
+    ),
+    (
+      "mixed_zeros",
+      np.array([10.0, 0.0, 30.0, 0.0]),
+      np.array([2.0, 0.0, 5.0, 4.0]),
+      np.array([5.0, 0.0, 6.0, 0.0]),
+    ),
+    ("scalar_inputs", np.array(10.0), np.array(2.0), np.array(5.0)),
+    (
+      "scalar_denominator_zero",
+      np.array(10.0),
+      np.array(0.0),
+      np.array(0.0),
+    ),
+    (
+      "negative_values",
+      np.array([-10.0, 20.0, -30.0]),
+      np.array([2.0, -4.0, 5.0]),
+      np.array([-5.0, -5.0, -6.0]),
+    ),
+    (
+      "negative_and_zero_values",
+      np.array([-10.0, 20.0, -30.0, 10.0]),
+      np.array([2.0, -4.0, 0.0, 0.0]),
+      np.array([-5.0, -5.0, 0.0, 0.0]),
+    ),
   )
   def test_divide_no_nan(self, x, y, expected):
     """Test that `divide_no_nan` functioncomputes correct values."""
@@ -98,13 +98,13 @@ class BaseTest(parameterized.TestCase):
     self.assertTrue(np.array_equal(result, expected))
 
   @parameterized.named_parameters(
-      ('basic_f16', OUTPUT_F16, None),
-      ('basic_f32', OUTPUT_F32, None),
-      ('basic_bf16', OUTPUT_BF16, None),
-      ('batch_size_one', OUTPUT_BS1, None),
-      ('weighted_f16', OUTPUT_F16, SAMPLE_WEIGHTS),
-      ('weighted_f32', OUTPUT_F32, SAMPLE_WEIGHTS),
-      ('weighted_bf16', OUTPUT_BF16, SAMPLE_WEIGHTS),
+    ("basic_f16", OUTPUT_F16, None),
+    ("basic_f32", OUTPUT_F32, None),
+    ("basic_bf16", OUTPUT_BF16, None),
+    ("batch_size_one", OUTPUT_BS1, None),
+    ("weighted_f16", OUTPUT_F16, SAMPLE_WEIGHTS),
+    ("weighted_f32", OUTPUT_F32, SAMPLE_WEIGHTS),
+    ("weighted_bf16", OUTPUT_BF16, SAMPLE_WEIGHTS),
   )
   def test_average(self, values, sample_weights):
     """Test that `Average` metric computes correct values."""
@@ -112,8 +112,8 @@ class BaseTest(parameterized.TestCase):
       sample_weights = jnp.ones_like(values)
     sample_weights = jnp.array(sample_weights, dtype=values.dtype)
     metric = metrax.Average.from_model_output(
-        values=values,
-        sample_weights=sample_weights,
+      values=values,
+      sample_weights=sample_weights,
     )
 
     keras_mean = keras.metrics.Mean(dtype=values.dtype)
@@ -125,12 +125,12 @@ class BaseTest(parameterized.TestCase):
     rtol = 1e-2 if values.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     atol = 1e-2 if values.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
-        metric.compute(),
-        keras_metrics,
-        rtol=rtol,
-        atol=atol,
+      metric.compute(),
+      keras_metrics,
+      rtol=rtol,
+      atol=atol,
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   absltest.main()

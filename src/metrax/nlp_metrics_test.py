@@ -15,7 +15,8 @@
 """Tests for metrax nlp metrics."""
 
 import os
-os.environ['KERAS_BACKEND'] = 'jax'
+
+os.environ["KERAS_BACKEND"] = "jax"
 
 from absl.testing import absltest
 from absl.testing import parameterized
@@ -28,7 +29,6 @@ np.random.seed(42)
 
 
 class NlpMetricsTest(parameterized.TestCase):
-
   def test_bleu_empty(self):
     """Tests the `empty` method of the `BLEU` class."""
     m = metrax.BLEU.empty()
@@ -53,96 +53,88 @@ class NlpMetricsTest(parameterized.TestCase):
   def test_bleu(self):
     """Tests that BLEU metric computes correct values."""
     references = [
-        ["He eats a sweet apple", "He is eating a tasty apple, isn't he"],
-        [
-            "Silicon Valley is one of my favourite shows",
-            "Silicon Valley is the best show ever",
-        ],
+      ["He eats a sweet apple", "He is eating a tasty apple, isn't he"],
+      [
+        "Silicon Valley is one of my favourite shows",
+        "Silicon Valley is the best show ever",
+      ],
     ]
     predictions = [
-        "He He He eats sweet apple which is a fruit",
-        "I love Silicon Valley it is one of my favourite shows",
+      "He He He eats sweet apple which is a fruit",
+      "I love Silicon Valley it is one of my favourite shows",
     ]
     keras_metric = keras_hub.metrics.Bleu()
     keras_metric.update_state(references, predictions)
     metrax_metric = metrax.BLEU.from_model_output(predictions, references)
 
     np.testing.assert_allclose(
-        metrax_metric.compute(),
-        keras_metric.result(),
-        rtol=1e-05,
-        atol=1e-05,
+      metrax_metric.compute(),
+      keras_metric.result(),
+      rtol=1e-05,
+      atol=1e-05,
     )
 
   def test_bleu_merge(self):
     """Tests that BLEU metric computes correct values using merge."""
     references = [
-        ["He eats a sweet apple", "He is eating a tasty apple, isn't he"],
-        [
-            "Silicon Valley is one of my favourite shows",
-            "Silicon Valley is the best show ever",
-        ],
+      ["He eats a sweet apple", "He is eating a tasty apple, isn't he"],
+      [
+        "Silicon Valley is one of my favourite shows",
+        "Silicon Valley is the best show ever",
+      ],
     ]
     predictions = [
-        "He He He eats sweet apple which is a fruit",
-        "I love Silicon Valley it is one of my favourite shows",
+      "He He He eats sweet apple which is a fruit",
+      "I love Silicon Valley it is one of my favourite shows",
     ]
     keras_metric = keras_hub.metrics.Bleu()
     keras_metric.update_state(references, predictions)
     metrax_metric = None
     for ref_list, pred in zip(references, predictions):
       update = metrax.BLEU.from_model_output([pred], [ref_list])
-      metrax_metric = (
-          update if metrax_metric is None else metrax_metric.merge(update)
-      )
+      metrax_metric = update if metrax_metric is None else metrax_metric.merge(update)
 
     np.testing.assert_allclose(
-        metrax_metric.compute(),
-        keras_metric.result(),
-        rtol=1e-05,
-        atol=1e-05,
+      metrax_metric.compute(),
+      keras_metric.result(),
+      rtol=1e-05,
+      atol=1e-05,
     )
 
   def test_bleu_merge_fails_on_different_max_order(self):
     """Tests that error is raised when BLEU metrics with different max_order are merged."""
     references = [
-        ["He eats a sweet apple", "He is eating a tasty apple, isn't he"],
+      ["He eats a sweet apple", "He is eating a tasty apple, isn't he"],
     ]
     predictions = [
-        "He He He eats sweet apple which is a fruit",
+      "He He He eats sweet apple which is a fruit",
     ]
-    order_3_metric = metrax.BLEU.from_model_output(
-        predictions, references, max_order=3
-    )
-    order_4_metric = metrax.BLEU.from_model_output(
-        predictions, references, max_order=4
-    )
+    order_3_metric = metrax.BLEU.from_model_output(predictions, references, max_order=3)
+    order_4_metric = metrax.BLEU.from_model_output(predictions, references, max_order=4)
 
-    np.testing.assert_raises(
-        ValueError, lambda: order_3_metric.merge(order_4_metric)
-    )
+    np.testing.assert_raises(ValueError, lambda: order_3_metric.merge(order_4_metric))
 
   @parameterized.named_parameters(
-      (
-          "rougeL",
-          metrax.RougeL,
-          keras_hub.metrics.RougeL,
-      ),
-      (
-          "rougeN",
-          metrax.RougeN,
-          keras_hub.metrics.RougeN,
-      ),
+    (
+      "rougeL",
+      metrax.RougeL,
+      keras_hub.metrics.RougeL,
+    ),
+    (
+      "rougeN",
+      metrax.RougeN,
+      keras_hub.metrics.RougeN,
+    ),
   )
   def test_rouge(self, metrax_rouge, keras_rouge):
     """Tests that ROUGE metric computes correct values."""
     references = [
-        "He eats a sweet apple",
-        "Silicon Valley is one of my favourite shows",
+      "He eats a sweet apple",
+      "Silicon Valley is one of my favourite shows",
     ]
     predictions = [
-        "He He He eats sweet apple which is a fruit",
-        "I love Silicon Valley it is one of my favourite shows",
+      "He He He eats sweet apple which is a fruit",
+      "I love Silicon Valley it is one of my favourite shows",
     ]
     keras_metric = keras_rouge()
     keras_metric.update_state(references, predictions)
@@ -150,33 +142,33 @@ class NlpMetricsTest(parameterized.TestCase):
     metrax_metric = metrax_rouge.from_model_output(predictions, references)
 
     np.testing.assert_allclose(
-        metrax_metric.compute(),
-        keras_metric_array,
-        rtol=1e-05,
-        atol=1e-05,
+      metrax_metric.compute(),
+      keras_metric_array,
+      rtol=1e-05,
+      atol=1e-05,
     )
 
   @parameterized.named_parameters(
-      (
-          "rougeL",
-          metrax.RougeL,
-          keras_hub.metrics.RougeL,
-      ),
-      (
-          "rougeN",
-          metrax.RougeN,
-          keras_hub.metrics.RougeN,
-      ),
+    (
+      "rougeL",
+      metrax.RougeL,
+      keras_hub.metrics.RougeL,
+    ),
+    (
+      "rougeN",
+      metrax.RougeN,
+      keras_hub.metrics.RougeN,
+    ),
   )
   def test_rouge_merge(self, metrax_rouge, keras_rouge):
     """Tests that ROUGE-N metric computes correct values using merge."""
     references = [
-        "He eats a sweet apple",
-        "Silicon Valley is one of my favourite shows",
+      "He eats a sweet apple",
+      "Silicon Valley is one of my favourite shows",
     ]
     predictions = [
-        "He He He eats sweet apple which is a fruit",
-        "I love Silicon Valley it is one of my favourite shows",
+      "He He He eats sweet apple which is a fruit",
+      "I love Silicon Valley it is one of my favourite shows",
     ]
     keras_metric = keras_rouge()
     keras_metric.update_state(references, predictions)
@@ -185,65 +177,57 @@ class NlpMetricsTest(parameterized.TestCase):
     metrax_metric = None
     for ref, pred in zip(references, predictions):
       update = metrax_rouge.from_model_output([pred], [ref])
-      metrax_metric = (
-          update if metrax_metric is None else metrax_metric.merge(update)
-      )
+      metrax_metric = update if metrax_metric is None else metrax_metric.merge(update)
 
     np.testing.assert_allclose(
-        metrax_metric.compute(),
-        keras_metric_array,
-        rtol=1e-05,
-        atol=1e-05,
+      metrax_metric.compute(),
+      keras_metric_array,
+      rtol=1e-05,
+      atol=1e-05,
     )
 
   def test_rougen_merge_fails_on_different_max_order(self):
     """Tests that error is raised when ROUGE-N metrics with different max_order are merged."""
     references = [
-        "He eats a sweet apple",
+      "He eats a sweet apple",
     ]
     predictions = [
-        "He He He eats sweet apple which is a fruit",
+      "He He He eats sweet apple which is a fruit",
     ]
-    order_3_metric = metrax.RougeN.from_model_output(
-        predictions, references, order=3
-    )
-    order_4_metric = metrax.RougeN.from_model_output(
-        predictions, references, order=4
-    )
+    order_3_metric = metrax.RougeN.from_model_output(predictions, references, order=3)
+    order_4_metric = metrax.RougeN.from_model_output(predictions, references, order=4)
 
-    np.testing.assert_raises(
-        ValueError, lambda: order_3_metric.merge(order_4_metric)
-    )
+    np.testing.assert_raises(ValueError, lambda: order_3_metric.merge(order_4_metric))
 
   @parameterized.named_parameters(
-      (
-          'basic',
-          np.random.randint(10, size=[2, 5, 10]),
-          np.random.uniform(size=(2, 5, 10, 20)),
-          None,
-          False,
-      ),
-      (
-          'weighted',
-          np.random.randint(10, size=[2, 5, 10]),
-          np.random.uniform(size=(2, 5, 10, 20)),
-          np.random.randint(2, size=(2, 5, 10)).astype(np.float32),
-          False,
-      ),
-      (
-          'negative_values',
-          np.random.randint(10, size=[2, 5, 10]),
-          np.random.uniform(size=(2, 5, 10, 20), low=-2, high=2),
-          None,
-          False,
-      ),
-      (
-          'from_logits',
-          np.random.randint(10, size=[2, 5, 10]),
-          np.random.uniform(size=(2, 5, 10, 20), low=-2, high=2),
-          None,
-          True,
-      ),
+    (
+      "basic",
+      np.random.randint(10, size=[2, 5, 10]),
+      np.random.uniform(size=(2, 5, 10, 20)),
+      None,
+      False,
+    ),
+    (
+      "weighted",
+      np.random.randint(10, size=[2, 5, 10]),
+      np.random.uniform(size=(2, 5, 10, 20)),
+      np.random.randint(2, size=(2, 5, 10)).astype(np.float32),
+      False,
+    ),
+    (
+      "negative_values",
+      np.random.randint(10, size=[2, 5, 10]),
+      np.random.uniform(size=(2, 5, 10, 20), low=-2, high=2),
+      None,
+      False,
+    ),
+    (
+      "from_logits",
+      np.random.randint(10, size=[2, 5, 10]),
+      np.random.uniform(size=(2, 5, 10, 20), low=-2, high=2),
+      None,
+      True,
+    ),
   )
   def test_perplexity(self, y_true, y_pred, sample_weights, from_logits):
     """Test that `Perplexity` Metric computes correct values."""
@@ -253,51 +237,41 @@ class NlpMetricsTest(parameterized.TestCase):
       weights = sample_weights[index] if sample_weights is not None else None
       keras_metric.update_state(labels, logits, sample_weight=weights)
       update = metrax.Perplexity.from_model_output(
-          predictions=logits,
-          labels=labels,
-          sample_weights=weights,
-          from_logits=from_logits,
+        predictions=logits,
+        labels=labels,
+        sample_weights=weights,
+        from_logits=from_logits,
       )
-      metrax_metric = update if metrax_metric is None else metrax_metric.merge(
-          update
-      )
+      metrax_metric = update if metrax_metric is None else metrax_metric.merge(update)
 
     expected = keras_metric.result()
     np.testing.assert_allclose(
-        metrax_metric.compute(),
-        expected,
-        rtol=1e-05,
-        atol=1e-05,
+      metrax_metric.compute(),
+      expected,
+      rtol=1e-05,
+      atol=1e-05,
     )
 
   def test_wer(self):
     """Tests that WER metric computes correct values with tokenized and untokenized inputs."""
-    string_preds = [
-      "the cat sat on the mat",
-      "a quick brown fox jumps over the lazy dog",
-      "hello world"
-    ]
-    string_refs = [
-      "the cat sat on the hat",
-      "the quick brown fox jumps over the lazy dog",
-      "hello beautiful world"
-    ]
+    string_preds = ["the cat sat on the mat", "a quick brown fox jumps over the lazy dog", "hello world"]
+    string_refs = ["the cat sat on the hat", "the quick brown fox jumps over the lazy dog", "hello beautiful world"]
     tokenized_preds = [sentence.split() for sentence in string_preds]
     tokenized_refs = [sentence.split() for sentence in string_refs]
 
     metrax_token_metric = None
     keras_metric = keras_hub.metrics.EditDistance(normalize=True)
     for pred, ref in zip(tokenized_preds, tokenized_refs):
-      metrax_update = metrax.WER.from_model_output(pred,ref)
+      metrax_update = metrax.WER.from_model_output(pred, ref)
       keras_metric.update_state(ref, pred)
       metrax_token_metric = metrax_update if metrax_token_metric is None else metrax_token_metric.merge(metrax_update)
 
     np.testing.assert_allclose(
-        metrax_token_metric.compute(),
-        keras_metric.result(),
-        rtol=1e-05,
-        atol=1e-05,
-        err_msg="String-based WER should match keras_hub EditDistance"
+      metrax_token_metric.compute(),
+      keras_metric.result(),
+      rtol=1e-05,
+      atol=1e-05,
+      err_msg="String-based WER should match keras_hub EditDistance",
     )
 
     metrax_string_metric = None
@@ -306,13 +280,13 @@ class NlpMetricsTest(parameterized.TestCase):
       metrax_string_metric = update if metrax_string_metric is None else metrax_string_metric.merge(update)
 
     np.testing.assert_allclose(
-    metrax_string_metric.compute(),
-    metrax_token_metric.compute(),
-    rtol=1e-05,
-    atol=1e-05,
-    err_msg="String input and tokenized input should produce the same WER"
+      metrax_string_metric.compute(),
+      metrax_token_metric.compute(),
+      rtol=1e-05,
+      atol=1e-05,
+      err_msg="String input and tokenized input should produce the same WER",
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   absltest.main()

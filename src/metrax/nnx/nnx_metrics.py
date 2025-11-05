@@ -73,11 +73,13 @@ class Dice(NnxWrapper):
   def __init__(self):
     super().__init__(metrax.Dice)
 
+
 class FBetaScore(NnxWrapper):
   """An NNX class for the Metrax metric FBetaScore."""
 
   def __init__(self):
     super().__init__(metrax.FBetaScore)
+
 
 class IoU(NnxWrapper):
   """An NNX class for the Metrax metric IoU."""

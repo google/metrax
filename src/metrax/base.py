@@ -31,10 +31,10 @@ class Average(clu_metrics.Average):
 
   @classmethod
   def from_model_output(
-      cls,
-      values: jax.Array,
-      sample_weights: jax.Array | None = None,
-  ) -> 'Average':
+    cls,
+    values: jax.Array,
+    sample_weights: jax.Array | None = None,
+  ) -> "Average":
     """Updates the metric.
 
     Args:
@@ -52,8 +52,8 @@ class Average(clu_metrics.Average):
       total = values * sample_weights
       count = count * sample_weights
     return cls(
-        total=total.sum(),
-        count=count.sum(),
+      total=total.sum(),
+      count=count.sum(),
     )
 
   def compute(self) -> jax.Array:

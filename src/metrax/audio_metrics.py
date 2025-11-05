@@ -49,9 +49,9 @@ class SNR(base.Average):
 
   @staticmethod
   def _calculate_snr(
-      preds: jax.Array,
-      target: jax.Array,
-      zero_mean: bool = False,
+    preds: jax.Array,
+    target: jax.Array,
+    zero_mean: bool = False,
   ) -> jax.Array:
     """Computes SNR (Signal-to-Noise Ratio) values for a batch of audio signals.
 
@@ -66,20 +66,17 @@ class SNR(base.Average):
         in the batch.
     """
     if preds.shape != target.shape:
-      raise ValueError(
-          f'Input signals must have the same shape, but got {preds.shape} and'
-          f' {target.shape}'
-      )
+      raise ValueError(f"Input signals must have the same shape, but got {preds.shape} and {target.shape}")
 
     target_processed, preds_processed = jax.lax.cond(
-        zero_mean,
-        lambda t, p: (
-            t - jnp.mean(t, axis=-1, keepdims=True),
-            p - jnp.mean(p, axis=-1, keepdims=True),
-        ),
-        lambda t, p: (t, p),
-        target,
-        preds,
+      zero_mean,
+      lambda t, p: (
+        t - jnp.mean(t, axis=-1, keepdims=True),
+        p - jnp.mean(p, axis=-1, keepdims=True),
+      ),
+      lambda t, p: (t, p),
+      target,
+      preds,
     )
     noise = target_processed - preds_processed
     eps = jnp.finfo(preds.dtype).eps
@@ -91,11 +88,11 @@ class SNR(base.Average):
 
   @classmethod
   def from_model_output(
-      cls,
-      predictions: jax.Array,
-      targets: jax.Array,
-      zero_mean: bool = False,
-  ) -> 'SNR':
+    cls,
+    predictions: jax.Array,
+    targets: jax.Array,
+    zero_mean: bool = False,
+  ) -> "SNR":
     """Computes SNR for a batch of audio signals and creates an SNR metric instance.
 
     Args:
@@ -109,8 +106,8 @@ class SNR(base.Average):
         ready for averaging.
     """
     batch_snr_value = cls._calculate_snr(
-        predictions,
-        targets,
-        zero_mean=zero_mean,
+      predictions,
+      targets,
+      zero_mean=zero_mean,
     )
     return super().from_model_output(values=batch_snr_value)

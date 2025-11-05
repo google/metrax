@@ -104,22 +104,22 @@ class BLEU(clu_metrics.Metric):
   reference_length: jax.Array
 
   @classmethod
-  def empty(cls) -> 'BLEU':
+  def empty(cls) -> "BLEU":
     return cls(
-        max_order=4,
-        matches_by_order=jnp.array(0, jnp.float32),
-        possible_matches_by_order=jnp.array(0, jnp.float32),
-        translation_length=jnp.array(0, jnp.float32),
-        reference_length=jnp.array(0, jnp.float32),
+      max_order=4,
+      matches_by_order=jnp.array(0, jnp.float32),
+      possible_matches_by_order=jnp.array(0, jnp.float32),
+      translation_length=jnp.array(0, jnp.float32),
+      reference_length=jnp.array(0, jnp.float32),
     )
 
   @classmethod
   def from_model_output(
-      cls,
-      predictions: list[str],
-      references: list[list[str]],
-      max_order: int = 4,
-  ) -> 'BLEU':
+    cls,
+    predictions: list[str],
+    references: list[list[str]],
+    max_order: int = 4,
+  ) -> "BLEU":
     """Computes BLEU statistics for a batch of predictions and references.
 
     Args:
@@ -159,40 +159,32 @@ class BLEU(clu_metrics.Metric):
           possible_matches_by_order[order - 1] += possible_matches
 
     return cls(
-        max_order=max_order,
-        matches_by_order=jnp.array(matches_by_order, dtype=jnp.float32),
-        possible_matches_by_order=jnp.array(
-            possible_matches_by_order, dtype=jnp.float32
-        ),
-        translation_length=jnp.array(pred_length, dtype=jnp.float32),
-        reference_length=jnp.array(ref_length, dtype=jnp.float32),
+      max_order=max_order,
+      matches_by_order=jnp.array(matches_by_order, dtype=jnp.float32),
+      possible_matches_by_order=jnp.array(possible_matches_by_order, dtype=jnp.float32),
+      translation_length=jnp.array(pred_length, dtype=jnp.float32),
+      reference_length=jnp.array(ref_length, dtype=jnp.float32),
     )
 
-  def merge(self, other: 'BLEU') -> 'BLEU':
+  def merge(self, other: "BLEU") -> "BLEU":
     if self.max_order != other.max_order:
-      raise ValueError(
-          'BLEU metrics with different max_order cannot be merged.'
-      )
+      raise ValueError("BLEU metrics with different max_order cannot be merged.")
     return type(self)(
-        max_order=self.max_order,
-        matches_by_order=(self.matches_by_order + other.matches_by_order),
-        possible_matches_by_order=(
-            self.possible_matches_by_order + other.possible_matches_by_order
-        ),
-        translation_length=(self.translation_length + other.translation_length),
-        reference_length=(self.reference_length + other.reference_length),
+      max_order=self.max_order,
+      matches_by_order=(self.matches_by_order + other.matches_by_order),
+      possible_matches_by_order=(self.possible_matches_by_order + other.possible_matches_by_order),
+      translation_length=(self.translation_length + other.translation_length),
+      reference_length=(self.reference_length + other.reference_length),
     )
 
   def compute(self) -> jax.Array:
     precisions = [0] * self.max_order
     for i in range(0, self.max_order):
-      precisions[i] = base.divide_no_nan(
-          self.matches_by_order[i], self.possible_matches_by_order[i]
-      )
+      precisions[i] = base.divide_no_nan(self.matches_by_order[i], self.possible_matches_by_order[i])
     geo_mean = (
-        math.exp(sum((1.0 / self.max_order) * math.log(p) for p in precisions))
-        if precisions and min(precisions) > 0
-        else 0
+      math.exp(sum((1.0 / self.max_order) * math.log(p) for p in precisions))
+      if precisions and min(precisions) > 0
+      else 0
     )
     ratio = base.divide_no_nan(self.translation_length, self.reference_length)
     bp = 1.0 if ratio > 1.0 else math.exp(1 - 1.0 / ratio)
@@ -236,19 +228,17 @@ class Perplexity(clu_metrics.Metric):
   num_samples: jax.Array
 
   @classmethod
-  def empty(cls) -> 'Perplexity':
-    return cls(
-      aggregate_crossentropy=jnp.array(0, jnp.float32),
-      num_samples=jnp.array(0, jnp.float32))
+  def empty(cls) -> "Perplexity":
+    return cls(aggregate_crossentropy=jnp.array(0, jnp.float32), num_samples=jnp.array(0, jnp.float32))
 
   @classmethod
   def from_model_output(
-      cls,
-      predictions: jax.Array,
-      labels: jax.Array,
-      sample_weights: jax.Array | None = None,
-      from_logits: bool = False,
-  ) -> 'Perplexity':
+    cls,
+    predictions: jax.Array,
+    labels: jax.Array,
+    sample_weights: jax.Array | None = None,
+    from_logits: bool = False,
+  ) -> "Perplexity":
     """Updates the metric.
 
     Args:
@@ -272,9 +262,7 @@ class Perplexity(clu_metrics.Metric):
     if from_logits:
       log_prob = jax.nn.log_softmax(predictions, axis=-1)
     else:
-      predictions = base.divide_no_nan(
-          predictions, jnp.sum(predictions, axis=-1, keepdims=True)
-      )
+      predictions = base.divide_no_nan(predictions, jnp.sum(predictions, axis=-1, keepdims=True))
       epsilon = 1e-7
       predictions = jnp.clip(predictions, epsilon, 1.0 - epsilon)
       log_prob = jnp.log(predictions)
@@ -286,30 +274,24 @@ class Perplexity(clu_metrics.Metric):
     if sample_weights is not None:
       crossentropy = crossentropy * sample_weights
       # Normalize by the sum of weights for each sequence.
-      crossentropy = base.divide_no_nan(
-          jnp.sum(crossentropy), jnp.sum(sample_weights)
-      )
+      crossentropy = base.divide_no_nan(jnp.sum(crossentropy), jnp.sum(sample_weights))
     else:
       crossentropy = jnp.mean(crossentropy)
 
     batch_size = jnp.array(labels.shape[0])
     return cls(
-        aggregate_crossentropy=(batch_size * crossentropy),
-        num_samples=batch_size,
+      aggregate_crossentropy=(batch_size * crossentropy),
+      num_samples=batch_size,
     )
 
-  def merge(self, other: 'Perplexity') -> 'Perplexity':
+  def merge(self, other: "Perplexity") -> "Perplexity":
     return type(self)(
-        aggregate_crossentropy=(
-            self.aggregate_crossentropy + other.aggregate_crossentropy
-        ),
-        num_samples=self.num_samples + other.num_samples,
+      aggregate_crossentropy=(self.aggregate_crossentropy + other.aggregate_crossentropy),
+      num_samples=self.num_samples + other.num_samples,
     )
 
   def compute(self) -> jax.Array:
-    return jnp.exp(
-        base.divide_no_nan(self.aggregate_crossentropy, self.num_samples)
-    )
+    return jnp.exp(base.divide_no_nan(self.aggregate_crossentropy, self.num_samples))
 
 
 @flax.struct.dataclass
@@ -323,15 +305,13 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
 
   @classmethod
   @abc.abstractmethod
-  def empty(cls, **kwargs) -> 'RougeBase':
+  def empty(cls, **kwargs) -> "RougeBase":
     """Creates an empty Rouge metric. Implemented by subclasses."""
-    raise NotImplementedError('Subclasses must implement the empty method.')
+    raise NotImplementedError("Subclasses must implement the empty method.")
 
   @staticmethod
   @abc.abstractmethod
-  def _calculate_instance_scores(
-      pred_tokens: list[str], ref_tokens: list[str], **kwargs
-  ) -> tuple[float, float, float]:
+  def _calculate_instance_scores(pred_tokens: list[str], ref_tokens: list[str], **kwargs) -> tuple[float, float, float]:
     """Calculates precision, recall, and F1 for a single prediction-reference pair.
 
     kwargs may contain 'order' for RougeN.
@@ -339,18 +319,16 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
     Returns:
         A tuple (precision, recall, f1_score).
     """
-    raise NotImplementedError(
-        'Subclasses must implement _calculate_instance_scores.'
-    )
+    raise NotImplementedError("Subclasses must implement _calculate_instance_scores.")
 
   @classmethod
   def _get_common_initial_values(cls) -> dict[str, jax.Array]:
     """Returns a dictionary of common metric attributes initialized to zero."""
     return {
-        'total_precision': jnp.array(0.0, jnp.float32),
-        'total_recall': jnp.array(0.0, jnp.float32),
-        'total_f1': jnp.array(0.0, jnp.float32),
-        'num_examples': jnp.array(0.0, jnp.float32),
+      "total_precision": jnp.array(0.0, jnp.float32),
+      "total_recall": jnp.array(0.0, jnp.float32),
+      "total_f1": jnp.array(0.0, jnp.float32),
+      "num_examples": jnp.array(0.0, jnp.float32),
     }
 
   @classmethod
@@ -359,9 +337,7 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
     return {}
 
   @classmethod
-  def from_model_output(
-      cls, predictions: list[str], references: list[str], **kwargs
-  ) -> 'RougeBase':
+  def from_model_output(cls, predictions: list[str], references: list[str], **kwargs) -> "RougeBase":
     """Computes sums of per-instance ROUGE scores for a batch.
 
     Subclasses implement _calculate_instance_scores and helper methods for
@@ -387,9 +363,7 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
       pred_tokens = pred_str.split()
       ref_tokens = ref_str.split()
 
-      precision, recall, f1 = cls._calculate_instance_scores(
-          pred_tokens, ref_tokens, **kwargs
-      )
+      precision, recall, f1 = cls._calculate_instance_scores(pred_tokens, ref_tokens, **kwargs)
 
       total_precision += precision
       total_recall += recall
@@ -397,36 +371,31 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
       num_examples += 1
 
     constructor_args = {
-        'total_precision': jnp.array(total_precision, dtype=jnp.float32),
-        'total_recall': jnp.array(total_recall, dtype=jnp.float32),
-        'total_f1': jnp.array(total_f1, dtype=jnp.float32),
-        'num_examples': jnp.array(num_examples, dtype=jnp.float32),
+      "total_precision": jnp.array(total_precision, dtype=jnp.float32),
+      "total_recall": jnp.array(total_recall, dtype=jnp.float32),
+      "total_f1": jnp.array(total_f1, dtype=jnp.float32),
+      "num_examples": jnp.array(num_examples, dtype=jnp.float32),
     }
-    constructor_args.update(
-        cls._get_specific_constructor_args_for_class(**kwargs)
-    )
+    constructor_args.update(cls._get_specific_constructor_args_for_class(**kwargs))
     return cls(**constructor_args)
 
-  def merge(self, other: 'RougeBase') -> 'RougeBase':
+  def merge(self, other: "RougeBase") -> "RougeBase":
     """Merges this Rouge metric with another."""
     if not isinstance(other, type(self)):
-      raise TypeError(
-          'Cannot merge instances of different types:'
-          f' {type(self).__name__} and {type(other).__name__}'
-      )
+      raise TypeError(f"Cannot merge instances of different types: {type(self).__name__} and {type(other).__name__}")
 
     self._validate_merge_specifics(other)
 
     merged_data = {
-        'total_precision': self.total_precision + other.total_precision,
-        'total_recall': self.total_recall + other.total_recall,
-        'total_f1': self.total_f1 + other.total_f1,
-        'num_examples': self.num_examples + other.num_examples,
+      "total_precision": self.total_precision + other.total_precision,
+      "total_recall": self.total_recall + other.total_recall,
+      "total_f1": self.total_f1 + other.total_f1,
+      "num_examples": self.num_examples + other.num_examples,
     }
     merged_data.update(self._get_specific_fields_for_merge_constructor())
     return type(self)(**merged_data)  # type: ignore[call-arg]
 
-  def _validate_merge_specifics(self, other: 'RougeBase'):
+  def _validate_merge_specifics(self, other: "RougeBase"):
     """Hook for subclass-specific validation during merge (e.g., check order).
 
     Args:
@@ -448,9 +417,7 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
 
   def compute(self) -> jax.Array:
     """Computes macro-averaged recall, precision, and F1-score."""
-    macro_avg_precision = base.divide_no_nan(
-        self.total_precision, self.num_examples
-    )
+    macro_avg_precision = base.divide_no_nan(self.total_precision, self.num_examples)
     macro_avg_recall = base.divide_no_nan(self.total_recall, self.num_examples)
     macro_avg_f1score = base.divide_no_nan(self.total_f1, self.num_examples)
 
@@ -500,15 +467,15 @@ class RougeL(RougeBase):
   """
 
   @classmethod
-  def empty(cls, **kwargs) -> 'RougeL':
+  def empty(cls, **kwargs) -> "RougeL":
     common_values = super()._get_common_initial_values()
     return cls(**common_values)
 
   @staticmethod
   def _calculate_instance_scores(
-      pred_tokens: list[str],
-      ref_tokens: list[str],
-      **kwargs,
+    pred_tokens: list[str],
+    ref_tokens: list[str],
+    **kwargs,
   ) -> tuple[float, float, float]:
     lcs = jnp.array(_lcs_length(pred_tokens, ref_tokens))
     pred_len = jnp.array(len(pred_tokens))
@@ -569,19 +536,17 @@ class RougeN(RougeBase):
   order: int
 
   @classmethod
-  def empty(cls, order: int = 2) -> 'RougeN':
+  def empty(cls, order: int = 2) -> "RougeN":
     common_values = super()._get_common_initial_values()
     return cls(order=order, **common_values)
 
   @classmethod
   def _get_specific_constructor_args_for_class(cls, **kwargs) -> dict[str, int]:
-    return {'order': kwargs.get('order', 2)}
+    return {"order": kwargs.get("order", 2)}
 
   @staticmethod
-  def _calculate_instance_scores(
-      pred_tokens: list[str], ref_tokens: list[str], **kwargs
-  ) -> tuple[float, float, float]:
-    order = kwargs.get('order', 2)
+  def _calculate_instance_scores(pred_tokens: list[str], ref_tokens: list[str], **kwargs) -> tuple[float, float, float]:
+    order = kwargs.get("order", 2)
 
     pred_ngrams_counts = _get_single_n_grams(pred_tokens, order)
     ref_ngrams_counts = _get_single_n_grams(ref_tokens, order)
@@ -596,15 +561,14 @@ class RougeN(RougeBase):
     f1 = base.divide_no_nan(2 * precision * recall, precision + recall)
     return float(precision), float(recall), float(f1)
 
-  def _validate_merge_specifics(self, other: 'RougeBase'):
+  def _validate_merge_specifics(self, other: "RougeBase"):
     if not isinstance(other, RougeN) or self.order != other.order:
       raise ValueError(
-          'RougeN metrics with different orders cannot be merged. '
-          f'Got {self.order} and {getattr(other, "order", "N/A")}.'
+        f"RougeN metrics with different orders cannot be merged. Got {self.order} and {getattr(other, 'order', 'N/A')}."
       )
 
   def _get_specific_fields_for_merge_constructor(self) -> dict[str, int]:
-    return {'order': self.order}
+    return {"order": self.order}
 
 
 @flax.struct.dataclass
@@ -634,10 +598,10 @@ class WER(base.Average):
 
   @classmethod
   def from_model_output(
-      cls,
-      predictions: list[str],
-      references: list[str],
-  ) -> 'WER':
+    cls,
+    predictions: list[str],
+    references: list[str],
+  ) -> "WER":
     """Updates the metric.
 
     Args:
@@ -653,7 +617,7 @@ class WER(base.Average):
         ValueError: If inputs are not properly formatted or are empty.
     """
     if not predictions or not references:
-      raise ValueError('predictions and references must not be empty')
+      raise ValueError("predictions and references must not be empty")
 
     if isinstance(predictions, str):
       predictions = predictions.split()
@@ -664,8 +628,8 @@ class WER(base.Average):
     reference_length = len(references)
 
     return cls(
-        total=jnp.array(edit_distance, dtype=jnp.float32),
-        count=jnp.array(reference_length, dtype=jnp.float32),
+      total=jnp.array(edit_distance, dtype=jnp.float32),
+      count=jnp.array(reference_length, dtype=jnp.float32),
     )
 
   @staticmethod
@@ -703,9 +667,9 @@ class WER(base.Average):
         cost = 0 if prediction[i - 1] == reference[j - 1] else 1
 
         distance_matrix[i][j] = min(
-            distance_matrix[i - 1][j] + 1,  # deletion
-            distance_matrix[i][j - 1] + 1,  # insertion
-            distance_matrix[i - 1][j - 1] + cost,  # substitution
+          distance_matrix[i - 1][j] + 1,  # deletion
+          distance_matrix[i][j - 1] + 1,  # insertion
+          distance_matrix[i - 1][j - 1] + cost,  # substitution
         )
 
     return distance_matrix[m][n]
