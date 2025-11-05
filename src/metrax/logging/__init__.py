@@ -13,9 +13,9 @@
 # limitations under the License.
 
 from metrax.logging import protocol
-from metrax.logging import tensorboardbackend
-from metrax.logging import wandbbackend
+from metrax.logging import tensorboard_backend
+from metrax.logging import wandb_backend
 
 LoggingBackend = protocol.LoggingBackend
-TensorBoardBackend = tensorboardbackend.TensorBoardBackend
-WandbBackend = wandbbackend.WandbBackend
+TensorboardBackend = tensorboard_backend.TensorboardBackend
+WandbBackend = wandb_backend.WandbBackend

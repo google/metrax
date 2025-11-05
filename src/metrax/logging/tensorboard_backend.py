@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Metrax LoggingBackend implemenation for Weight & Bias."""
-
-import datetime
-import logging
+"""Metrax LoggingBackend implemenation for Tensorboard."""
 
 import jax
 import numpy as np
+from tensorboardX import writer
 
 _DEFAULT_STEP = 0
 
@@ -34,39 +32,25 @@ def _preprocess_event_name(event_name: str) -> str:
   return event_name.lstrip("/")  # Remove leading slashes
 
 
-class WandbBackend:
-  """A logging backend for W&B that conforms to the LoggingBackend protocol."""
+class TensorboardBackend:
+  """A logging backend for Tensorboard that conforms to the LoggingBackend protocol."""
 
-  def __init__(self, project: str, name: str | None = None, **kwargs):
-    try:
-      # pylint: disable=g-import-not-at-top
-      # pytype: disable=import-error
-      import wandb
-    except ImportError as e:
-      raise ImportError(
-        "The 'wandb' library is not installed. Please install it with 'pip install wandb' to use the WandbBackend."
-      ) from e
-    self.wandb = wandb
-    if jax.process_index() != 0:
-      self._is_active = False
-      return
-
-    run_name = name or datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    wandb.init(project=project, name=run_name, anonymous="allow", **kwargs)
-    if wandb.run:
-      logging.info("W&B run URL: %s", wandb.run.url)
-      self._is_active = True
+  def __init__(self, log_dir: str, flush_every_n_steps: int = 100):
+    self._flush_every_n_steps = flush_every_n_steps
+    if jax.process_index() == 0:
+      self._writer = writer.SummaryWriter(logdir=log_dir)
     else:
-      self._is_active = False
+      self._writer = None
 
   def log_scalar(self, event: str, value: float | np.ndarray, **kwargs):
-    if self.wandb is None or not self._is_active:
+    if self._writer is None:
       return
     current_step = _get_step(kwargs)
     event_name = _preprocess_event_name(event)
-    self.wandb.log({event_name: value}, step=current_step)
+    self._writer.add_scalar(event_name, value, current_step)
+    if current_step % self._flush_every_n_steps == 0:
+      self._writer.flush()
 
   def close(self):
-    if self.wandb is None or not self._is_active:
-      return
-    self.wandb.finish()
+    if self._writer:
+      self._writer.close()
