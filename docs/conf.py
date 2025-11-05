@@ -18,61 +18,61 @@ import os
 import sys
 
 # Import local version of metrax.
-sys.path.insert(0, os.path.abspath("../src"))
+sys.path.insert(0, os.path.abspath('../src'))
 
 # -- Project information
 
-project = "metrax"
-copyright = "2025, The metrax Authors"
-author = "The metrax Authors"
+project = 'metrax'
+copyright = '2025, The metrax Authors'
+author = 'The metrax Authors'
 
-release = ""
-version = ""
+release = ''
+version = ''
 
 
 # -- General configuration
 
 extensions = [
-  "sphinx.ext.duration",
-  "sphinx.ext.doctest",
-  "sphinx.ext.intersphinx",
-  "sphinx.ext.napoleon",
-  "sphinx_rtd_theme",
-  "sphinx.ext.autodoc",
-  "sphinx.ext.autosummary",
+    'sphinx.ext.duration',
+    'sphinx.ext.doctest',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.napoleon',
+    'sphinx_rtd_theme',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
 ]
 
 intersphinx_mapping = {
-  "python": ("https://docs.python.org/3/", None),
-  "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
+    'python': ('https://docs.python.org/3/', None),
+    'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
 }
-intersphinx_disabled_domains = ["std"]
+intersphinx_disabled_domains = ['std']
 
-templates_path = ["_templates"]
+templates_path = ['_templates']
 
 # -- Options for HTML output
 
-html_theme = "sphinx_rtd_theme"
+html_theme = 'sphinx_rtd_theme'
 html_theme_options = {
-  "collapse_navigation": False,
-  "navigation_depth": 2,
+    'collapse_navigation': False,
+    'navigation_depth': 2,
 }
-html_static_path = ["static"]
+html_static_path = ['static']
 html_js_files = [
-  "custom.js",
+    'custom.js',
 ]
 
 # -- Options for EPUB output
-epub_show_urls = "footnote"
+epub_show_urls = 'footnote'
 
 
 # -- Extension configuration
 
-autodoc_member_order = "bysource"
+autodoc_member_order = 'bysource'
 
 autodoc_default_options = {
-  "members": None,
-  "undoc-members": True,
-  "show-inheritance": True,
-  "special-members": "__call__, __init__",
+    'members': None,
+    'undoc-members': True,
+    'show-inheritance': True,
+    'special-members': '__call__, __init__',
 }
