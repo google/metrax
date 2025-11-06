@@ -40,7 +40,8 @@ class DCGAtK(base.Average):
     - :math:`s_i` is its score from the prediction,
     - :math:`\text{rank}(s_i)` is the 1-based rank of item :math:`i`.
     - :math:`\text{gain}(y_i) = 2^{y_i} - 1`.
-    - :math:`\text{rank_discount}(\text{rank}(s_i)) = \frac{1}{\log_2(\text{rank}(s_i) + 1)}`.
+    - :math:`\text{rank_discount}(\text{rank}(s_i)) =
+    \frac{1}{\log_2(\text{rank}(s_i) + 1)}`.
 
   We get the final formula:
 
@@ -80,6 +81,9 @@ class DCGAtK(base.Average):
       """Computes DCG for a single k value across all examples in a batch.
 
       Args:
+        k: A scalar array representing the single 'k' (top-k) value for which
+          DCG is to be computed.
+        current_item_contributions: A 2D array containing the pre-calculated
         k: A scalar array representing the single 'k' (top-k) value for which
           DCG is to be computed.
         current_item_contributions: A 2D array containing the pre-calculated
@@ -135,10 +139,17 @@ class NDCGAtK(DCGAtK):
 
   where
 
+<<<<<<< Updated upstream
     - If :math:`IDCG@k` is 0, then :math:`NDCG@k` is defined as 0.
     - The :math:`DCG@k` calculation uses :math:`exp2` gain
       (:math:`2^{\text{relevance}} - 1`) and standard logarithmic discount
       (:math:`\frac{1}{\log_2(\text{rank} + 1)}`).
+=======
+    - If IDCG@k is 0, NDCG@k is defined as 0.
+    - The :math:`DCG@k` calculation uses 'exp2' gain
+    (:math:`2^{\text{relevance}} - 1`) and
+  standard logarithmic discount (:math:`\frac{1}{\log_2(\text{rank} + 1)}`).
+>>>>>>> Stashed changes
   """
 
   @classmethod
@@ -162,8 +173,8 @@ class NDCGAtK(DCGAtK):
     """
     actual_dcg_at_ks = super()._calculate_dcg_at_ks(predictions, labels, ks)
     ideal_dcg_at_ks = super()._calculate_dcg_at_ks(
-        predictions=labels,  # Use labels to determine ideal DCG.
-        labels=labels,
+        predictions=labels,  # Use labels to determine ideal ranking
+        labels=labels,  # Use labels to determine gain
         ks=ks,
     )
     ndcg_at_ks = base.divide_no_nan(actual_dcg_at_ks, ideal_dcg_at_ks)
