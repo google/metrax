@@ -15,7 +15,7 @@
 from unittest import mock
 
 from absl.testing import absltest
-from metrax import logging as metrax_logging
+import metrax.logging as metrax_logging
 
 TensorboardBackend = metrax_logging.TensorboardBackend
 
