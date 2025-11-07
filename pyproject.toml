@@ -42,7 +42,7 @@ Issues = "https://github.com/google/metrax/issues"
 [project.optional-dependencies]
 dev = [
   "absl-py>=2.3.1",
-  "jax[cpu]==0.6.2",
+  "jax[cpu]>=0.6.2",
   "jax_tpu_embedding==0.1.0.dev20250618",
   "keras-hub",
   "keras-rs>=0.2.1",
