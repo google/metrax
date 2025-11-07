@@ -17,11 +17,11 @@ classifiers = [
 ]
 license = {file = 'LICENSE'}
 dependencies = [
-  "clu>=0.0.12",
+  "clu==0.0.12",
   "flax>=0.11.1",
-  "jax>=0.6.2",
-  "numpy>=2.1.3",
-  "tensorboardX>=2.6.4",
+  "jax==0.6.2",
+  "numpy==2.1.3",
+  "tensorboardX==2.6.4",
 ]
 
 [tool.hatch.build]
@@ -42,8 +42,8 @@ Issues = "https://github.com/google/metrax/issues"
 [project.optional-dependencies]
 dev = [
   "absl-py>=2.3.1",
-  "jax[cpu]>=0.6.2",
-  "jax_tpu_embedding>=0.1.0.dev20251016",
+  "jax[cpu]==0.6.2",
+  "jax_tpu_embedding==0.1.0.dev20250618",
   "keras-hub",
   "keras-rs>=0.2.1",
   "nltk>=3.9.1",
