@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "google_metrax"
-version = "0.2.2"
+version = "0.2.3"
 authors = [
   { name="Jiwon Shin", email="jshin1394@gmail.com" },
 ]
