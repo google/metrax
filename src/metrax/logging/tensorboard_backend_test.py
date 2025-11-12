@@ -66,8 +66,6 @@ class TensorboardBackendTest(absltest.TestCase):
   def test_log_scalar_flush_rate_limited(self, mock_summary_writer, mock_time):
     """Tests that flush honors both step frequency and time interval."""
     mock_writer_instance = mock_summary_writer.return_value
-
-    # Initialize clock at t=1000.0s
     mock_time.return_value = 1000.0
 
     with mock.patch("jax.process_index", return_value=0):
@@ -76,20 +74,14 @@ class TensorboardBackendTest(absltest.TestCase):
           log_dir="/fake/logs", flush_every_n_steps=1, flush_interval_s=30.0
       )
 
-      # 1. Log at t=1000.0s (0s elapsed since init)
-      # Condition: Step met (1%1==0), Time NOT met (0 < 30) -> NO FLUSH
       backend.log_scalar("event1", 1.0, step=1)
       mock_writer_instance.add_scalar.assert_called_with("event1", 1.0, 1)
       mock_writer_instance.flush.assert_not_called()
 
-      # 2. Advance time to t=1020.0s (20s elapsed)
-      # Condition: Step met, Time NOT met (20 < 30) -> NO FLUSH
       mock_time.return_value = 1020.0
       backend.log_scalar("event2", 2.0, step=2)
       mock_writer_instance.flush.assert_not_called()
 
-      # 3. Advance time to t=1035.0s (35s elapsed)
-      # Condition: Step met, Time met (35 >= 30) -> FLUSH
       mock_time.return_value = 1035.0
       backend.log_scalar("event3", 3.0, step=3)
       mock_writer_instance.flush.assert_called_once()
