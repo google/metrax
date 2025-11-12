@@ -14,6 +14,7 @@
 
 """Metrax LoggingBackend implemenation for Tensorboard."""
 
+import time
 import jax
 import numpy as np
 from tensorboardX import writer
@@ -35,8 +36,16 @@ def _preprocess_event_name(event_name: str) -> str:
 class TensorboardBackend:
   """A logging backend for Tensorboard that conforms to the LoggingBackend protocol."""
 
-  def __init__(self, log_dir: str, flush_every_n_steps: int = 100):
+  def __init__(
+      self,
+      log_dir: str,
+      flush_every_n_steps: int = 100,
+      flush_interval_s: float = 30.0,
+  ):
     self._flush_every_n_steps = flush_every_n_steps
+    self._flush_interval_s = flush_interval_s
+    self._last_flush_time = time.time()
+
     if jax.process_index() == 0:
       self._writer = writer.SummaryWriter(logdir=log_dir)
     else:
@@ -49,7 +58,10 @@ class TensorboardBackend:
     event_name = _preprocess_event_name(event)
     self._writer.add_scalar(event_name, value, current_step)
     if current_step % self._flush_every_n_steps == 0:
-      self._writer.flush()
+      now = time.time()
+      if (now - self._last_flush_time) >= self._flush_interval_s:
+        self._writer.flush()
+        self._last_flush_time = now
 
   def close(self):
     if self._writer:
