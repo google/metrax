@@ -52,14 +52,17 @@ templates_path = ['_templates']
 
 html_theme = 'sphinx_book_theme'
 html_theme_options = {
-    "show_toc_level": 2,
-    "repository_url": "https://github.com/google/metrax",
-    "use_repository_button": True,
-    "navigation_with_keys": False,
-    "show_navbar_depth": 2,
+    'show_toc_level': 2,
+    'repository_url': 'https://github.com/google/metrax',
+    'use_repository_button': True,
+    'navigation_with_keys': False,
+    'show_navbar_depth': 2,
 }
-html_static_path = ["static"]
-html_logo = "static/metrax_logo.png"
+html_static_path = ['static']
+html_logo = 'static/metrax_logo.png'
+html_css_files = [
+    'custom.css',
+]
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
