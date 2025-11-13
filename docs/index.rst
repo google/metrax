@@ -1,15 +1,13 @@
-metrax Documentation
+Metrax Documentation
 =====================
 
-**metrax** provides common evaluation metric implementations for JAX.
-
-Table of Contents
------------------
-
 .. toctree::
-   :maxdepth: 1
+   :hidden:
+   :caption: API Reference
 
    Metrax metrics <metrax>
+
+**Metrax** provides common evaluation metric implementations for JAX.
 
 
 Getting Started
@@ -76,4 +74,3 @@ Non-jittable metrics need to go outside the jitted function.
       outputs = eval_step(logits, labels)
       # Non-jittable metrics
       outputs['sequence_match'] = metrics.SequenceMatch.from_model_outputs(logits, labels)
-

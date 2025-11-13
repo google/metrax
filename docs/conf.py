@@ -33,11 +33,9 @@ version = ''
 # -- General configuration
 
 extensions = [
-    'sphinx.ext.duration',
-    'sphinx.ext.doctest',
+    'myst_nb',
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
-    'sphinx_rtd_theme',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
 ]
@@ -52,15 +50,14 @@ templates_path = ['_templates']
 
 # -- Options for HTML output
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_book_theme'
 html_theme_options = {
-    'collapse_navigation': False,
-    'navigation_depth': 2,
+    "show_toc_level": 2,
+    "repository_url": "https://github.com/google/metrax",
+    "use_repository_button": True,
+    "navigation_with_keys": False,
+    "show_navbar_depth": 2,
 }
-html_static_path = ['static']
-html_js_files = [
-    'custom.js',
-]
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
@@ -76,3 +73,5 @@ autodoc_default_options = {
     'show-inheritance': True,
     'special-members': '__call__, __init__',
 }
+
+autosummary_generate = True
