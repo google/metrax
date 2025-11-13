@@ -1,9 +1,9 @@
-Metrax Documentation
-=====================
+Metrax: A JAX-native High Performance Eval Metrics Library
+==========================================================
 
 .. toctree::
    :hidden:
-   :caption: API Reference
+   :caption: Currently Supported Metrics
 
    Metrax metrics <metrax>
 

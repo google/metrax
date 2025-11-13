@@ -58,6 +58,8 @@ html_theme_options = {
     "navigation_with_keys": False,
     "show_navbar_depth": 2,
 }
+html_static_path = ["static"]
+html_logo = "static/metrax_logo.png"
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
