@@ -93,6 +93,14 @@ class MetraxTest(parameterized.TestCase):
           },
       ),
       (
+          'cosinesimilarity',
+          metrax.CosineSimilarity,
+          {
+              'predictions': OUTPUT_LABELS,
+              'targets': OUTPUT_PREDS,
+          },
+      ),
+      (
           'dcgAtK',
           metrax.DCGAtK,
           {

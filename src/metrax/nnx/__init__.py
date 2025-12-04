@@ -20,6 +20,7 @@ Accuracy = nnx_metrics.Accuracy
 Average = nnx_metrics.Average
 AveragePrecisionAtK = nnx_metrics.AveragePrecisionAtK
 BLEU = nnx_metrics.BLEU
+CosineSimilarity = nnx_metrics.CosineSimilarity
 DCGAtK = nnx_metrics.DCGAtK
 Dice = nnx_metrics.Dice
 FBetaScore = nnx_metrics.FBetaScore
@@ -49,6 +50,7 @@ __all__ = [
     "Average",
     "AveragePrecisionAtK",
     "BLEU",
+    "CosineSimilarity",
     "DCGAtK",
     "Dice",
     "FBetaScore",

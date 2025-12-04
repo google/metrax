@@ -553,6 +553,47 @@ class ImageMetricsTest(parameterized.TestCase):
 
     np.testing.assert_allclose(result, expected, rtol=1e-5, atol=1e-5)
 
+  @parameterized.named_parameters(
+      (
+          'cosine_similarity_basic_f32',
+          PREDS_1,
+          TARGETS_1,
+      ),
+      (
+          'cosine_similarity_multichannel_norm',
+          PREDS_2,
+          TARGETS_2,
+      ),
+      (
+          'cosine_similarity_uint8_range_single_channel',
+          PREDS_3,
+          TARGETS_3,
+      ),
+      (
+          'cosine_similarity_identical_images',
+          PREDS_4,
+          TARGETS_4,
+      ),
+      (
+          'cosine_similarity_large_batch',
+          PREDS_6,
+          TARGETS_6,
+      ),
+  )
+  def test_cosine_similarity_against_keras(self, predictions, targets):
+    """Test that CosineSimilarity computes expected values."""
+    predictions = jnp.array(predictions)
+    targets = jnp.array(targets)
+    keras_cosine_similarity_metric = keras.metrics.CosineSimilarity()
+    keras_cosine_similarity_metric.update_state(predictions, targets)
+    expected = keras_cosine_similarity_metric.result()
+
+    metric = metrax.CosineSimilarity.from_model_output(
+        predictions=predictions, targets=targets
+    )
+    result = metric.compute()
+
+    np.testing.assert_allclose(result, expected, rtol=1e-5, atol=1e-5)
 
 if __name__ == '__main__':
   absltest.main()
