@@ -666,3 +666,43 @@ class Dice(clu_metrics.Metric):
     """Returns the final Dice coefficient."""
     epsilon = 1e-7
     return (2.0 * self.intersection) / (self.sum_pred + self.sum_true + epsilon)
+
+
+@flax.struct.dataclass
+class CosineSimilarity(base.Average):
+  r"""Calculates the Cosine Similarity between two arrays.
+
+    The Cosine Similarity is defined as the dot product of the vectors divided
+    by the product of their magnitudes (norms).
+
+    .. math::
+        cos_{sim}(x,y) = \frac{x \cdot y}{||x|| * ||y||}
+  """
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      targets: jax.Array,
+      axis: int = -1,
+  ) -> 'CosineSimilarity':
+    """Creates a CosineSimilarity instance.
+
+    Args:
+        predictions: A floating point array of the predictions. The shape should
+          be (batch_size,).
+        targets: A floating point array of the targets. The shape should be
+          (batch_size,).
+        axis: The axis to compute the norm over.
+
+    Returns:
+        A `CosineSimilarity` instance.
+    """
+    dot_product = (predictions * targets).sum(axis=axis)
+    predictions_norm = jnp.linalg.norm(predictions, ord=2, axis=axis)
+    targets_norm = jnp.linalg.norm(targets, ord=2, axis=axis)
+
+    cosine_similarity = dot_product / (predictions_norm * targets_norm)
+
+    return super().from_model_output(values=cosine_similarity)
+
