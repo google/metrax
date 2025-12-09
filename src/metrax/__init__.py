@@ -26,6 +26,7 @@ Accuracy = classification_metrics.Accuracy
 Average = base.Average
 AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
 BLEU = nlp_metrics.BLEU
+CosineSimilarity = image_metrics.CosineSimilarity
 DCGAtK = ranking_metrics.DCGAtK
 Dice = image_metrics.Dice
 FBetaScore = classification_metrics.FBetaScore
@@ -57,6 +58,7 @@ __all__ = [
     "Average",
     "AveragePrecisionAtK",
     "BLEU",
+    "CosineSimilarity",
     "DCGAtK",
     "Dice",
     "FBetaScore",
