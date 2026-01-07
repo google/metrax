@@ -231,6 +231,78 @@ class RegressionMetricsTest(parameterized.TestCase):
     )
 
   @parameterized.named_parameters(
+      ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+      ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16),
+      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1),
+      ('weighted_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16),
+      ('weighted_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+      ('weighted_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16),
+  )
+  def test_msle(self, y_true, y_pred):
+    """Test that `MSLE` Metric computes correct values."""
+    y_true = y_true.astype(y_pred.dtype)
+    y_pred = y_pred.astype(y_true.dtype)
+
+    metric = None
+    for labels, logits in zip(y_true, y_pred):
+      update = metrax.MSLE.from_model_output(
+          predictions=logits,
+          labels=labels,
+      )
+      metric = update if metric is None else metric.merge(update)
+
+    expected = sklearn_metrics.mean_squared_log_error(
+        y_true.astype('float32').flatten(),
+        y_pred.astype('float32').flatten(),
+    )
+    # Use lower tolerance for lower precision dtypes.
+    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    np.testing.assert_allclose(
+        metric.compute(),
+        expected,
+        rtol=rtol,
+        atol=atol,
+    )
+
+  @parameterized.named_parameters(
+      ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16),
+      ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+      ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16),
+      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1),
+      ('weighted_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16),
+      ('weighted_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32),
+      ('weighted_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16),
+  )
+  def test_rmsle(self, y_true, y_pred):
+    """Test that `RMSLE` Metric computes correct values."""
+    y_true = y_true.astype(y_pred.dtype)
+    y_pred = y_pred.astype(y_true.dtype)
+
+    metric = None
+    for labels, logits in zip(y_true, y_pred):
+      update = metrax.RMSLE.from_model_output(
+          predictions=logits,
+          labels=labels,
+      )
+      metric = update if metric is None else metric.merge(update)
+
+    expected = sklearn_metrics.root_mean_squared_log_error(
+        y_true.astype('float32').flatten(),
+        y_pred.astype('float32').flatten(),
+    )
+    # Use lower tolerance for lower precision dtypes.
+    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    np.testing.assert_allclose(
+        metric.compute(),
+        expected,
+        rtol=rtol,
+        atol=atol,
+    )
+
+  @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, None),
       ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, None),
       ('basic_bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, None),

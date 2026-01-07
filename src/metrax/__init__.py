@@ -33,12 +33,14 @@ IoU = image_metrics.IoU
 MAE = regression_metrics.MAE
 MRR = ranking_metrics.MRR
 MSE = regression_metrics.MSE
+MSLE = regression_metrics.MSLE
 NDCGAtK = ranking_metrics.NDCGAtK
 Perplexity = nlp_metrics.Perplexity
 Precision = classification_metrics.Precision
 PrecisionAtK = ranking_metrics.PrecisionAtK
 PSNR = image_metrics.PSNR
 RMSE = regression_metrics.RMSE
+RMSLE = regression_metrics.RMSLE
 RSQUARED = regression_metrics.RSQUARED
 Recall = classification_metrics.Recall
 RecallAtK = ranking_metrics.RecallAtK
@@ -63,12 +65,14 @@ __all__ = [
     "MAE",
     "MRR",
     "MSE",
+    "MSLE",
     "NDCGAtK",
     "Perplexity",
     "Precision",
     "PrecisionAtK",
     "PSNR",
     "RMSE",
+    "RMSLE",
     "RSQUARED",
     "Recall",
     "RecallAtK",

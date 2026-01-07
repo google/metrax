@@ -161,6 +161,68 @@ class RMSE(MSE):
 
 
 @flax.struct.dataclass
+class MSLE(base.Average):
+  r"""Computes the mean squared logarithmic error for regression problems given `predictions` and `labels`.
+
+  The mean squared logarithmic error is defined as:
+
+  .. math::
+      MSLE = \frac{1}{N} \sum_{i=1}^{N} (ln(y_i + 1) - ln(\hat{y}_i + 1))^2
+
+  where:
+      - :math:`y_i` are true values
+      - :math:`\hat{y}_i` are predictions
+      - :math:`N` is the number of samples
+  """
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+  ) -> 'MSLE':
+    """Updates the metric.
+
+    Args:
+      predictions: A floating point 1D vector representing the prediction
+        generated from the model. The shape should be (batch_size,).
+      labels: True value. The shape should be (batch_size,).
+
+    Returns:
+      Updated MSLE metric. The shape should be a single scalar.
+    """
+    log_predictions = jnp.log(predictions + 1)
+    log_labels = jnp.log(labels + 1)
+    squared_error = jnp.square(log_predictions - log_labels)
+    count = jnp.ones_like(labels, dtype=jnp.int32)
+    return cls(
+        total=squared_error.sum(),
+        count=count.sum(),
+    )
+
+
+@flax.struct.dataclass
+class RMSLE(MSLE):
+  r"""Computes the root mean squared logarithmic error for regression problems given `predictions` and `labels`.
+
+  The root mean squared logarithmic error is defined as:
+
+  .. math::
+      RMSLE = \sqrt{\frac{1}{N} \sum_{i=1}^{N}
+        (ln(y_i + 1) - ln(\hat{y}_i + 1))^2
+      }
+
+  where:
+      - :math:`y_i` are true values
+      - :math:`\hat{y}_i` are predictions
+      - :math:`N` is the number of samples
+  """
+
+  def compute(self) -> jax.Array:
+    return jnp.sqrt(super().compute())
+
+
+@flax.struct.dataclass
 class RSQUARED(clu_metrics.Metric):
   r"""Computes the r-squared score of a scalar or a batch of tensors.
 
