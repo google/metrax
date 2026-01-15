@@ -43,6 +43,23 @@ def _default_threshold(num_thresholds: int) -> jax.Array:
   return thresholds
 
 
+def _convert_logits_to_probabilities(
+    predictions: jax.Array, from_logits: bool )-> jax.Array:
+    """Converts logits to probabilities if `from_logits` is True
+    Args:
+        predictions: JAX array of predicted values, expected to be logits if `from_logits` is True.
+        from_logits: Boolean indicating whether `predictions` are logits.
+    Returns:
+        JAX array of probabilities if `from_logits` is True, otherwise returns `predictions` unchanged.
+    """
+
+    if from_logits:
+        predictions = jax.nn.softmax(predictions, axis=-1)
+        # Assuming binary classification, take the positive class probability.
+
+
+    return predictions
+
 @flax.struct.dataclass
 class Accuracy(base.Average):
   r"""Computes accuracy, which is the frequency with which `predictions` match `labels`.
@@ -69,6 +86,7 @@ class Accuracy(base.Average):
       predictions: jax.Array,
       labels: jax.Array,
       sample_weights: jax.Array | None = None,
+      from_logits: bool = False,
   ) -> 'Accuracy':
     """Updates the metric state with new `predictions` and `labels`.
 
@@ -99,6 +117,12 @@ class Accuracy(base.Average):
         comparison, or if `sample_weights` cannot be broadcast to `labels`'
         shape.
     """
+
+    if from_logits:
+        predictions = jax.nn.softmax(predictions, axis=-1)
+
+
+
     correct = predictions == labels
     count = jnp.ones_like(labels, dtype=jnp.int32)
     if sample_weights is not None:
@@ -149,6 +173,7 @@ class Precision(clu_metrics.Metric):
       predictions: jax.Array,
       labels: jax.Array,
       threshold: float = 0.5,
+      from_logits: bool = False,
   ) -> 'Precision':
     """Updates the metric.
 
@@ -166,7 +191,10 @@ class Precision(clu_metrics.Metric):
       ValueError: If type of `labels` is wrong or the shapes of `predictions`
       and `labels` are incompatible.
     """
+    predictions = _convert_logits_to_probabilities(predictions, from_logits)
+
     predictions = jnp.where(predictions >= threshold, 1, 0)
+
     true_positives = jnp.sum((predictions == 1) & (labels == 1))
     false_positives = jnp.sum((predictions == 1) & (labels == 0))
 
@@ -219,7 +247,7 @@ class Recall(clu_metrics.Metric):
 
   @classmethod
   def from_model_output(
-      cls, predictions: jax.Array, labels: jax.Array, threshold: float = 0.5
+      cls, predictions: jax.Array, labels: jax.Array, threshold: float = 0.5, from_logits: bool = False
   ) -> 'Recall':
     """Updates the metric.
 
@@ -237,6 +265,8 @@ class Recall(clu_metrics.Metric):
       ValueError: If type of `labels` is wrong or the shapes of `predictions`
       and `labels` are incompatible.
     """
+    predictions = _convert_logits_to_probabilities(predictions, from_logits)
+
     predictions = jnp.where(predictions >= threshold, 1, 0)
     true_positives = jnp.sum((predictions == 1) & (labels == 1))
     false_negatives = jnp.sum((predictions == 0) & (labels == 1))
@@ -325,6 +355,7 @@ class AUCPR(clu_metrics.Metric):
       labels: jax.Array,
       sample_weights: jax.Array | None = None,
       num_thresholds: int = 200,
+      from_logits: bool = False,
   ) -> 'AUCPR':
     """Updates the metric.
 
@@ -345,6 +376,8 @@ class AUCPR(clu_metrics.Metric):
       ValueError: If type of `labels` is wrong or the shapes of `predictions`
       and `labels` are incompatible.
     """
+    predictions = _convert_logits_to_probabilities(predictions, from_logits)
+
     pred_is_pos = jnp.greater(
         predictions,
         _default_threshold(num_thresholds=num_thresholds)[..., None],
@@ -513,6 +546,7 @@ class AUCROC(clu_metrics.Metric):
       labels: jax.Array,
       sample_weights: jax.Array | None = None,
       num_thresholds: int = 200,
+      from_logits: bool = False,
   ) -> 'AUCROC':
     """Updates the metric.
 
@@ -533,6 +567,8 @@ class AUCROC(clu_metrics.Metric):
       ValueError: If type of `labels` is wrong or the shapes of `predictions`
       and `labels` are incompatible.
     """
+    predictions = _convert_logits_to_probabilities(predictions, from_logits)
+
     pred_is_pos = jnp.greater(
         predictions,
         _default_threshold(num_thresholds=num_thresholds)[..., None],
@@ -622,7 +658,8 @@ class FBetaScore(clu_metrics.Metric):
             predictions: jax.Array,
             labels: jax.Array,
             beta = beta,
-            threshold = 0.5,) -> 'FBetaScore':
+            threshold = 0.5,
+            from_logits : bool = False) -> 'FBetaScore':
         """Updates the metric.
             Note: When only predictions and labels are given, the score calculated
             is the F1 score if the FBetaScore beta value has not been previously modified.
@@ -655,6 +692,10 @@ class FBetaScore(clu_metrics.Metric):
             raise ValueError('The "Threshold" value must be a floating number.')
         if threshold < 0.0 or threshold > 1.0:
             raise ValueError('The "Threshold" value must be between 0 and 1.')
+
+        # If the predictions are logits, convert them to probabilities
+
+        predictions = _convert_logits_to_probabilities(predictions, from_logits)
 
         # Modify predictions with the given threshold value
         predictions = jnp.where(predictions >= threshold, 1, 0)
