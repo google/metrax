@@ -73,8 +73,17 @@ class RegressionMetricsTest(parameterized.TestCase):
 
     y_pred = OUTPUT_PREDS
     y_true = OUTPUT_LABELS
-    metric = jax.jit(sharded_r2)(y_pred, y_true)
-    metric = metric.reduce()
+
+    # Calculate sharded R2 across devices.
+    metric_sharded = sharded_r2(y_pred, y_true)
+
+    # Move the metric results from devices to the host.
+    cpu_device = jax.devices('cpu')[0]
+    metric_on_host = jax.tree_util.tree_map(
+        lambda x: jax.device_put(x, cpu_device),
+        metric_sharded,
+    )
+    metric = metric_on_host.reduce()
 
     keras_r2 = keras.metrics.R2Score()
     for labels, logits in zip(y_true, y_pred):
