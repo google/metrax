@@ -60,6 +60,13 @@ class BLEU(NnxWrapper):
     super().__init__(metrax.BLEU)
 
 
+class CosineSimilarity(NnxWrapper):
+  """An NNX class for the Metrax metric CosineSimilarity."""
+
+  def __init__(self):
+    super().__init__(metrax.CosineSimilarity)
+
+
 class DCGAtK(NnxWrapper):
   """An NNX class for the Metrax metric DCGAtK."""
 
