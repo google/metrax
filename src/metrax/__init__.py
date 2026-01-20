@@ -47,6 +47,7 @@ RougeN = nlp_metrics.RougeN
 SNR = audio_metrics.SNR
 SpearmanRankCorrelation = regression_metrics.SpearmanRankCorrelation
 SSIM = image_metrics.SSIM
+TotalVariation = image_metrics.TotalVariation
 WER = nlp_metrics.WER
 
 

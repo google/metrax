@@ -41,6 +41,7 @@ RougeN = nnx_metrics.RougeN
 SNR = nnx_metrics.SNR
 SpearmanRankCorrelation = nnx_metrics.SpearmanRankCorrelation
 SSIM = nnx_metrics.SSIM
+TotalVariation = nnx_metrics.TotalVariation
 WER = nnx_metrics.WER
 
 
