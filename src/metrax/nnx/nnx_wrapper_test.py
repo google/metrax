@@ -79,7 +79,7 @@ class NnxWrapperTest(parameterized.TestCase):
       sample_weights = np.ones_like(y_true)
 
     nnx_metric = metrax.nnx.MSE()
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       nnx_metric.update(
           predictions=logits,
           labels=labels,

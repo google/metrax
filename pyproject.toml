@@ -10,7 +10,7 @@ authors = [
 ]
 description = "A centralized JAX metrics library."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
@@ -43,8 +43,8 @@ Issues = "https://github.com/google/metrax/issues"
 dev = [
   "absl-py>=2.3.1",
   "jax[cpu]==0.6.2",
-  "jax_tpu_embedding==0.1.0.dev20250618",
-  "keras-hub",
+  "jax_tpu_embedding==0.1.0.dev20250618; platform_system != 'Darwin' and platform_system != 'Windows'",
+  "keras-hub;python_version<'3.13' and platform_system != 'Windows'",
   "keras-rs>=0.2.1",
   "nltk>=3.9.1",
   "pytest>=8.4.1",
@@ -58,7 +58,7 @@ dev = [
 docs = [
   "myst_nb",
   "sphinx-book-theme",
-  "scikit-learn==1.6.1",
+  "scikit-learn>=1.6.1",
 ]
 
 [tool.ruff]

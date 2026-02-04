@@ -23,12 +23,14 @@ import jax.numpy as jnp
 import keras_hub
 import metrax
 import numpy as np
+import sys
+import pytest
 
 np.random.seed(42)
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 13), reason="keras_hub not available for Python 3.13+")
 class NlpMetricsTest(parameterized.TestCase):
-
   def test_bleu_empty(self):
     """Tests the `empty` method of the `BLEU` class."""
     m = metrax.BLEU.empty()
@@ -90,7 +92,7 @@ class NlpMetricsTest(parameterized.TestCase):
     keras_metric = keras_hub.metrics.Bleu()
     keras_metric.update_state(references, predictions)
     metrax_metric = None
-    for ref_list, pred in zip(references, predictions):
+    for ref_list, pred in zip(references, predictions, strict=False):
       update = metrax.BLEU.from_model_output([pred], [ref_list])
       metrax_metric = (
           update if metrax_metric is None else metrax_metric.merge(update)
@@ -183,7 +185,7 @@ class NlpMetricsTest(parameterized.TestCase):
     keras_metric_array = jnp.stack(list(keras_metric.result().values()))
 
     metrax_metric = None
-    for ref, pred in zip(references, predictions):
+    for ref, pred in zip(references, predictions, strict=False):
       update = metrax_rouge.from_model_output([pred], [ref])
       metrax_metric = (
           update if metrax_metric is None else metrax_metric.merge(update)
@@ -249,7 +251,7 @@ class NlpMetricsTest(parameterized.TestCase):
     """Test that `Perplexity` Metric computes correct values."""
     keras_metric = keras_hub.metrics.Perplexity(from_logits=from_logits)
     metrax_metric = None
-    for index, (labels, logits) in enumerate(zip(y_true, y_pred)):
+    for index, (labels, logits) in enumerate(zip(y_true, y_pred, strict=False)):
       weights = sample_weights[index] if sample_weights is not None else None
       keras_metric.update_state(labels, logits, sample_weight=weights)
       update = metrax.Perplexity.from_model_output(
@@ -287,7 +289,7 @@ class NlpMetricsTest(parameterized.TestCase):
 
     metrax_token_metric = None
     keras_metric = keras_hub.metrics.EditDistance(normalize=True)
-    for pred, ref in zip(tokenized_preds, tokenized_refs):
+    for pred, ref in zip(tokenized_preds, tokenized_refs, strict=False):
       metrax_update = metrax.WER.from_model_output(pred,ref)
       keras_metric.update_state(ref, pred)
       metrax_token_metric = metrax_update if metrax_token_metric is None else metrax_token_metric.merge(metrax_update)
@@ -301,7 +303,7 @@ class NlpMetricsTest(parameterized.TestCase):
     )
 
     metrax_string_metric = None
-    for pred, ref in zip(string_preds, string_refs):
+    for pred, ref in zip(string_preds, string_refs, strict=False):
       update = metrax.WER.from_model_output(predictions=pred, references=ref)
       metrax_string_metric = update if metrax_string_metric is None else metrax_string_metric.merge(update)
 

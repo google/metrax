@@ -34,7 +34,7 @@ def _get_single_n_grams(segment: list[str], order: int):
   Returns:
     A collections.Counter mapping n-gram tuples to their counts.
   """
-  return collections.Counter(zip(*[segment[i:] for i in range(order)]))
+  return collections.Counter(zip(*[segment[i:] for i in range(order)], strict=False))
 
 
 def _get_ngrams(segment: list[str], max_order: int):
@@ -141,7 +141,7 @@ class BLEU(clu_metrics.Metric):
     pred_length = 0
     ref_length = 0
 
-    for pred, ref_list in zip(predictions, references):
+    for pred, ref_list in zip(predictions, references, strict=False):
       pred = pred.split()
       ref_list = [r.split() for r in ref_list]
       pred_length += len(pred)
@@ -383,7 +383,7 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
     total_f1 = 0.0
     num_examples = 0.0
 
-    for pred_str, ref_str in zip(predictions, references):
+    for pred_str, ref_str in zip(predictions, references, strict=False):
       pred_tokens = pred_str.split()
       ref_tokens = ref_str.split()
 

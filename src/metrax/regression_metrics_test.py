@@ -82,7 +82,7 @@ class RegressionMetricsTest(parameterized.TestCase):
 
     # 5. Verify against reference (Keras reference remains the same).
     keras_r2 = keras.metrics.R2Score()
-    for labels, logits in zip(OUTPUT_LABELS, OUTPUT_PREDS):
+    for labels, logits in zip(OUTPUT_LABELS, OUTPUT_PREDS, strict=False):
       keras_r2.update_state(
           labels[:, jnp.newaxis],
           logits[:, jnp.newaxis],
@@ -128,7 +128,7 @@ class RegressionMetricsTest(parameterized.TestCase):
     metric = metric_on_host.reduce()
 
     keras_r2 = keras.metrics.R2Score()
-    for labels, logits in zip(y_true, y_pred):
+    for labels, logits in zip(y_true, y_pred, strict=False):
       keras_r2.update_state(
           labels[:, jnp.newaxis],
           logits[:, jnp.newaxis],
@@ -178,7 +178,7 @@ class RegressionMetricsTest(parameterized.TestCase):
       sample_weights = np.ones_like(y_true)
 
     metric = None
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       update = metrax.MAE.from_model_output(
           predictions=logits,
           labels=labels,
@@ -220,7 +220,7 @@ class RegressionMetricsTest(parameterized.TestCase):
       sample_weights = np.ones_like(y_true)
 
     metric = None
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       update = metrax.MSE.from_model_output(
           predictions=logits,
           labels=labels,
@@ -263,7 +263,7 @@ class RegressionMetricsTest(parameterized.TestCase):
 
     metric = None
     keras_rmse = keras.metrics.RootMeanSquaredError()
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       update = metrax.RMSE.from_model_output(
           predictions=logits,
           labels=labels,
@@ -299,7 +299,7 @@ class RegressionMetricsTest(parameterized.TestCase):
       sample_weights = np.ones_like(y_true)
 
     metric = None
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       update = metrax.MSLE.from_model_output(
           predictions=logits,
           labels=labels,
@@ -339,7 +339,7 @@ class RegressionMetricsTest(parameterized.TestCase):
       sample_weights = np.ones_like(y_true)
 
     metric = None
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       update = metrax.RMSLE.from_model_output(
           predictions=logits,
           labels=labels,
@@ -380,7 +380,7 @@ class RegressionMetricsTest(parameterized.TestCase):
 
     metric = None
     keras_r2 = keras.metrics.R2Score()
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       update = metrax.RSQUARED.from_model_output(
           predictions=logits,
           labels=labels,
@@ -416,7 +416,7 @@ class RegressionMetricsTest(parameterized.TestCase):
     y_pred = y_pred.astype(y_true.dtype)
 
     metric = None
-    for labels, logits in zip(y_true, y_pred):
+    for labels, logits in zip(y_true, y_pred, strict=False):
       update = metrax.SpearmanRankCorrelation.from_model_output(
           predictions=logits,
           labels=labels,

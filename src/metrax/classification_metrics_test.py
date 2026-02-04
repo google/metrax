@@ -101,11 +101,11 @@ class ClassificationMetricsTest(parameterized.TestCase):
       sample_weights = np.ones_like(y_true)
     metrax_accuracy = metrax.Accuracy.empty()
     keras_accuracy = keras.metrics.Accuracy()
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       update = metrax.Accuracy.from_model_output(
-          predictions=logits,
-          labels=labels,
-          sample_weights=weights,
+        predictions=logits,
+        labels=labels,
+        sample_weights=weights,
       )
       metrax_accuracy = metrax_accuracy.merge(update)
       keras_accuracy.update_state(labels, logits, weights)
@@ -141,7 +141,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
     expected = keras_precision.result()
 
     metric = None
-    for logits, labels in zip(y_pred, y_true):
+    for logits, labels in zip(y_pred, y_true, strict=False):
       update = metrax.Precision.from_model_output(
           predictions=logits,
           labels=labels,
@@ -180,7 +180,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
     expected = keras_recall.result()
 
     metric = None
-    for logits, labels in zip(y_pred, y_true):
+    for logits, labels in zip(y_pred, y_true, strict=False):
       update = metrax.Recall.from_model_output(
           predictions=logits,
           labels=labels,
@@ -214,7 +214,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       sample_weights = np.ones_like(y_true)
 
     metric = None
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       update = metrax.AUCPR.from_model_output(
           predictions=logits,
           labels=labels,
@@ -223,7 +223,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       metric = update if metric is None else metric.merge(update)
 
     keras_aucpr = keras.metrics.AUC(curve='PR')
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       keras_aucpr.update_state(labels, logits, sample_weight=weights)
     expected = keras_aucpr.result()
     np.testing.assert_allclose(
@@ -255,7 +255,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       sample_weights = np.ones_like(y_true)
 
     metric = None
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       update = metrax.AUCROC.from_model_output(
           predictions=logits,
           labels=labels,
@@ -264,7 +264,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       metric = update if metric is None else metric.merge(update)
 
     keras_aucroc = keras.metrics.AUC(curve='ROC')
-    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights, strict=False):
       keras_aucroc.update_state(labels, logits, sample_weight=weights)
     expected = keras_aucroc.result()
     np.testing.assert_allclose(
