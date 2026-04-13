@@ -45,6 +45,7 @@ dev = [
   "jax[cpu]==0.6.2",
   "jax_tpu_embedding==0.1.0.dev20250618",
   "keras-hub",
+  "tokenizers",
   "keras-rs>=0.2.1",
   "nltk>=3.9.1",
   "pytest>=8.4.1",
@@ -52,6 +53,7 @@ dev = [
   "protobuf>=5.29.5",
   "rouge-score>=0.1.2",
   "scikit-learn>=1.7.1",
+  "sentencepiece",
   "tensorflow",
   "torchmetrics>=1.8.1",
 ]

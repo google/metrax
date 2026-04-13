@@ -20,6 +20,8 @@ import jax.numpy as jnp
 from metrax import base
 
 
+# TODO(jiwonshin): Move SNR class out of audio metrics since now it can be used
+# for image data as well.
 @flax.struct.dataclass
 class SNR(base.Average):
   r"""SNR (Signal-to-Noise Ratio) Metric for audio.
@@ -55,6 +57,13 @@ class SNR(base.Average):
   ) -> jax.Array:
     """Computes SNR (Signal-to-Noise Ratio) values for a batch of audio signals.
 
+    If the input has more than 2 dimensions, it is assumed that the first
+    dimension is the batch dimension and all others are signal dimensions. The
+    input is then reshaped to (batch, signal_dimensions) to compute the SNR over
+    all signal dimensions for each example in the batch. E.g. image data of
+    shape (batch, H, W, C) is reshaped to (batch, H * W * C) to compute the SNR
+    for each image in the batch.
+
     Args:
         preds: The estimated or predicted audio signal. JAX Array.
         target: The ground truth audio signal. JAX Array.
@@ -70,6 +79,10 @@ class SNR(base.Average):
           f'Input signals must have the same shape, but got {preds.shape} and'
           f' {target.shape}'
       )
+
+    if preds.ndim > 2:
+      target = jnp.reshape(target, (target.shape[0], -1))
+      preds = jnp.reshape(preds, (preds.shape[0], -1))
 
     target_processed, preds_processed = jax.lax.cond(
         zero_mean,

@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for metrax image metrics."""
+"""Tests for metrax audio metrics."""
 
 import os
 
 os.environ['KERAS_BACKEND'] = 'jax'
 
-from absl.testing import absltest
+from absl.testing import absltest  # pylint: disable=g-import-not-at-top
 from absl.testing import parameterized
 import jax.numpy as jnp
 import metrax
@@ -43,6 +43,13 @@ AUDIO_TARGET_2D = (np.random.randn(*AUDIO_SHAPE_2D) * 5.0).astype(np.float32)
 AUDIO_PREDS_2D_NOISY = (
     AUDIO_TARGET_2D + 0.5 * np.random.randn(*AUDIO_SHAPE_2D)
 ).astype(np.float32)
+# 3D batch of signals
+AUDIO_SHAPE_3D = (2, 3, 100)
+AUDIO_TARGET_3D = (np.random.randn(*AUDIO_SHAPE_3D) * 5.0).astype(np.float32)
+AUDIO_PREDS_3D_NOISY = (
+    AUDIO_TARGET_3D + 0.5 * np.random.randn(*AUDIO_SHAPE_3D)
+).astype(np.float32)
+
 # Target and preds are all zeros.
 AUDIO_SHAPE_ZEROS = (100,)
 AUDIO_TARGET_ZEROS = np.zeros(AUDIO_SHAPE_ZEROS).astype(np.float32)
@@ -89,6 +96,18 @@ class AudioMetricsTest(parameterized.TestCase):
           True,
       ),
       (
+          'snr_3d_noisy_false_zero_mean',
+          AUDIO_TARGET_3D,
+          AUDIO_PREDS_3D_NOISY,
+          False,
+      ),
+      (
+          'snr_3d_noisy_true_zero_mean',
+          AUDIO_TARGET_3D,
+          AUDIO_PREDS_3D_NOISY,
+          True,
+      ),
+      (
           'snr_zeros_false_zero_mean',
           AUDIO_TARGET_ZEROS,
           AUDIO_PREDS_ZEROS,
@@ -109,6 +128,10 @@ class AudioMetricsTest(parameterized.TestCase):
         zero_mean=zero_mean,
     )
     metrax_snr_result = metrax_snr_metric.compute()
+
+    if preds_np.ndim > 2:
+      preds_np = preds_np.reshape(preds_np.shape[0], -1)
+      target_np = target_np.reshape(target_np.shape[0], -1)
 
     torchmetrics_snr_result = (
         tm_snr.signal_noise_ratio(
