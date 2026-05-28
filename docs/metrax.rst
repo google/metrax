@@ -1,36 +1,15 @@
 Metrax Metrics
 ==============
 
-.. automodule:: metrax
+Metrax provides high-performance, JAX-native evaluation metrics organized into specialized categories. Select a category below to explore the available metrics and their API reference:
 
-.. autosummary::
-   :toctree: api/
-   :template: autosummary/class.rst
+.. toctree::
+   :maxdepth: 2
 
-   ~AUCPR
-   ~AUCROC
-   ~Accuracy
-   ~Average
-   ~AveragePrecisionAtK
-   ~BLEU
-   ~DCGAtK
-   ~Dice
-   ~FBetaScore
-   ~IoU
-   ~MAE
-   ~MRR
-   ~MSE
-   ~NDCGAtK
-   ~Perplexity
-   ~Precision
-   ~PrecisionAtK
-   ~PSNR
-   ~RMSE
-   ~RSQUARED
-   ~Recall
-   ~RecallAtK
-   ~RougeL
-   ~RougeN
-   ~SNR
-   ~SSIM
-   ~WER
+   base
+   classification
+   regression
+   ranking
+   nlp
+   image
+   audio
