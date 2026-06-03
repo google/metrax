@@ -17,7 +17,6 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import jax
 import metrax
-import metrax.nnx
 import numpy as np
 
 np.random.seed(42)
