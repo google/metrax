@@ -60,6 +60,7 @@ AUDIO_SHAPE = (2, 16000)
 AUDIO_PREDS = np.random.randn(*AUDIO_SHAPE).astype(np.float32)
 AUDIO_TARGETS = np.random.randn(*AUDIO_SHAPE).astype(np.float32)
 
+
 class MetraxTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
