@@ -19,6 +19,7 @@ import jax
 import metrax
 import numpy as np
 
+
 np.random.seed(42)
 BATCHES = 1
 BATCH_SIZE = 8
