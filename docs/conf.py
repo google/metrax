@@ -16,6 +16,8 @@
 
 import os
 import sys
+import importlib
+import metrax
 
 # Import local version of metrax.
 sys.path.insert(0, os.path.abspath('../src'))
@@ -84,8 +86,6 @@ autosummary_generate = True
 
 def _generate_rst_files() -> None:
   """Automates creation of Sphinx RST files for Metrax metrics."""
-  import importlib  # pylint: disable=import-outside-toplevel
-  import metrax  # pylint: disable=import-outside-toplevel
 
   mods = {}
   for name in metrax.__all__:
