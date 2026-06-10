@@ -14,9 +14,9 @@
 
 """Configuration file for the Sphinx documentation builder."""
 
+import importlib
 import os
 import sys
-import importlib
 import metrax
 
 # Import local version of metrax.
