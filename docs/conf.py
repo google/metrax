@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.abspath('../src'))
 # -- Project information
 
 project = 'metrax'
-copyright = '2025, The metrax Authors'
+copyright = '2025, The metrax Authors'  # pylint: disable=redefined-builtin
 author = 'The metrax Authors'
 
 release = ''
@@ -115,9 +115,7 @@ def _generate_rst_files() -> None:
         '   :template: autosummary/class.rst\n\n'
         f'{items}\n'
     )
-    with open(
-        os.path.join(docs_dir, f'{cat}.rst'), 'w', encoding='utf-8'
-    ) as f:
+    with open(os.path.join(docs_dir, f'{cat}.rst'), 'w', encoding='utf-8') as f:
       f.write(content)
 
   if cats:
@@ -134,9 +132,7 @@ def _generate_rst_files() -> None:
         f'Metrax Metrics\n==============\n\n{intro}\n\n'
         f'.. toctree::\n   :maxdepth: 2\n\n{toc}\n'
     )
-    with open(
-        os.path.join(docs_dir, 'metrax.rst'), 'w', encoding='utf-8'
-    ) as f:
+    with open(os.path.join(docs_dir, 'metrax.rst'), 'w', encoding='utf-8') as f:
       f.write(metrax_rst)
 
 
