@@ -135,5 +135,4 @@ def _generate_rst_files() -> None:
     with open(os.path.join(docs_dir, 'metrax.rst'), 'w', encoding='utf-8') as f:
       f.write(metrax_rst)
 
-
 _generate_rst_files()
