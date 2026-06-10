@@ -2,3 +2,57 @@
 .wy-side-nav-search .wy-nav-top {
     background: transparent;
 }
+
+/* Premium style for the metrics category TOC */
+.toctree-wrapper .toctree-l1 {
+    margin-top: 2rem !important;
+    margin-bottom: 0.75rem !important;
+    list-style-type: none !important;
+    /* Remove default list bullet for categories */
+}
+
+.toctree-wrapper .toctree-l1>a {
+    font-size: 1.3rem !important;
+    font-weight: 600 !important;
+    color: var(--pst-color-text-base, #1a202c) !important;
+    text-decoration: none !important;
+    border-bottom: 1px solid var(--pst-color-border, #e2e8f0) !important;
+    padding-bottom: 0.4rem !important;
+    display: inline-block !important;
+    width: 100% !important;
+}
+
+.toctree-wrapper .toctree-l2 {
+    margin-top: 0.4rem !important;
+    margin-bottom: 0.4rem !important;
+    list-style-type: none !important;
+    /* Custom spacing instead of default bullets */
+    padding-left: 1.25rem !important;
+    position: relative !important;
+}
+
+/* Elegant custom bullet for metrics */
+.toctree-wrapper .toctree-l2::before {
+    content: "•" !important;
+    color: var(--pst-color-primary, #3182ce) !important;
+    /* Sleek primary color */
+    font-weight: bold !important;
+    display: inline-block !important;
+    width: 1rem !important;
+    margin-left: -1rem !important;
+    position: absolute !important;
+    left: 0.75rem !important;
+}
+
+.toctree-wrapper .toctree-l2>a {
+    font-size: 1.05rem !important;
+    font-weight: 500 !important;
+    color: var(--pst-color-primary, #2b6cb0) !important;
+    text-decoration: none !important;
+    transition: color 0.15s ease !important;
+}
+
+.toctree-wrapper .toctree-l2>a:hover {
+    color: var(--pst-color-primary-hover, #1a365d) !important;
+    text-decoration: underline !important;
+}
