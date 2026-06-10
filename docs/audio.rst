@@ -3,7 +3,7 @@ Audio
 
 .. currentmodule:: metrax
 
-These metrics are used to evaluate audio and speech processing models.
+A collection of different metrics for audio models.
 
 .. autosummary::
    :toctree: api/

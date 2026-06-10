@@ -3,7 +3,7 @@ NLP
 
 .. currentmodule:: metrax
 
-These metrics are used to evaluate Natural Language Processing models.
+A collection of different metrics for NLP models.
 
 .. autosummary::
    :toctree: api/

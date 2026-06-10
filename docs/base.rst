@@ -3,7 +3,7 @@ Base
 
 .. currentmodule:: metrax
 
-These are base/helper metrics used across Metrax.
+A collection of base metrics for metrax.
 
 .. autosummary::
    :toctree: api/

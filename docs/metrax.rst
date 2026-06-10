@@ -7,9 +7,9 @@ Metrax provides high-performance, JAX-native evaluation metrics organized into s
    :maxdepth: 2
 
    base
-   classification
-   regression
-   ranking
-   nlp
-   image
    audio
+   classification
+   image
+   nlp
+   ranking
+   regression

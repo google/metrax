@@ -3,7 +3,7 @@ Regression
 
 .. currentmodule:: metrax
 
-These metrics are used to evaluate regression models.
+A collection of different metrics for regression models.
 
 .. autosummary::
    :toctree: api/
@@ -11,8 +11,8 @@ These metrics are used to evaluate regression models.
 
    ~MAE
    ~MSE
-   ~RMSE
    ~MSLE
+   ~RMSE
    ~RMSLE
    ~RSQUARED
    ~SpearmanRankCorrelation

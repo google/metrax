@@ -1,9 +1,9 @@
-Image & Vision
-==============
+Image
+=====
 
 .. currentmodule:: metrax
 
-These metrics are used to evaluate computer vision and image generation models.
+A collection of different metrics for image models.
 
 .. autosummary::
    :toctree: api/

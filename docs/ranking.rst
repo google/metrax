@@ -3,7 +3,7 @@ Ranking
 
 .. currentmodule:: metrax
 
-These metrics are used to evaluate search and ranking systems.
+A collection of different metrics for ranking models.
 
 .. autosummary::
    :toctree: api/
@@ -11,7 +11,7 @@ These metrics are used to evaluate search and ranking systems.
 
    ~AveragePrecisionAtK
    ~DCGAtK
-   ~NDCGAtK
    ~MRR
+   ~NDCGAtK
    ~PrecisionAtK
    ~RecallAtK
