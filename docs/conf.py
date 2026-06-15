@@ -14,8 +14,10 @@
 
 """Configuration file for the Sphinx documentation builder."""
 
+import importlib
 import os
 import sys
+import metrax
 
 # Import local version of metrax.
 sys.path.insert(0, os.path.abspath('../src'))
@@ -23,7 +25,7 @@ sys.path.insert(0, os.path.abspath('../src'))
 # -- Project information
 
 project = 'metrax'
-copyright = '2025, The metrax Authors'
+copyright = '2025, The metrax Authors'  # pylint: disable=redefined-builtin
 author = 'The metrax Authors'
 
 release = ''
@@ -80,3 +82,58 @@ autodoc_default_options = {
 }
 
 autosummary_generate = True
+
+
+def _generate_rst_files() -> None:
+  """Automates creation of Sphinx RST files for Metrax metrics."""
+
+  mods = {}
+  for name in metrax.__all__:
+    mod_name = getattr(metrax, name).__module__
+    mods.setdefault(mod_name, []).append(name)
+
+  docs_dir = os.path.dirname(os.path.abspath(__file__))
+  cats = []
+
+  for mod_name, metrics in mods.items():
+    cat = mod_name.split('.')[-1].replace('_metrics', '')
+    cats.append(cat)
+    title = cat.upper() if len(cat) <= 3 else cat.capitalize()
+    mod = sys.modules.get(mod_name)
+    if not mod:
+      mod = importlib.import_module(mod_name)
+    doc = getattr(mod, '__doc__', '') or ''
+    desc = doc.strip().split('\n\n')[0] if doc else ''
+    items = '\n'.join(f'   ~{m}' for m in sorted(metrics))
+
+    content = (
+        f'{title}\n{"=" * len(title)}\n\n'
+        '.. currentmodule:: metrax\n\n'
+        f'{desc}\n\n'
+        '.. autosummary::\n'
+        '   :toctree: api/\n'
+        '   :template: autosummary/class.rst\n\n'
+        f'{items}\n'
+    )
+    with open(os.path.join(docs_dir, f'{cat}.rst'), 'w', encoding='utf-8') as f:
+      f.write(content)
+
+  if cats:
+    toc = '\n'.join(
+        f'   {c}'
+        for c in sorted(cats, key=lambda x: (0 if x == 'base' else 1, x))
+    )
+    intro = (
+        'Metrax provides high-performance, JAX-native evaluation metrics'
+        ' organized into specialized categories. Select a category below to'
+        ' explore the available metrics and their API reference:'
+    )
+    metrax_rst = (
+        f'Metrax Metrics\n==============\n\n{intro}\n\n'
+        f'.. toctree::\n   :maxdepth: 2\n\n{toc}\n'
+    )
+    with open(os.path.join(docs_dir, 'metrax.rst'), 'w', encoding='utf-8') as f:
+      f.write(metrax_rst)
+
+
+_generate_rst_files()
