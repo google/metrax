@@ -26,6 +26,8 @@ Accuracy = classification_metrics.Accuracy
 Average = base.Average
 AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
 BLEU = nlp_metrics.BLEU
+BinaryAccuracy = classification_metrics.BinaryAccuracy
+CategoricalAccuracy = classification_metrics.CategoricalAccuracy
 CosineSimilarity = image_metrics.CosineSimilarity
 DCGAtK = ranking_metrics.DCGAtK
 Dice = image_metrics.Dice
@@ -48,6 +50,7 @@ RecallAtK = ranking_metrics.RecallAtK
 RougeL = nlp_metrics.RougeL
 RougeN = nlp_metrics.RougeN
 SNR = audio_metrics.SNR
+SparseCategoricalAccuracy = classification_metrics.SparseCategoricalAccuracy
 SpearmanRankCorrelation = regression_metrics.SpearmanRankCorrelation
 SSIM = image_metrics.SSIM
 WER = nlp_metrics.WER
@@ -60,6 +63,8 @@ __all__ = [
     "Average",
     "AveragePrecisionAtK",
     "BLEU",
+    "BinaryAccuracy",
+    "CategoricalAccuracy",
     "CosineSimilarity",
     "DCGAtK",
     "Dice",
@@ -77,6 +82,7 @@ __all__ = [
     "RMSE",
     "RMSLE",
     "RSQUARED",
+    "SparseCategoricalAccuracy",
     "SpearmanRankCorrelation",
     "Recall",
     "RecallAtK",

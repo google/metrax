@@ -111,6 +111,127 @@ class Accuracy(base.Average):
 
 
 @flax.struct.dataclass
+class BinaryAccuracy(base.Average):
+  r"""Computes binary classification accuracy for predictions and labels.
+
+  This metric calculates the proportion of correct predictions by comparing
+  `predictions >= threshold` and `labels` element-wise. It is the ratio of the
+  sum of weighted correct predictions to the sum of all corresponding weights.
+  If no `sample_weights` are provided, weights default to 1 for each element.
+  """
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+      threshold: float = 0.5,
+  ) -> 'BinaryAccuracy':
+    """Updates the metric state with new `predictions` and `labels`.
+
+    Args:
+      predictions: JAX array of predicted values.
+      labels: JAX array of true binary values (0 or 1).
+      sample_weights: Optional JAX array of sample weights.
+      threshold: The threshold parameter used to convert predicted probabilities
+        to binary decisions.
+
+    Returns:
+      An updated instance of `BinaryAccuracy` metric.
+    """
+    correct = (predictions >= threshold) == labels
+    count = jnp.ones_like(labels, dtype=jnp.int32)
+    if sample_weights is not None:
+      correct = correct * sample_weights
+      count = count * sample_weights
+    return cls(
+        total=correct.sum(),
+        count=count.sum(),
+    )
+
+
+@flax.struct.dataclass
+class CategoricalAccuracy(base.Average):
+  r"""Computes accuracy for one-hot categorical classification models.
+
+  This metric calculates the frequency with which the predicted class matches
+  the true class by comparing `argmax(predictions, axis=-1)` and
+  `argmax(labels, axis=-1)`. If no `sample_weights` are provided, weights
+  default to 1 for each element.
+  """
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+  ) -> 'CategoricalAccuracy':
+    """Updates the metric state with new `predictions` and `labels`.
+
+    Args:
+      predictions: JAX array of predicted probability distributions or logits.
+      labels: JAX array of one-hot encoded true class labels.
+      sample_weights: Optional JAX array of sample weights.
+
+    Returns:
+      An updated instance of `CategoricalAccuracy` metric.
+    """
+    correct = jnp.argmax(predictions, axis=-1) == jnp.argmax(
+        labels, axis=-1
+    )
+    count = jnp.ones_like(correct, dtype=jnp.int32)
+    if sample_weights is not None:
+      correct = correct * sample_weights
+      count = count * sample_weights
+    return cls(
+        total=correct.sum(),
+        count=count.sum(),
+    )
+
+
+@flax.struct.dataclass
+class SparseCategoricalAccuracy(base.Average):
+  r"""Computes accuracy for sparse categorical classification models.
+
+  This metric calculates the frequency with which the predicted class matches
+  the integer target class by comparing `argmax(predictions, axis=-1)` and
+  `labels`. If no `sample_weights` are provided, weights default to 1 for
+  each element.
+  """
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+  ) -> 'SparseCategoricalAccuracy':
+    """Updates the metric state with new `predictions` and `labels`.
+
+    Args:
+      predictions: JAX array of predicted probability distributions or logits.
+      labels: JAX array of ground truth integer class labels.
+      sample_weights: Optional JAX array of sample weights.
+
+    Returns:
+      An updated instance of `SparseCategoricalAccuracy` metric.
+    """
+    if labels.ndim == predictions.ndim:
+      labels = jnp.squeeze(labels, axis=-1)
+    correct = jnp.argmax(predictions, axis=-1) == labels
+    count = jnp.ones_like(labels, dtype=jnp.int32)
+    if sample_weights is not None:
+      correct = correct * sample_weights
+      count = count * sample_weights
+    return cls(
+        total=correct.sum(),
+        count=count.sum(),
+    )
+
+
+@flax.struct.dataclass
 class Precision(clu_metrics.Metric):
   r"""Computes precision for binary classification given `predictions` and `labels`.
 
