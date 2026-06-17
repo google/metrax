@@ -231,3 +231,24 @@ class WER(NnxWrapper):
 
   def __init__(self):
     super().__init__(metrax.WER)
+
+
+class BinaryAccuracy(NnxWrapper):
+  """An NNX class for the Metrax metric BinaryAccuracy."""
+
+  def __init__(self):
+    super().__init__(metrax.BinaryAccuracy)
+
+
+class CategoricalAccuracy(NnxWrapper):
+  """An NNX class for the Metrax metric CategoricalAccuracy."""
+
+  def __init__(self):
+    super().__init__(metrax.CategoricalAccuracy)
+
+
+class SparseCategoricalAccuracy(NnxWrapper):
+  """An NNX class for the Metrax metric SparseCategoricalAccuracy."""
+
+  def __init__(self):
+    super().__init__(metrax.SparseCategoricalAccuracy)

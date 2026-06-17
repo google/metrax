@@ -20,6 +20,8 @@ Accuracy = nnx_metrics.Accuracy
 Average = nnx_metrics.Average
 AveragePrecisionAtK = nnx_metrics.AveragePrecisionAtK
 BLEU = nnx_metrics.BLEU
+BinaryAccuracy = nnx_metrics.BinaryAccuracy
+CategoricalAccuracy = nnx_metrics.CategoricalAccuracy
 CosineSimilarity = nnx_metrics.CosineSimilarity
 DCGAtK = nnx_metrics.DCGAtK
 Dice = nnx_metrics.Dice
@@ -42,6 +44,7 @@ RecallAtK = nnx_metrics.RecallAtK
 RougeL = nnx_metrics.RougeL
 RougeN = nnx_metrics.RougeN
 SNR = nnx_metrics.SNR
+SparseCategoricalAccuracy = nnx_metrics.SparseCategoricalAccuracy
 SpearmanRankCorrelation = nnx_metrics.SpearmanRankCorrelation
 SSIM = nnx_metrics.SSIM
 WER = nnx_metrics.WER
@@ -53,6 +56,8 @@ __all__ = [
     "Average",
     "AveragePrecisionAtK",
     "BLEU",
+    "BinaryAccuracy",
+    "CategoricalAccuracy",
     "CosineSimilarity",
     "DCGAtK",
     "Dice",
@@ -73,6 +78,7 @@ __all__ = [
     "RougeL",
     "RougeN",
     "SNR",
+    "SparseCategoricalAccuracy",
     "SpearmanRankCorrelation",
     "SSIM",
     "WER",
