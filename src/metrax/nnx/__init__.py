@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Metrax NNX metrics collection."""
+
 from metrax.nnx import nnx_metrics
 
 AUCPR = nnx_metrics.AUCPR

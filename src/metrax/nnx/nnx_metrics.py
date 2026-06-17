@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""NNX wrapper metric implementations for Metrax."""
+
 import metrax
 from metrax.nnx import nnx_wrapper
 
@@ -80,11 +82,13 @@ class Dice(NnxWrapper):
   def __init__(self):
     super().__init__(metrax.Dice)
 
+
 class FBetaScore(NnxWrapper):
   """An NNX class for the Metrax metric FBetaScore."""
 
   def __init__(self):
     super().__init__(metrax.FBetaScore)
+
 
 class IoU(NnxWrapper):
   """An NNX class for the Metrax metric IoU."""
