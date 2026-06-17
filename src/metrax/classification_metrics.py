@@ -178,9 +178,7 @@ class CategoricalAccuracy(base.Average):
     Returns:
       An updated instance of `CategoricalAccuracy` metric.
     """
-    correct = jnp.argmax(predictions, axis=-1) == jnp.argmax(
-        labels, axis=-1
-    )
+    correct = jnp.argmax(predictions, axis=-1) == jnp.argmax(labels, axis=-1)
     count = jnp.ones_like(correct, dtype=jnp.int32)
     if sample_weights is not None:
       correct = correct * sample_weights

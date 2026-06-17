@@ -52,9 +52,9 @@ MC_LABELS_INT = np.random.randint(
     0, NUM_CLASSES, size=(BATCHES, BATCH_SIZE)
 ).astype(np.int32)
 MC_LABELS_OH = np.eye(NUM_CLASSES)[MC_LABELS_INT].astype(np.float32)
-MC_PREDS = np.random.uniform(
-    size=(BATCHES, BATCH_SIZE, NUM_CLASSES)
-).astype(np.float32)
+MC_PREDS = np.random.uniform(size=(BATCHES, BATCH_SIZE, NUM_CLASSES)).astype(
+    np.float32
+)
 MC_PREDS_F16 = MC_PREDS.astype(jnp.float16)
 MC_PREDS_BF16 = MC_PREDS.astype(jnp.bfloat16)
 
