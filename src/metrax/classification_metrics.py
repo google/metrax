@@ -64,7 +64,7 @@ class Accuracy(base.Average):
   """
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       labels: jax.Array,

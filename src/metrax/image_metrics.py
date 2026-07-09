@@ -315,7 +315,7 @@ class SSIM(base.Average):
     return jnp.mean(ssim_scores_stacked, axis=-1)  # (batch,)
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       targets: jax.Array,
@@ -360,7 +360,7 @@ class SSIM(base.Average):
         k1=k1,
         k2=k2,
     )
-    return super().from_model_output(values=batch_ssim_values)
+    return super().from_model_output(values=batch_ssim_values)  # pyrefly: ignore[bad-return]
 
 
 @flax.struct.dataclass
@@ -438,7 +438,7 @@ class IoU(base.Average):
     return jnp.mean(iou_scores_per_class)
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       targets: jax.Array,
@@ -508,7 +508,7 @@ class IoU(base.Average):
         target_class_ids=target_class_ids,
         epsilon=epsilon,
     )
-    return super().from_model_output(values=iou_score)
+    return super().from_model_output(values=iou_score)  # pyrefly: ignore[bad-return]
 
 
 @flax.struct.dataclass
@@ -570,7 +570,7 @@ class PSNR(base.Average):
     return psnr
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jnp.ndarray,
       targets: jnp.ndarray,
@@ -590,7 +590,7 @@ class PSNR(base.Average):
         A ``PSNR`` instance containing per‑image PSNR values.
     """
     batch_psnr = cls._calculate_psnr(predictions, targets, max_val=max_val)
-    return super().from_model_output(values=batch_psnr)
+    return super().from_model_output(values=batch_psnr)  # pyrefly: ignore[bad-return]
 
 
 @flax.struct.dataclass
@@ -681,7 +681,7 @@ class CosineSimilarity(base.Average):
   """
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       targets: jax.Array,
@@ -705,4 +705,4 @@ class CosineSimilarity(base.Average):
 
     cosine_similarity = dot_product / (predictions_norm * targets_norm)
 
-    return super().from_model_output(values=cosine_similarity)
+    return super().from_model_output(values=cosine_similarity)  # pyrefly: ignore[bad-return]

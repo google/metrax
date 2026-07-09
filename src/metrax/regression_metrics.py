@@ -44,7 +44,7 @@ class MAE(base.Average):
   """
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       labels: jax.Array,
@@ -100,7 +100,7 @@ class MSE(base.Average):
   """
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       labels: jax.Array,
@@ -176,7 +176,7 @@ class MSLE(base.Average):
   """
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       labels: jax.Array,

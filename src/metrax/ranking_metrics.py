@@ -106,7 +106,7 @@ class DCGAtK(base.Average):
     return dcg_at_ks
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       labels: jax.Array,
@@ -245,7 +245,7 @@ class AveragePrecisionAtK(base.Average):
     return ap_at_ks
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       labels: jax.Array,
@@ -344,7 +344,7 @@ class MRR(base.Average):
     return rr_at_ks
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       labels: jax.Array,
@@ -443,7 +443,7 @@ class TopKRankingMetric(base.Average, abc.ABC):
     raise NotImplementedError('Subclasses must implement this method.')
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       labels: jax.Array,

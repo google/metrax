@@ -103,7 +103,7 @@ class SNR(base.Average):
     return snr
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       targets: jax.Array,
@@ -126,4 +126,4 @@ class SNR(base.Average):
         targets,
         zero_mean=zero_mean,
     )
-    return super().from_model_output(values=batch_snr_value)
+    return super().from_model_output(values=batch_snr_value)  # pyrefly: ignore[bad-return]

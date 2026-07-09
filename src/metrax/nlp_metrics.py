@@ -186,7 +186,7 @@ class BLEU(clu_metrics.Metric):
   def compute(self) -> jax.Array:
     precisions = [0] * self.max_order
     for i in range(0, self.max_order):
-      precisions[i] = base.divide_no_nan(
+      precisions[i] = base.divide_no_nan(  # pyrefly: ignore[unsupported-operation]
           self.matches_by_order[i], self.possible_matches_by_order[i]
       )
     geo_mean = (
@@ -402,7 +402,7 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
         'total_f1': jnp.array(total_f1, dtype=jnp.float32),
         'num_examples': jnp.array(num_examples, dtype=jnp.float32),
     }
-    constructor_args.update(
+    constructor_args.update(  # pyrefly: ignore[no-matching-overload]
         cls._get_specific_constructor_args_for_class(**kwargs)
     )
     return cls(**constructor_args)
@@ -423,7 +423,7 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
         'total_f1': self.total_f1 + other.total_f1,
         'num_examples': self.num_examples + other.num_examples,
     }
-    merged_data.update(self._get_specific_fields_for_merge_constructor())
+    merged_data.update(self._get_specific_fields_for_merge_constructor())  # pyrefly: ignore[no-matching-overload]
     return type(self)(**merged_data)  # type: ignore[call-arg]
 
   def _validate_merge_specifics(self, other: 'RougeBase'):
@@ -569,7 +569,7 @@ class RougeN(RougeBase):
   order: int
 
   @classmethod
-  def empty(cls, order: int = 2) -> 'RougeN':
+  def empty(cls, order: int = 2) -> 'RougeN':  # pyrefly: ignore[bad-override]
     common_values = super()._get_common_initial_values()
     return cls(order=order, **common_values)
 
