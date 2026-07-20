@@ -47,6 +47,16 @@ SAMPLE_WEIGHTS = np.tile(
     [0.5, 1, 0, 0, 0, 0, 0, 0],
     (BATCHES, 1),
 ).astype(np.float32)
+NUM_CLASSES = 5
+MC_LABELS_INT = np.random.randint(
+    0, NUM_CLASSES, size=(BATCHES, BATCH_SIZE)
+).astype(np.int32)
+MC_LABELS_OH = np.eye(NUM_CLASSES)[MC_LABELS_INT].astype(np.float32)
+MC_PREDS = np.random.uniform(size=(BATCHES, BATCH_SIZE, NUM_CLASSES)).astype(
+    np.float32
+)
+MC_PREDS_F16 = MC_PREDS.astype(jnp.float16)
+MC_PREDS_BF16 = MC_PREDS.astype(jnp.bfloat16)
 
 
 class ClassificationMetricsTest(parameterized.TestCase):
@@ -88,6 +98,24 @@ class ClassificationMetricsTest(parameterized.TestCase):
     self.assertEqual(m.false_positives, jnp.array(0, jnp.float32))
     self.assertEqual(m.false_negatives, jnp.array(0, jnp.float32))
     self.assertEqual(m.beta, 1.0)
+
+  def test_binary_accuracy_empty(self):
+    """Tests the `empty` method of `BinaryAccuracy`."""
+    m = metrax.BinaryAccuracy.empty()
+    self.assertEqual(m.total, jnp.array(0, jnp.float32))
+    self.assertEqual(m.count, jnp.array(0, jnp.int32))
+
+  def test_categorical_accuracy_empty(self):
+    """Tests the `empty` method of `CategoricalAccuracy`."""
+    m = metrax.CategoricalAccuracy.empty()
+    self.assertEqual(m.total, jnp.array(0, jnp.float32))
+    self.assertEqual(m.count, jnp.array(0, jnp.int32))
+
+  def test_sparse_categorical_accuracy_empty(self):
+    """Tests the `empty` method of `SparseCategoricalAccuracy`."""
+    m = metrax.SparseCategoricalAccuracy.empty()
+    self.assertEqual(m.total, jnp.array(0, jnp.float32))
+    self.assertEqual(m.count, jnp.array(0, jnp.int32))
 
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
@@ -364,6 +392,99 @@ class ClassificationMetricsTest(parameterized.TestCase):
     # Precision = 1/2, Recall = 1/2
     # F1 = 2 * (0.5 * 0.5) / (0.5 + 0.5) = 0.5
     self.assertAlmostEqual(metric.compute(), 0.5)
+
+  @parameterized.named_parameters(
+      ('f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS, 0.5),
+      ('high_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS, 0.7),
+      ('low_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS, 0.1),
+      ('f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS, 0.5),
+      ('high_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS, 0.7),
+      ('low_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS, 0.1),
+      ('bf16', OUTPUT_LABELS, OUTPUT_PREDS_BF16, SAMPLE_WEIGHTS, 0.5),
+      ('bs_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None, 0.5),
+  )
+  def test_binary_accuracy(self, y_true, y_pred, sample_weights, threshold):
+    """Test that `BinaryAccuracy` metric computes correct values."""
+    if sample_weights is None:
+      sample_weights = np.ones_like(y_true)
+    metrax_metric = metrax.BinaryAccuracy.empty()
+    keras_metric = keras.metrics.BinaryAccuracy(threshold=threshold)
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      update = metrax.BinaryAccuracy.from_model_output(
+          predictions=logits,
+          labels=labels,
+          sample_weights=weights,
+          threshold=threshold,
+      )
+      metrax_metric = metrax_metric.merge(update)
+      keras_metric.update_state(labels, logits, weights)
+
+    rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        keras_metric.result(),
+        rtol=rtol,
+        atol=atol,
+    )
+
+  @parameterized.named_parameters(
+      ('f16', MC_LABELS_OH, MC_PREDS_F16, SAMPLE_WEIGHTS),
+      ('f32', MC_LABELS_OH, MC_PREDS, SAMPLE_WEIGHTS),
+      ('bf16', MC_LABELS_OH, MC_PREDS_BF16, None),
+  )
+  def test_categorical_accuracy(self, y_true, y_pred, sample_weights):
+    """Test that `CategoricalAccuracy` metric computes correct values."""
+    if sample_weights is None:
+      sample_weights = np.ones((BATCHES, BATCH_SIZE), dtype=np.float32)
+    metrax_metric = metrax.CategoricalAccuracy.empty()
+    keras_metric = keras.metrics.CategoricalAccuracy()
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      update = metrax.CategoricalAccuracy.from_model_output(
+          predictions=logits,
+          labels=labels,
+          sample_weights=weights,
+      )
+      metrax_metric = metrax_metric.merge(update)
+      keras_metric.update_state(labels, logits, weights)
+
+    rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        keras_metric.result(),
+        rtol=rtol,
+        atol=atol,
+    )
+
+  @parameterized.named_parameters(
+      ('f16', MC_LABELS_INT, MC_PREDS_F16, SAMPLE_WEIGHTS),
+      ('f32', MC_LABELS_INT, MC_PREDS, SAMPLE_WEIGHTS),
+      ('bf16', MC_LABELS_INT, MC_PREDS_BF16, None),
+  )
+  def test_sparse_categorical_accuracy(self, y_true, y_pred, sample_weights):
+    """Test that `SparseCategoricalAccuracy` computes correct values."""
+    if sample_weights is None:
+      sample_weights = np.ones((BATCHES, BATCH_SIZE), dtype=np.float32)
+    metrax_metric = metrax.SparseCategoricalAccuracy.empty()
+    keras_metric = keras.metrics.SparseCategoricalAccuracy()
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      update = metrax.SparseCategoricalAccuracy.from_model_output(
+          predictions=logits,
+          labels=labels,
+          sample_weights=weights,
+      )
+      metrax_metric = metrax_metric.merge(update)
+      keras_metric.update_state(labels, logits, weights)
+
+    rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        keras_metric.result(),
+        rtol=rtol,
+        atol=atol,
+    )
 
 
 if __name__ == '__main__':
