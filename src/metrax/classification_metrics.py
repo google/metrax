@@ -711,7 +711,7 @@ class BinaryAccuracy(base.Average):
   """
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       labels: jax.Array,
@@ -752,7 +752,7 @@ class CategoricalAccuracy(base.Average):
   """
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       labels: jax.Array,
@@ -790,7 +790,7 @@ class SparseCategoricalAccuracy(base.Average):
   """
 
   @classmethod
-  def from_model_output(
+  def from_model_output(  # pyrefly: ignore[bad-override]
       cls,
       predictions: jax.Array,
       labels: jax.Array,
