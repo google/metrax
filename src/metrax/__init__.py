@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Metrax public API and metric definitions."""
+
 from metrax import audio_metrics
 from metrax import base
 from metrax import classification_metrics

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A collection of NNX-compatible metrics for Metrax."""
+
 import metrax
 from metrax.nnx import nnx_wrapper
 

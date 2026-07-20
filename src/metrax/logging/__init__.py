@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Metrax logging backend implementations."""
+
 from metrax.logging import protocol
 from metrax.logging import tensorboard_backend
 from metrax.logging import wandb_backend
