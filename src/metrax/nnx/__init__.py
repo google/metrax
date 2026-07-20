@@ -19,7 +19,9 @@ AUCROC = nnx_metrics.AUCROC
 Accuracy = nnx_metrics.Accuracy
 Average = nnx_metrics.Average
 AveragePrecisionAtK = nnx_metrics.AveragePrecisionAtK
+BinaryAccuracy = nnx_metrics.BinaryAccuracy
 BLEU = nnx_metrics.BLEU
+CategoricalAccuracy = nnx_metrics.CategoricalAccuracy
 CosineSimilarity = nnx_metrics.CosineSimilarity
 DCGAtK = nnx_metrics.DCGAtK
 Dice = nnx_metrics.Dice
@@ -42,6 +44,7 @@ RecallAtK = nnx_metrics.RecallAtK
 RougeL = nnx_metrics.RougeL
 RougeN = nnx_metrics.RougeN
 SNR = nnx_metrics.SNR
+SparseCategoricalAccuracy = nnx_metrics.SparseCategoricalAccuracy
 SpearmanRankCorrelation = nnx_metrics.SpearmanRankCorrelation
 SSIM = nnx_metrics.SSIM
 WER = nnx_metrics.WER
@@ -52,7 +55,9 @@ __all__ = [
     "AUCROC",
     "Average",
     "AveragePrecisionAtK",
+    "BinaryAccuracy",
     "BLEU",
+    "CategoricalAccuracy",
     "CosineSimilarity",
     "DCGAtK",
     "Dice",
@@ -73,6 +78,7 @@ __all__ = [
     "RougeL",
     "RougeN",
     "SNR",
+    "SparseCategoricalAccuracy",
     "SpearmanRankCorrelation",
     "SSIM",
     "WER",

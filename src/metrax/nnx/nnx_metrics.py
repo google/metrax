@@ -53,11 +53,25 @@ class AveragePrecisionAtK(NnxWrapper):
     super().__init__(metrax.AveragePrecisionAtK)
 
 
+class BinaryAccuracy(NnxWrapper):
+  """An NNX class for the Metrax metric BinaryAccuracy."""
+
+  def __init__(self):
+    super().__init__(metrax.BinaryAccuracy)
+
+
 class BLEU(NnxWrapper):
   """An NNX class for the Metrax metric BLEU."""
 
   def __init__(self):
     super().__init__(metrax.BLEU)
+
+
+class CategoricalAccuracy(NnxWrapper):
+  """An NNX class for the Metrax metric CategoricalAccuracy."""
+
+  def __init__(self):
+    super().__init__(metrax.CategoricalAccuracy)
 
 
 class CosineSimilarity(NnxWrapper):
@@ -80,11 +94,13 @@ class Dice(NnxWrapper):
   def __init__(self):
     super().__init__(metrax.Dice)
 
+
 class FBetaScore(NnxWrapper):
   """An NNX class for the Metrax metric FBetaScore."""
 
   def __init__(self):
     super().__init__(metrax.FBetaScore)
+
 
 class IoU(NnxWrapper):
   """An NNX class for the Metrax metric IoU."""
@@ -210,6 +226,13 @@ class SNR(NnxWrapper):
 
   def __init__(self):
     super().__init__(metrax.SNR)
+
+
+class SparseCategoricalAccuracy(NnxWrapper):
+  """An NNX class for the Metrax metric SparseCategoricalAccuracy."""
+
+  def __init__(self):
+    super().__init__(metrax.SparseCategoricalAccuracy)
 
 
 class SpearmanRankCorrelation(NnxWrapper):
