@@ -43,6 +43,39 @@ def _default_threshold(num_thresholds: int) -> jax.Array:
   return thresholds
 
 
+def _apply_sample_weights(
+    sample_weights: jax.Array | None,
+    correct: jax.Array,
+    count: jax.Array,
+) -> tuple[jax.Array, jax.Array]:
+  """Applies sample weights to correct and count arrays."""
+  if sample_weights is not None:
+    if (
+        sample_weights.ndim == correct.ndim + 1
+        and sample_weights.shape[-1] == 1
+    ):
+      sample_weights = jnp.squeeze(sample_weights, axis=-1)
+    elif correct.ndim == sample_weights.ndim + 1 and correct.shape[-1] == 1:
+      correct = jnp.squeeze(correct, axis=-1)
+      count = jnp.squeeze(count, axis=-1)
+    correct = correct * sample_weights
+    count = count * sample_weights
+  return correct, count
+
+
+def _squeeze_mismatching_trailing_ones(
+    predictions: jax.Array, labels: jax.Array
+) -> tuple[jax.Array, jax.Array]:
+  """Squeezes mismatching trailing ones from predictions and labels."""
+  if predictions.ndim < labels.ndim:
+    if labels.shape[-1] == 1:
+      labels = jnp.squeeze(labels, axis=-1)
+  elif labels.ndim < predictions.ndim:
+    if predictions.shape[-1] == 1:
+      predictions = jnp.squeeze(predictions, axis=-1)
+  return predictions, labels
+
+
 @flax.struct.dataclass
 class Accuracy(base.Average):
   r"""Computes accuracy, which is the frequency with which `predictions` match `labels`.
@@ -102,8 +135,7 @@ class Accuracy(base.Average):
     correct = predictions == labels
     count = jnp.ones_like(labels, dtype=jnp.int32)
     if sample_weights is not None:
-      correct = correct * sample_weights
-      count = count * sample_weights
+      correct, count = _apply_sample_weights(sample_weights, correct, count)
     return cls(
         total=correct.sum(),
         count=count.sum(),
@@ -698,3 +730,139 @@ class FBetaScore(clu_metrics.Metric):
     denominator = (b2 * precision) + recall
 
     return base.divide_no_nan(numerator, denominator)
+
+
+@flax.struct.dataclass
+class BinaryAccuracy(base.Average):
+  r"""Computes binary classification accuracy for predictions and labels.
+
+  This metric calculates the proportion of correct predictions by comparing
+  `predictions >= threshold` and `labels` element-wise. It is the ratio of the
+  sum of weighted correct predictions to the sum of all corresponding weights.
+  If no `sample_weights` are provided, weights default to 1 for each element.
+  """
+
+  @classmethod
+  def from_model_output(  # pyrefly: ignore[bad-override]
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+      threshold: float = 0.5,
+  ) -> 'BinaryAccuracy':
+    """Updates the metric state with new `predictions` and `labels`.
+
+    Args:
+      predictions: JAX array of predicted values. Expected to have a shape
+        compatible with `labels` for element-wise comparison (e.g.,
+        `(batch_size,)`, `(batch_size, 1)`).
+      labels: JAX array of true values. Expected to have a shape compatible with
+        `predictions` for element-wise comparison.
+      sample_weights: Optional JAX array of weights. If provided, it must be
+        broadcastable to the shape of `labels` (which should also be compatible
+        with `predictions`' shape).
+      threshold: The threshold parameter used to convert predicted probabilities
+        to binary decisions.
+
+    Returns:
+      An updated instance of `BinaryAccuracy` metric.
+    """
+    predictions, labels = _squeeze_mismatching_trailing_ones(
+        predictions, labels
+    )
+    correct = (predictions >= threshold) == labels
+    count = jnp.ones_like(labels, dtype=jnp.int32)
+    if sample_weights is not None:
+      correct, count = _apply_sample_weights(sample_weights, correct, count)
+    return cls(
+        total=correct.sum(),
+        count=count.sum(),
+    )
+
+
+@flax.struct.dataclass
+class CategoricalAccuracy(base.Average):
+  r"""Computes accuracy for one-hot categorical classification models.
+
+  This metric calculates the frequency with which the predicted class matches
+  the true class by comparing `argmax(predictions, axis=-1)` and
+  `argmax(labels, axis=-1)`. If no `sample_weights` are provided, weights
+  default to 1 for each element.
+  """
+
+  @classmethod
+  def from_model_output(  # pyrefly: ignore[bad-override]
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+  ) -> 'CategoricalAccuracy':
+    """Updates the metric state with new `predictions` and `labels`.
+
+    Args:
+      predictions: JAX array of predicted values (typically logits or
+        probabilities). Expected to have a shape compatible with `labels` (e.g.,
+        `(batch_size, num_classes)`, `(batch_size, seq_len, num_features)`).
+      labels: JAX array of true one-hot values. Expected to have the same shape
+        as `predictions`.
+      sample_weights: Optional JAX array of weights. If provided, it must be
+        broadcastable to the shape of `labels` (which should also be compatible
+        with `predictions`' shape).
+
+    Returns:
+      An updated instance of `CategoricalAccuracy` metric.
+    """
+    correct = jnp.argmax(predictions, axis=-1) == jnp.argmax(labels, axis=-1)
+    count = jnp.ones_like(correct, dtype=jnp.int32)
+    if sample_weights is not None:
+      correct, count = _apply_sample_weights(sample_weights, correct, count)
+    return cls(
+        total=correct.sum(),
+        count=count.sum(),
+    )
+
+
+@flax.struct.dataclass
+class SparseCategoricalAccuracy(base.Average):
+  r"""Computes accuracy for sparse categorical classification models.
+
+  This metric calculates the frequency with which the predicted class matches
+  the integer target class by comparing `argmax(predictions, axis=-1)` and
+  `labels`. If no `sample_weights` are provided, weights default to 1 for
+  each element.
+  """
+
+  @classmethod
+  def from_model_output(  # pyrefly: ignore[bad-override]
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+  ) -> 'SparseCategoricalAccuracy':
+    """Updates the metric state with new `predictions` and `labels`.
+
+    Args:
+      predictions: JAX array of predicted values (typically logits or
+        probabilities). Expected to have one additional class dimension at the
+        end compared to `labels` (e.g., predictions: `(batch_size, num_classes)`
+        and labels: `(batch_size,)`).
+      labels: JAX array of true integer values. Expected to have a shape
+        compatible with `predictions` for element-wise comparison (e.g.,
+        `(batch_size,)`, `(batch_size, 1)`, `(batch_size, seq_len)`).
+      sample_weights: Optional JAX array of weights. If provided, it must be
+        broadcastable to the shape of `labels` (which should also be compatible
+        with `predictions`' shape).
+
+    Returns:
+      An updated instance of `SparseCategoricalAccuracy` metric.
+    """
+    if labels.ndim == predictions.ndim and labels.shape[-1] == 1:
+      labels = jnp.squeeze(labels, axis=-1)
+    correct = jnp.argmax(predictions, axis=-1) == labels
+    count = jnp.ones_like(labels, dtype=jnp.int32)
+    if sample_weights is not None:
+      correct, count = _apply_sample_weights(sample_weights, correct, count)
+    return cls(
+        total=correct.sum(),
+        count=count.sum(),
+    )
