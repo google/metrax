@@ -28,8 +28,18 @@ Please make sure that your PR passes all tests by running `pytest ./src/` on you
 local machine. Also, you can run only tests that are affected by your code
 changes, but you will need to select them manually.
 
-Metrax uses [ruff](https://github.com/astral-sh/ruff) for linting. Before
-sending a PR please run `ruff check` to catch any issues.
+Metrax uses [ruff](https://github.com/astral-sh/ruff) for linting and formatting, managed via [pre-commit](https://pre-commit.com/).
+
+To set up pre-commit hooks locally:
+```bash
+pip install -e ".[dev]"
+pre-commit install
+```
+
+Once installed, pre-commit will automatically run `ruff` linting and formatting checks whenever you commit changes. You can also run the hooks manually on all files:
+```bash
+pre-commit run --all-files
+```
 
 ## Community Guidelines
 
