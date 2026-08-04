@@ -388,9 +388,6 @@ class ClassificationMetricsTest(parameterized.TestCase):
         )
         metric = update if metric is None else metric.merge(update)
 
-    print("Metrax Answer: ", metric.compute())
-    print("Keras Answer: ", expected)
-
     # Use lower tolerance for lower precision dtypes.
     rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
     atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
