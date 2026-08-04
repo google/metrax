@@ -712,6 +712,20 @@ class FBetaScore(clu_metrics.Metric):
         beta=beta,
     )
 
+  # Merge datasets together
+  def merge(self, other: 'FBetaScore') -> 'FBetaScore':
+
+    # Check if the incoming beta is the same value as the current beta
+    if other.beta == self.beta:
+        return type(self)(
+            true_positives=self.true_positives + other.true_positives,
+            false_positives=self.false_positives + other.false_positives,
+            false_negatives=self.false_negatives + other.false_negatives,
+            beta=self.beta,
+        )
+    else:
+        raise ValueError('The "Beta" values between the two are not equal.')
+
   # Compute the F-Beta score metric
   def compute(self) -> jax.Array:
 
