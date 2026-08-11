@@ -42,12 +42,16 @@ Issues = "https://github.com/google/metrax/issues"
 [project.optional-dependencies]
 dev = [
   "absl-py>=2.3.1",
+  "grain",
+  "importlib-resources",
   "jax[cpu]==0.6.2",
   "jax_tpu_embedding==0.1.0.dev20250618",
   "keras-hub",
   "tokenizers",
   "keras-rs>=0.2.1",
   "nltk>=3.9.1",
+  "opencv-python-headless",
+  "optax",
   "pytest>=8.4.1",
   "Pillow>=9.0.0",
   "protobuf>=5.29.5",
@@ -55,6 +59,7 @@ dev = [
   "scikit-learn>=1.7.1",
   "sentencepiece",
   "tensorflow",
+  "tensorflow-datasets",
   "torchmetrics>=1.8.1",
 ]
 docs = [
