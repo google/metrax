@@ -67,12 +67,10 @@ def _squeeze_mismatching_trailing_ones(
     predictions: jax.Array, labels: jax.Array
 ) -> tuple[jax.Array, jax.Array]:
   """Squeezes mismatching trailing ones from predictions and labels."""
-  if predictions.ndim < labels.ndim:
-    if labels.shape[-1] == 1:
-      labels = jnp.squeeze(labels, axis=-1)
-  elif labels.ndim < predictions.ndim:
-    if predictions.shape[-1] == 1:
-      predictions = jnp.squeeze(predictions, axis=-1)
+  if predictions.ndim < labels.ndim and labels.shape[-1] == 1:
+    labels = jnp.squeeze(labels, axis=-1)
+  elif labels.ndim < predictions.ndim and predictions.shape[-1] == 1:
+    predictions = jnp.squeeze(predictions, axis=-1)
   return predictions, labels
 
 
