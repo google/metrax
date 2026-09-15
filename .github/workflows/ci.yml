@@ -20,6 +20,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install ".[dev]"
+          pip install --upgrade keras-hub-nightly
       - name: Run Unit Tests
         run: |
           pytest ./src/

@@ -56,7 +56,7 @@ def _get_ngrams(segment: list[str], max_order: int):
 
 def _lcs_length(str1: list[str], str2: list[str]) -> int:
   """Computes the length of the Longest Common Subsequence (LCS)."""
-  lengths = [[0 for j in range(len(str2) + 1)] for i in range(len(str1) + 1)]
+  lengths = [[0 for _ in range(len(str2) + 1)] for _ in range(len(str1) + 1)]
   for i, x in enumerate(str1):
     for j, y in enumerate(str2):
       if x == y:
@@ -216,12 +216,14 @@ class Perplexity(clu_metrics.Metric):
   Given a sequence of :math:`N` tokens, perplexity is calculated as:
 
   .. math::
-      Perplexity = \exp\left(-\frac{1}{N}\sum_{i=1}^{N} \log P(x_i|x_{<i})\right)
+      Perplexity = \exp\left(-\frac{1}{N}\sum_{i=1}^{N} \log
+      P(x_i|x_{<i})\right)
 
   When sample weights :math:`w_i` are provided:
 
   .. math::
-      Perplexity = \exp\left(-\frac{\sum_{i=1}^{N} w_i\log P(x_i|x_{<i})}{\sum_{i=1}^{N} w_i}\right)
+      Perplexity = \exp\left(-\frac{\sum_{i=1}^{N} w_i\log
+      P(x_i|x_{<i})}{\sum_{i=1}^{N} w_i}\right)
 
   where:
       - :math:`P(x_i|x_{<i})` is the predicted probability of token :math:`x_i`
@@ -229,7 +231,8 @@ class Perplexity(clu_metrics.Metric):
       - :math:`w_i` are sample weights
       - :math:`N` is the sequence length
 
-  Lower perplexity indicates better prediction - the model is less "perplexed" by the data.
+  Lower perplexity indicates better prediction - the model is less "perplexed"
+  by the data.
   """
 
   aggregate_crossentropy: jax.Array
@@ -238,8 +241,9 @@ class Perplexity(clu_metrics.Metric):
   @classmethod
   def empty(cls) -> 'Perplexity':
     return cls(
-      aggregate_crossentropy=jnp.array(0, jnp.float32),
-      num_samples=jnp.array(0, jnp.float32))
+        aggregate_crossentropy=jnp.array(0, jnp.float32),
+        num_samples=jnp.array(0, jnp.float32),
+    )
 
   @classmethod
   def from_model_output(
@@ -252,12 +256,11 @@ class Perplexity(clu_metrics.Metric):
     """Updates the metric.
 
     Args:
-      predictions: A floating point tensor representing the prediction
-      generated from the model. The shape should be (batch_size, seq_len,
-      vocab_size).
+      predictions: A floating point tensor representing the prediction generated
+        from the model. The shape should be (batch_size, seq_len, vocab_size).
       labels: True value. The shape should be (batch_size, seq_len).
-      sample_weights: An optional tensor representing the
-        weight of each token. The shape should be (batch_size, seq_len).
+      sample_weights: An optional tensor representing the weight of each token.
+        The shape should be (batch_size, seq_len).
       from_logits: Whether the predictions are logits. If True, the predictions
         are converted to probabilities using a softmax. If False, all values
         outside of [0, 1] are clipped to 0 or 1.
@@ -282,20 +285,15 @@ class Perplexity(clu_metrics.Metric):
     labels_one_hot = jax.nn.one_hot(labels, predictions.shape[-1], axis=-1)
     crossentropy = -jnp.sum(labels_one_hot * log_prob, axis=-1)
 
-    # Sum across sequence length dimension first.
     if sample_weights is not None:
+      num_tokens = jnp.sum(sample_weights)
       crossentropy = crossentropy * sample_weights
-      # Normalize by the sum of weights for each sequence.
-      crossentropy = base.divide_no_nan(
-          jnp.sum(crossentropy), jnp.sum(sample_weights)
-      )
     else:
-      crossentropy = jnp.mean(crossentropy)
+      num_tokens = jnp.array(labels.size)
 
-    batch_size = jnp.array(labels.shape[0])
     return cls(
-        aggregate_crossentropy=(batch_size * crossentropy),
-        num_samples=batch_size,
+        aggregate_crossentropy=(jnp.sum(crossentropy)),
+        num_samples=num_tokens,
     )
 
   def merge(self, other: 'Perplexity') -> 'Perplexity':
@@ -669,7 +667,7 @@ class WER(base.Average):
     )
 
   @staticmethod
-  def _levenshtein_distance(prediction: list, reference: list) -> int:
+  def _levenshtein_distance(prediction: list[str], reference: list[str]) -> int:
     """Computes the Levenshtein (edit) distance between two token sequences.
 
     Args:
