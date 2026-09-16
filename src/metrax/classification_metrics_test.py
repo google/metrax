@@ -356,12 +356,37 @@ class ClassificationMetricsTest(parameterized.TestCase):
   def test_fbetascore(self, y_true, y_pred, threshold, beta):
     # Define the Keras FBeta class to be tested against
     keras_fbeta = keras.metrics.FBetaScore(beta=beta, threshold=threshold)
-    keras_fbeta.update_state(y_true, y_pred)
+
+    for labels, logits in zip(y_true, y_pred ):
+        # Reshape each batch to be in a 2D array so that Keras accepts it.
+        label_size = labels.shape[-1]
+        logits_size = logits.shape[-1]
+        labels = labels.reshape(1, label_size)
+        logits = logits.reshape(1, logits_size)
+
+        # Update Keras' values
+        keras_fbeta.update_state(labels, logits)
+
     expected = keras_fbeta.result()
 
     # Calculate the F-beta score using the metrax variant
-    metric = metrax.FBetaScore
-    metric = metric.from_model_output(y_pred, y_true, beta, threshold)
+    metric = None
+    for labels, logits in zip(y_true, y_pred):
+        # Reshape each batch to be in a 2D array so that Metrax understands it in a way like Keras.
+        # If I don't do this then Metrax will try to give a single output answer instead of something similar to Keras.
+        # For some currently unknown reason
+        label_size = labels.shape[-1]
+        logits_size = logits.shape[-1]
+        labels = labels.reshape(1, label_size)
+        logits = logits.reshape(1, logits_size)
+
+        update = metrax.FBetaScore.from_model_output(
+            predictions=logits,
+            labels=labels,
+            beta=beta,
+            threshold=threshold,
+        )
+        metric = update if metric is None else metric.merge(update)
 
     # Use lower tolerance for lower precision dtypes.
     rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
