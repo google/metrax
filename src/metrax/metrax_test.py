@@ -17,8 +17,8 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import jax
 import metrax
-import metrax.nnx
 import numpy as np
+
 
 np.random.seed(42)
 BATCHES = 1
@@ -59,6 +59,7 @@ IOU_TARGET_CLASS_IDS = np.array([0, 1])
 AUDIO_SHAPE = (2, 16000)
 AUDIO_PREDS = np.random.randn(*AUDIO_SHAPE).astype(np.float32)
 AUDIO_TARGETS = np.random.randn(*AUDIO_SHAPE).astype(np.float32)
+
 
 class MetraxTest(parameterized.TestCase):
 
