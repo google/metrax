@@ -15,6 +15,7 @@
 """A wrapper for metrax metrics to be used with NNX."""
 
 from flax import nnx
+import inspect
 
 
 class NnxWrapper(nnx.metrics.Metric):
@@ -27,7 +28,25 @@ class NnxWrapper(nnx.metrics.Metric):
     self.clu_metric = self.clu_metric.empty()
 
   def update(self, **kwargs) -> None:
-    other_clu_metric = self.clu_metric.from_model_output(**kwargs)
+    # Filter kwargs to only those accepted by from_model_output
+    sig = inspect.signature(self.clu_metric.from_model_output)
+    params = sig.parameters
+    has_var_keyword = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+    if has_var_keyword:
+      # Method accepts **kwargs, pass everything
+      filtered_kwargs = kwargs
+    else:
+      accepted = {
+        name
+        for name, p in params.items()
+        if p.kind
+        in (
+          inspect.Parameter.POSITIONAL_OR_KEYWORD,
+          inspect.Parameter.KEYWORD_ONLY,
+        )
+      }
+      filtered_kwargs = {k: v for k, v in kwargs.items() if k in accepted}
+    other_clu_metric = self.clu_metric.from_model_output(**filtered_kwargs)
     self.clu_metric = self.clu_metric.merge(other_clu_metric)
 
   def compute(self):

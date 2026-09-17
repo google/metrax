@@ -16,6 +16,7 @@
 
 from absl.testing import absltest
 from absl.testing import parameterized
+from flax import nnx
 import jax.numpy as jnp
 import metrax
 import metrax.nnx
@@ -102,6 +103,30 @@ class NnxWrapperTest(parameterized.TestCase):
         rtol=rtol,
         atol=atol,
     )
+  def test_update_ignores_extra_kwargs(self):
+    """Tests that NnxWrapper ignores extra kwargs not accepted by the metric."""
+    nnx_metric = metrax.nnx.MSE()
+    # Should not raise even though 'extra_arg' is not a valid parameter.
+    nnx_metric.update(
+        predictions=jnp.array([1.0, 2.0, 3.0]),
+        labels=jnp.array([1.5, 2.5, 3.5]),
+        extra_arg=jnp.array([0.0]),
+    )
+    np.testing.assert_allclose(nnx_metric.compute(), 0.25, rtol=1e-5)
+
+  def test_multi_metric_with_different_kwargs(self):
+    """Tests that NnxWrapper works with MultiMetric passing mixed kwargs."""
+    metrics = nnx.MultiMetric(
+        loss=metrax.nnx.Average(),
+        accuracy=metrax.nnx.Accuracy(),
+    )
+    metrics.update(
+        values=jnp.array([0.5, 0.2]),
+        predictions=jnp.array([0, 1]),
+        labels=jnp.array([0, 1]),
+    )
+    np.testing.assert_allclose(metrics.compute()['loss'], 0.35, rtol=1e-5)
+    np.testing.assert_allclose(metrics.compute()['accuracy'], 1.0, rtol=1e-5)
 
 
 if __name__ == '__main__':
