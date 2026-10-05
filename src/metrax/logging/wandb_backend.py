@@ -45,8 +45,7 @@ class WandbBackend:
 
     try:
       # pylint: disable=g-import-not-at-top
-      # pytype: disable=import-error
-      import wandb
+      import wandb  # pyrefly: ignore[missing-import]
     except ImportError as e:
       raise ImportError(
           "The 'wandb' library is not installed. Please install it with "
