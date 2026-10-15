@@ -238,6 +238,13 @@ class MetraxTest(parameterized.TestCase):
               'zero_mean': False,
           },
       ),
+      (
+          'total_variation',
+          metrax.TotalVariation,
+          {
+              'predictions': PRED_IMGS,
+          },
+      ),
   )
   def test_metrics_jittable(self, metric, kwargs):
     """Tests that jitted metrax metric yields the same result as non-jitted metric."""

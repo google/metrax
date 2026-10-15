@@ -600,5 +600,32 @@ class ImageMetricsTest(parameterized.TestCase):
 
     np.testing.assert_allclose(result, expected, rtol=1e-5, atol=1e-5)
 
+  @parameterized.named_parameters(
+      ('tv_basic_f32', PREDS_1),
+      ('tv_multichannel_norm', PREDS_2),
+      ('tv_uint8_range_single_channel', PREDS_3),
+      ('tv_constant_image', np.ones_like(PREDS_4)),
+      ('tv_large_batch', PREDS_6),
+  )
+  def test_total_variation_against_tensorflow(
+      self, predictions_np: np.ndarray
+  ) -> None:
+    """Test that metrax.TotalVariation computes values matching tf.image.total_variation."""
+    metrax_tv = metrax.TotalVariation.from_model_output(
+        predictions=jnp.array(predictions_np),
+    ).compute()
+
+    tf_tv = tf.image.total_variation(predictions_np.astype(np.float32))
+    tf_mean = tf.reduce_mean(tf_tv).numpy()
+
+    np.testing.assert_allclose(
+        metrax_tv,
+        tf_mean,
+        rtol=1e-4,
+        atol=1e-4,
+        err_msg='TotalVariation mismatch',
+    )
+
+
 if __name__ == '__main__':
   absltest.main()
