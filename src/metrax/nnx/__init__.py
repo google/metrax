@@ -49,6 +49,7 @@ SNR = nnx_metrics.SNR
 SparseCategoricalAccuracy = nnx_metrics.SparseCategoricalAccuracy
 SpearmanRankCorrelation = nnx_metrics.SpearmanRankCorrelation
 SSIM = nnx_metrics.SSIM
+TotalVariation = nnx_metrics.TotalVariation
 WER = nnx_metrics.WER
 
 
@@ -83,5 +84,6 @@ __all__ = [
     "SparseCategoricalAccuracy",
     "SpearmanRankCorrelation",
     "SSIM",
+    "TotalVariation",
     "WER",
 ]

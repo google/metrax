@@ -706,3 +706,57 @@ class CosineSimilarity(base.Average):
     cosine_similarity = dot_product / (predictions_norm * targets_norm)
 
     return super().from_model_output(values=cosine_similarity)  # pyrefly: ignore[bad-return]
+
+
+@flax.struct.dataclass
+class TotalVariation(base.Average):
+  r"""Calculates the Total Variation (TV) of a batch of images.
+
+  Total variation is the sum of the absolute differences for neighboring pixel
+  values in the input images, measuring how much noise is in the images.
+
+  .. math::
+
+      \text{TV}(I) = \sum_{i,j,c} |I_{i+1, j, c} - I_{i, j, c}| +
+      \sum_{i,j,c} |I_{i, j+1, c} - I_{i, j, c}|
+  """
+
+  @staticmethod
+  def _calculate_total_variation(images: jax.Array) -> jax.Array:
+    """Computes per-image Total Variation values.
+
+    Args:
+      images: Input images of shape ``(batch, H, W, C)``.
+
+    Returns:
+      A 1D JAX array of shape ``(batch,)`` containing Total Variation per image.
+    """
+    images = jnp.asarray(images, dtype=jnp.float32)
+    if images.ndim != 4:
+      raise ValueError(
+          'Inputs must be 4-D (batch, height, width, channels), got'
+          f' {images.ndim}-D.'
+      )
+    pixel_dif1 = images[:, 1:, :, :] - images[:, :-1, :, :]
+    pixel_dif2 = images[:, :, 1:, :] - images[:, :, :-1, :]
+    tot_var = jnp.sum(jnp.abs(pixel_dif1), axis=(1, 2, 3)) + jnp.sum(
+        jnp.abs(pixel_dif2), axis=(1, 2, 3)
+    )
+    return tot_var
+
+  @classmethod
+  def from_model_output(  # pyrefly: ignore[bad-override]
+      cls,
+      predictions: jax.Array,
+  ) -> 'TotalVariation':
+    """Computes Total Variation for a batch of images.
+
+    Args:
+      predictions: A JAX array of images with shape ``(batch, H, W, C)``.
+
+    Returns:
+      A ``TotalVariation`` instance containing per-image TV values.
+    """
+    batch_tv = cls._calculate_total_variation(predictions)
+    return super().from_model_output(values=batch_tv)  # pyrefly: ignore[bad-return]
+
