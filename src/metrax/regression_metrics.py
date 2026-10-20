@@ -23,7 +23,7 @@ from metrax import base
 
 @flax.struct.dataclass
 class MAE(base.Average):
-  r"""Computes the mean absolute error for regression problems given `predictions` and `labels`.
+  r"""Computes mean absolute error for regression problems.
 
   The mean absolute error without sample weights is defined as:
 
@@ -79,7 +79,7 @@ class MAE(base.Average):
 
 @flax.struct.dataclass
 class MSE(base.Average):
-  r"""Computes the mean squared error for regression problems given `predictions` and `labels`.
+  r"""Computes mean squared error for regression problems.
 
   The mean squared error without sample weights is defined as:
 
@@ -135,7 +135,7 @@ class MSE(base.Average):
 
 @flax.struct.dataclass
 class RMSE(MSE):
-  r"""Computes the root mean squared error for regression problems given `predictions` and `labels`.
+  r"""Computes root mean squared error for regression problems.
 
   The root mean squared error without sample weights is defined as:
 
@@ -162,7 +162,7 @@ class RMSE(MSE):
 
 @flax.struct.dataclass
 class MSLE(base.Average):
-  r"""Computes the mean squared logarithmic error for regression problems given `predictions` and `labels`.
+  r"""Computes mean squared logarithmic error for regression problems.
 
   The mean squared logarithmic error is defined as:
 
@@ -209,7 +209,7 @@ class MSLE(base.Average):
 
 @flax.struct.dataclass
 class RMSLE(MSLE):
-  r"""Computes the root mean squared logarithmic error for regression problems given `predictions` and `labels`.
+  r"""Computes root mean squared logarithmic error for regression problems.
 
   The root mean squared logarithmic error is defined as:
 

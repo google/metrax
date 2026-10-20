@@ -76,7 +76,7 @@ def _squeeze_mismatching_trailing_ones(
 
 @flax.struct.dataclass
 class Accuracy(base.Average):
-  r"""Computes accuracy, which is the frequency with which `predictions` match `labels`.
+  r"""Computes accuracy, the frequency with which `predictions` match `labels`.
 
   This metric calculates the proportion of correct predictions by comparing
   `predictions` and `labels` element-wise. It is the ratio of the sum of
@@ -142,7 +142,7 @@ class Accuracy(base.Average):
 
 @flax.struct.dataclass
 class Precision(clu_metrics.Metric):
-  r"""Computes precision for binary classification given `predictions` and `labels`.
+  r"""Computes precision for binary classification.
 
   It is calculated as:
 
@@ -216,7 +216,7 @@ class Precision(clu_metrics.Metric):
 
 @flax.struct.dataclass
 class Recall(clu_metrics.Metric):
-  r"""Computes recall for binary classification given `predictions` and `labels`.
+  r"""Computes recall for binary classification.
 
   It is calculated as:
 
@@ -287,7 +287,7 @@ class Recall(clu_metrics.Metric):
 
 @flax.struct.dataclass
 class AUCPR(clu_metrics.Metric):
-  r"""Computes area under the precision-recall curve for binary classification given `predictions` and `labels`.
+  r"""Computes area under the precision-recall curve for binary classification.
 
   The Precision-Recall curve shows the tradeoff between precision and recall at
   different
