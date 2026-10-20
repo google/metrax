@@ -24,12 +24,13 @@ information on using pull requests.
 
 ## Testing
 
-Please make sure that your PR passes all tests by running `pytest ./src/` on your
-local machine. Also, you can run only tests that are affected by your code
+Please make sure that your PR passes all tests by running `pytest ./src/` on
+your local machine. Also, you can run only tests that are affected by your code
 changes, but you will need to select them manually.
 
-Metrax uses [ruff](https://github.com/astral-sh/ruff) for linting. Before
-sending a PR please run `ruff check` to catch any issues.
+Metrax uses [ruff](https://github.com/astral-sh/ruff) for linting and
+[Pyink](https://github.com/google/pyink) for formatting. Before sending a PR,
+please run `ruff check .` and `pyink .` to catch any issues.
 
 ## Community Guidelines
 

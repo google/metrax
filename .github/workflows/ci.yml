@@ -18,8 +18,9 @@ jobs:
           python-version: "3.12"
       - name: Lint
         run: |
-          pip install ruff==0.16.5
+          pip install ruff==0.16.5 pyink==26.5.1
           ruff check .
+          pyink --check .
   test:
     runs-on: ubuntu-latest
     steps:
