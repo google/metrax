@@ -65,10 +65,28 @@ docs = [
 
 [tool.ruff]
 indent-width = 2
-line-length = 120
+line-length = 80
 exclude = [
     "**/metrax_example.ipynb",
 ]
 [tool.ruff.lint]
 # TODO(jeffcarp): Add "I", "NPY"
 select = ["B", "E", "F", "N", "PYI", "T20", "TID", "SIM", "W"]
+
+[tool.pyink]
+line-length = 80
+unstable = true
+target-version = []
+pyink-indentation = 2
+pyink-use-majority-quotes = true
+include = '\.pyi?$'
+pyink-annotation-pragmas = [
+  "noqa",
+  "pylint:",
+  "type: ignore",
+  "pytype:",
+  "pyrefly:",
+  "mypy:",
+  "pyright:",
+  "pyre-",
+]

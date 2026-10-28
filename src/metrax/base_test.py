@@ -15,9 +15,10 @@
 """Tests for metrax base utilities."""
 
 import os
-os.environ['KERAS_BACKEND'] = 'jax'
 
-from absl.testing import absltest
+os.environ['KERAS_BACKEND'] = 'jax'  # pylint: disable=g-import-not-at-top
+
+from absl.testing import absltest  # pylint: disable=g-import-not-at-top
 from absl.testing import parameterized
 import jax.numpy as jnp
 import keras

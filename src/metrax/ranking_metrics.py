@@ -40,7 +40,8 @@ class DCGAtK(base.Average):
     - :math:`s_i` is its score from the prediction,
     - :math:`\text{rank}(s_i)` is the 1-based rank of item :math:`i`.
     - :math:`\text{gain}(y_i) = 2^{y_i} - 1`.
-    - :math:`\text{rank_discount}(\text{rank}(s_i)) = \frac{1}{\log_2(\text{rank}(s_i) + 1)}`.
+    - :math:`\text{rank_discount}(\text{rank}(s_i)) =
+      \frac{1}{\log_2(\text{rank}(s_i) + 1)}`.
 
   We get the final formula:
 
@@ -278,12 +279,13 @@ class AveragePrecisionAtK(base.Average):
 
 @flax.struct.dataclass
 class MRR(base.Average):
-  r"""Computes Mean Reciprocal Rank (MRR), supporting MRR@k for multiple k values.
+  r"""Computes MRR@k (Mean Reciprocal Rank) for multiple k values.
 
   MRR is the average of the reciprocal ranks of the first relevant item
   for a set of queries.
 
-  The mean reciprocal rank for a group of queries :math:`q` in :math:`Q` is defined as follows:
+  The mean reciprocal rank for a group of queries :math:`q` in :math:`Q` is
+  defined as follows:
 
   .. math::
       MRR = \frac{1}{|Q|} \sum_{q \in Q} RR_q
@@ -350,7 +352,7 @@ class MRR(base.Average):
       labels: jax.Array,
       ks: jax.Array,
   ) -> 'MRR':
-    """Creates an MRR metric instance from model output, calculating MRR@k for each k.
+    """Creates an MRR instance from model output with MRR@k for each k.
 
     Args:
       predictions: A 2D array of prediction scores. Higher scores indicate
@@ -374,7 +376,7 @@ class MRR(base.Average):
 
 @flax.struct.dataclass
 class TopKRankingMetric(base.Average, abc.ABC):
-  """Abstract base class for Top-K ranking metrics like Precision@k and Recall@k.
+  """Abstract base class for Top-K ranking metrics (Precision@k, Recall@k).
 
   This class provides common functionality for calculating metrics that evaluate
   the quality of the top k items in a ranked list. Subclasses must implement
@@ -424,7 +426,7 @@ class TopKRankingMetric(base.Average, abc.ABC):
   def _calculate_metric_at_ks(
       cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array
   ) -> jax.Array:
-    """Computes the specific metric (e.g., P@k, R@k) values per example for each k.
+    """Computes metric values (e.g., P@k, R@k) per example for each k.
 
     This method must be implemented by concrete subclasses (e.g., PrecisionAtK,
     RecallAtK) to define the actual calculation of the metric based on
@@ -499,7 +501,7 @@ class PrecisionAtK(TopKRankingMetric):
   def _calculate_metric_at_ks(
       cls, predictions: jax.Array, labels: jax.Array, ks: jax.Array
   ) -> jax.Array:
-    """Computes P@k (precision at k) metrics for each of k in ks for each example.
+    """Computes P@k (precision at k) for each k in `ks` for each example.
 
     This method implements the core logic for calculating Precision@k.
     It utilizes the `_get_relevant_at_k` helper from the base
