@@ -39,7 +39,7 @@ class Average(clu_metrics.Average):
 
     Args:
       values: A floating point 1D vector representing the values. The shape
-      should be (batch_size,).
+        should be (batch_size,).
       sample_weights: An optional floating point 1D vector representing the
         weight of each sample. The shape should be (batch_size,).
 
