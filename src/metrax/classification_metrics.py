@@ -74,9 +74,24 @@ def _squeeze_mismatching_trailing_ones(
   return predictions, labels
 
 
+def _in_top_k(targets: jax.Array, predictions: jax.Array, k: int) -> jax.Array:
+  """Returns a boolean array indicating whether `targets` are in the top `k`."""
+  if predictions.shape[-1] < k:
+    raise ValueError(
+        f'Number of classes in `predictions` ({predictions.shape[-1]}) must be'
+        f' at least `k` ({k}).'
+    )
+  preds_at_label = jnp.take_along_axis(predictions, targets, axis=-1)
+  preds_at_label = jnp.where(
+      jnp.isnan(preds_at_label), -jnp.inf, preds_at_label
+  )
+  rank = 1 + jnp.sum(jnp.greater(predictions, preds_at_label), axis=-1)
+  return jnp.less_equal(rank, k)
+
+
 @flax.struct.dataclass
 class Accuracy(base.Average):
-  r"""Computes accuracy, which is the frequency with which `predictions` match `labels`.
+  r"""Computes accuracy, the frequency with which `predictions` match `labels`.
 
   This metric calculates the proportion of correct predictions by comparing
   `predictions` and `labels` element-wise. It is the ratio of the sum of
@@ -142,7 +157,7 @@ class Accuracy(base.Average):
 
 @flax.struct.dataclass
 class Precision(clu_metrics.Metric):
-  r"""Computes precision for binary classification given `predictions` and `labels`.
+  r"""Computes precision for binary classification.
 
   It is calculated as:
 
@@ -216,7 +231,7 @@ class Precision(clu_metrics.Metric):
 
 @flax.struct.dataclass
 class Recall(clu_metrics.Metric):
-  r"""Computes recall for binary classification given `predictions` and `labels`.
+  r"""Computes recall for binary classification.
 
   It is calculated as:
 
@@ -287,7 +302,7 @@ class Recall(clu_metrics.Metric):
 
 @flax.struct.dataclass
 class AUCPR(clu_metrics.Metric):
-  r"""Computes area under the precision-recall curve for binary classification given `predictions` and `labels`.
+  r"""Computes area under the precision-recall curve for binary classification.
 
   The Precision-Recall curve shows the tradeoff between precision and recall at
   different
@@ -858,6 +873,47 @@ class SparseCategoricalAccuracy(base.Average):
       labels = jnp.squeeze(labels, axis=-1)
     correct = jnp.argmax(predictions, axis=-1) == labels
     count = jnp.ones_like(labels, dtype=jnp.int32)
+    if sample_weights is not None:
+      correct, count = _apply_sample_weights(sample_weights, correct, count)
+    return cls(
+        total=correct.sum(),
+        count=count.sum(),
+    )
+
+
+@flax.struct.dataclass
+class TopKCategoricalAccuracy(base.Average):
+  r"""Computes top-k accuracy for one-hot categorical classification models.
+
+  This metric calculates the frequency with which the true class (`argmax(
+  labels, axis=-1)`) is among the top `k` predicted classes. If no
+  `sample_weights` are provided, weights default to 1 for each element.
+  """
+
+  @classmethod
+  def from_model_output(  # pyrefly: ignore[bad-override]
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+      k: int = 5,
+  ) -> 'TopKCategoricalAccuracy':
+    """Updates the metric state with new `predictions` and `labels`.
+
+    Args:
+      predictions: JAX array of predicted values (typically logits or
+        probabilities) of shape `(..., num_classes)`.
+      labels: JAX array of true one-hot values of shape `(..., num_classes)`.
+      sample_weights: Optional JAX array of weights broadcastable to `labels`.
+      k: Number of top elements to look at for computing accuracy. Defaults to
+        5.
+
+    Returns:
+      An updated instance of `TopKCategoricalAccuracy` metric.
+    """
+    targets = jnp.argmax(labels, axis=-1, keepdims=True)
+    correct = _in_top_k(targets, predictions, k)
+    count = jnp.ones_like(correct, dtype=jnp.int32)
     if sample_weights is not None:
       correct, count = _apply_sample_weights(sample_weights, correct, count)
     return cls(

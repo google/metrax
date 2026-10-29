@@ -600,5 +600,6 @@ class ImageMetricsTest(parameterized.TestCase):
 
     np.testing.assert_allclose(result, expected, rtol=1e-5, atol=1e-5)
 
+
 if __name__ == '__main__':
   absltest.main()

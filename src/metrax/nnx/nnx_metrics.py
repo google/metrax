@@ -251,6 +251,13 @@ class SSIM(NnxWrapper):
     super().__init__(metrax.SSIM)
 
 
+class TopKCategoricalAccuracy(NnxWrapper):
+  """An NNX class for the Metrax metric TopKCategoricalAccuracy."""
+
+  def __init__(self):
+    super().__init__(metrax.TopKCategoricalAccuracy)
+
+
 class WER(NnxWrapper):
   """An NNX class for the Metrax metric WER."""
 
