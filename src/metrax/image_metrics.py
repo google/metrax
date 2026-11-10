@@ -110,7 +110,7 @@ class SSIM(base.Average):
       k1: float = 0.01,
       k2: float = 0.03,
   ) -> jnp.ndarray:
-    """Computes SSIM (Structural Similarity Index Measure) values for a batch of images.
+    """Computes SSIM values for a batch of images.
 
     This function calculates the SSIM between two batches of images (`img1` and
     `img2`). If the images have multiple channels, SSIM is calculated for each
@@ -166,7 +166,7 @@ class SSIM(base.Average):
     c2 = (k2 * max_val) ** 2
 
     def _calculate_ssim_for_channel(x_ch, y_ch, conv_kernel, c1, c2):
-      r"""Calculates the Structural Similarity Index (SSIM) for a single channel.
+      r"""Calculates Structural Similarity Index (SSIM) for a single channel.
 
       This function computes the SSIM between two single-channel image arrays
       (:math:`x_{ch}` and :math:`y_{ch}`) using a precomputed Gaussian kernel
@@ -397,7 +397,7 @@ class IoU(base.Average):
       target_class_ids: jnp.ndarray,
       epsilon: float = 1e-7,
   ) -> jnp.ndarray:
-    r"""Computes mean IoU for a processed batch by class-wise aggregation using jax.vmap.
+    r"""Computes mean IoU for a batch by class-wise aggregation.
 
     Per-batch processing: For each target class in the provided
     `target_class_ids` list, True Positives (TP), False Positives (FP), and
@@ -425,8 +425,8 @@ class IoU(base.Average):
     def _calculate_iou_for_single_class(
         class_id: jnp.ndarray,
     ) -> jnp.ndarray:
-      target_is_class = (targets == class_id)
-      pred_is_class = (predictions == class_id)
+      target_is_class = targets == class_id
+      pred_is_class = predictions == class_id
       intersection = jnp.sum(jnp.logical_and(target_is_class, pred_is_class))
       union = jnp.sum(jnp.logical_or(target_is_class, pred_is_class))
       return intersection / (union + epsilon)
@@ -673,11 +673,11 @@ class Dice(clu_metrics.Metric):
 class CosineSimilarity(base.Average):
   r"""Calculates the Cosine Similarity between two arrays.
 
-    The Cosine Similarity is defined as the dot product of the vectors divided
-    by the product of their magnitudes (norms).
+  The Cosine Similarity is defined as the dot product of the vectors divided
+  by the product of their magnitudes (norms).
 
-    .. math::
-        cos_{sim}(x,y) = \frac{x \cdot y}{||x|| * ||y||}
+  .. math::
+      cos_{sim}(x,y) = \frac{x \cdot y}{||x|| * ||y||}
   """
 
   @classmethod

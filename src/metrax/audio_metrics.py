@@ -109,7 +109,7 @@ class SNR(base.Average):
       targets: jax.Array,
       zero_mean: bool = False,
   ) -> 'SNR':
-    """Computes SNR for a batch of audio signals and creates an SNR metric instance.
+    """Computes SNR for a batch of audio signals.
 
     Args:
         predictions: A JAX array of predicted audio signals.

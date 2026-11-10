@@ -15,9 +15,10 @@
 """Tests for metrax regression metrics."""
 
 import os
-os.environ['KERAS_BACKEND'] = 'jax'
 
-from absl.testing import absltest
+os.environ['KERAS_BACKEND'] = 'jax'  # pylint: disable=g-import-not-at-top
+
+from absl.testing import absltest  # pylint: disable=g-import-not-at-top
 from absl.testing import parameterized
 import jax
 import jax.numpy as jnp
@@ -56,7 +57,7 @@ SAMPLE_WEIGHTS = np.tile(
 class RegressionMetricsTest(parameterized.TestCase):
 
   def test_multiple_devices_jit(self):
-    """Test that metrax metrics work across multiple devices using jit and jax.Array."""
+    """Tests that metrics work across multiple devices with jit and Mesh."""
     # 1. Define the hardware mesh.
     devices = jax.devices()
     mesh = jax.sharding.Mesh(devices, ('data',))
@@ -97,7 +98,8 @@ class RegressionMetricsTest(parameterized.TestCase):
     )
 
   def test_multiple_devices_pmap(self):
-    """Test that metrax metrics work across multiple devices using R2 as an example."""
+    """Tests that metrics work across multiple devices using pmap."""
+
     def create_r2(logits, labels):
       """Creates a metrax RSQUARED metric given logits and labels."""
       return metrax.RSQUARED.from_model_output(logits, labels)

@@ -15,9 +15,10 @@
 """Tests for metrax nlp metrics."""
 
 import os
-os.environ['KERAS_BACKEND'] = 'jax'
 
-from absl.testing import absltest
+os.environ["KERAS_BACKEND"] = "jax"  # pylint: disable=g-import-not-at-top
+
+from absl.testing import absltest  # pylint: disable=g-import-not-at-top
 from absl.testing import parameterized
 import jax.numpy as jnp
 import keras_hub
@@ -104,7 +105,7 @@ class NlpMetricsTest(parameterized.TestCase):
     )
 
   def test_bleu_merge_fails_on_different_max_order(self):
-    """Tests that error is raised when BLEU metrics with different max_order are merged."""
+    """Tests that merging BLEU metrics with different max_order fails."""
     references = [
         ["He eats a sweet apple", "He is eating a tasty apple, isn't he"],
     ]
@@ -197,7 +198,7 @@ class NlpMetricsTest(parameterized.TestCase):
     )
 
   def test_rougen_merge_fails_on_different_max_order(self):
-    """Tests that error is raised when ROUGE-N metrics with different max_order are merged."""
+    """Tests that merging ROUGE-N metrics with different max_order fails."""
     references = [
         "He eats a sweet apple",
     ]
@@ -217,28 +218,28 @@ class NlpMetricsTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
       (
-          'basic',
+          "basic",
           np.random.randint(10, size=[2, 5, 10]),
           np.random.uniform(size=(2, 5, 10, 20)),
           None,
           False,
       ),
       (
-          'weighted',
+          "weighted",
           np.random.randint(10, size=[2, 5, 10]),
           np.random.uniform(size=(2, 5, 10, 20)),
           np.random.randint(2, size=(2, 5, 10)).astype(np.float32),
           False,
       ),
       (
-          'negative_values',
+          "negative_values",
           np.random.randint(10, size=[2, 5, 10]),
           np.random.uniform(size=(2, 5, 10, 20), low=-2, high=2),
           None,
           False,
       ),
       (
-          'from_logits',
+          "from_logits",
           np.random.randint(10, size=[2, 5, 10]),
           np.random.uniform(size=(2, 5, 10, 20), low=-2, high=2),
           None,
@@ -258,8 +259,8 @@ class NlpMetricsTest(parameterized.TestCase):
           sample_weights=weights,
           from_logits=from_logits,
       )
-      metrax_metric = update if metrax_metric is None else metrax_metric.merge(
-          update
+      metrax_metric = (
+          update if metrax_metric is None else metrax_metric.merge(update)
       )
 
     expected = keras_metric.result()
@@ -271,16 +272,16 @@ class NlpMetricsTest(parameterized.TestCase):
     )
 
   def test_wer(self):
-    """Tests that WER metric computes correct values with tokenized and untokenized inputs."""
+    """Tests WER metric on both tokenized and untokenized string inputs."""
     string_preds = [
-      "the cat sat on the mat",
-      "a quick brown fox jumps over the lazy dog",
-      "hello world"
+        "the cat sat on the mat",
+        "a quick brown fox jumps over the lazy dog",
+        "hello world",
     ]
     string_refs = [
-      "the cat sat on the hat",
-      "the quick brown fox jumps over the lazy dog",
-      "hello beautiful world"
+        "the cat sat on the hat",
+        "the quick brown fox jumps over the lazy dog",
+        "hello beautiful world",
     ]
     tokenized_preds = [sentence.split() for sentence in string_preds]
     tokenized_refs = [sentence.split() for sentence in string_refs]
@@ -288,31 +289,39 @@ class NlpMetricsTest(parameterized.TestCase):
     metrax_token_metric = None
     keras_metric = keras_hub.metrics.EditDistance(normalize=True)
     for pred, ref in zip(tokenized_preds, tokenized_refs):
-      metrax_update = metrax.WER.from_model_output(pred,ref)
+      metrax_update = metrax.WER.from_model_output(pred, ref)
       keras_metric.update_state(ref, pred)
-      metrax_token_metric = metrax_update if metrax_token_metric is None else metrax_token_metric.merge(metrax_update)
+      metrax_token_metric = (
+          metrax_update
+          if metrax_token_metric is None
+          else metrax_token_metric.merge(metrax_update)
+      )
 
     np.testing.assert_allclose(
         metrax_token_metric.compute(),
         keras_metric.result(),
         rtol=1e-05,
         atol=1e-05,
-        err_msg="String-based WER should match keras_hub EditDistance"
+        err_msg="String-based WER should match keras_hub EditDistance",
     )
 
     metrax_string_metric = None
     for pred, ref in zip(string_preds, string_refs):
       update = metrax.WER.from_model_output(predictions=pred, references=ref)
-      metrax_string_metric = update if metrax_string_metric is None else metrax_string_metric.merge(update)
+      metrax_string_metric = (
+          update
+          if metrax_string_metric is None
+          else metrax_string_metric.merge(update)
+      )
 
     np.testing.assert_allclose(
-    metrax_string_metric.compute(),
-    metrax_token_metric.compute(),
-    rtol=1e-05,
-    atol=1e-05,
-    err_msg="String input and tokenized input should produce the same WER"
+        metrax_string_metric.compute(),
+        metrax_token_metric.compute(),
+        rtol=1e-05,
+        atol=1e-05,
+        err_msg="String input and tokenized input should produce the same WER",
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   absltest.main()
