@@ -34,7 +34,7 @@ def _preprocess_event_name(event_name: str) -> str:
 
 
 class TensorboardBackend:
-  """A logging backend for Tensorboard that conforms to the LoggingBackend protocol."""
+  """Tensorboard logging backend conforming to `LoggingBackend`."""
 
   def __init__(
       self,

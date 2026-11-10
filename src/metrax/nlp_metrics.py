@@ -330,7 +330,7 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
   def _calculate_instance_scores(
       pred_tokens: list[str], ref_tokens: list[str], **kwargs
   ) -> tuple[float, float, float]:
-    """Calculates precision, recall, and F1 for a single prediction-reference pair.
+    """Calculates precision, recall, and F1 for one prediction-reference pair.
 
     kwargs may contain 'order' for RougeN.
 
@@ -607,7 +607,7 @@ class RougeN(RougeBase):
 
 @flax.struct.dataclass
 class WER(base.Average):
-  r"""Computes Word Error Rate (WER) for speech recognition or text generation tasks.
+  r"""Computes Word Error Rate (WER) for speech recognition or text generation.
 
   Word Error Rate measures the edit distance between reference texts and
   predictions,

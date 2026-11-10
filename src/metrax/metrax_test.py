@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Tests for metrax metrics."""
+
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax
@@ -59,6 +60,7 @@ IOU_TARGET_CLASS_IDS = np.array([0, 1])
 AUDIO_SHAPE = (2, 16000)
 AUDIO_PREDS = np.random.randn(*AUDIO_SHAPE).astype(np.float32)
 AUDIO_TARGETS = np.random.randn(*AUDIO_SHAPE).astype(np.float32)
+
 
 class MetraxTest(parameterized.TestCase):
 
@@ -153,7 +155,6 @@ class MetraxTest(parameterized.TestCase):
           metrax.MSLE,
           {'predictions': OUTPUT_LABELS, 'labels': OUTPUT_PREDS},
       ),
-
       (
           'ndcgAtK',
           metrax.NDCGAtK,
@@ -240,7 +241,7 @@ class MetraxTest(parameterized.TestCase):
       ),
   )
   def test_metrics_jittable(self, metric, kwargs):
-    """Tests that jitted metrax metric yields the same result as non-jitted metric."""
+    """Tests that jitted and non-jitted metrics yield identical results."""
     computed_metric = metric.from_model_output(**kwargs)
     jitted_metric = jax.jit(metric.from_model_output)(**kwargs)
     np.testing.assert_allclose(
@@ -270,7 +271,7 @@ class MetraxTest(parameterized.TestCase):
       ),
   )
   def test_metrics_not_jittable(self, metric, kwargs):
-    """Tests that attempting to jit and call a known non-jittable metric raises an error."""
+    """Tests that jitting and calling a non-jittable metric raises TypeError."""
     np.testing.assert_raises(
         TypeError, lambda: jax.jit(metric.from_model_output)(**kwargs)
     )
