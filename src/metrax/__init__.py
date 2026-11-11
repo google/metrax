@@ -55,6 +55,7 @@ SNR = audio_metrics.SNR
 SparseCategoricalAccuracy = classification_metrics.SparseCategoricalAccuracy
 SpearmanRankCorrelation = regression_metrics.SpearmanRankCorrelation
 SSIM = image_metrics.SSIM
+TopKCategoricalAccuracy = classification_metrics.TopKCategoricalAccuracy
 WER = nlp_metrics.WER
 
 
@@ -92,5 +93,6 @@ __all__ = [
     "SparseCategoricalAccuracy",
     "SpearmanRankCorrelation",
     "SSIM",
+    "TopKCategoricalAccuracy",
     "WER",
 ]
