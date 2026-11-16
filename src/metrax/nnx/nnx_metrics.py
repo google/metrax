@@ -237,6 +237,13 @@ class SparseCategoricalAccuracy(NnxWrapper):
     super().__init__(metrax.SparseCategoricalAccuracy)
 
 
+class SparseTopKCategoricalAccuracy(NnxWrapper):
+  """An NNX class for the Metrax metric SparseTopKCategoricalAccuracy."""
+
+  def __init__(self):
+    super().__init__(metrax.SparseTopKCategoricalAccuracy)
+
+
 class SpearmanRankCorrelation(NnxWrapper):
   """An NNX class for the Metrax metric SpearmanRankCorrelation."""
 

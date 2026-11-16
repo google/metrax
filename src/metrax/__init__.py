@@ -53,6 +53,9 @@ RougeL = nlp_metrics.RougeL
 RougeN = nlp_metrics.RougeN
 SNR = audio_metrics.SNR
 SparseCategoricalAccuracy = classification_metrics.SparseCategoricalAccuracy
+SparseTopKCategoricalAccuracy = (
+    classification_metrics.SparseTopKCategoricalAccuracy
+)
 SpearmanRankCorrelation = regression_metrics.SpearmanRankCorrelation
 SSIM = image_metrics.SSIM
 TopKCategoricalAccuracy = classification_metrics.TopKCategoricalAccuracy
@@ -91,6 +94,7 @@ __all__ = [
     "RougeN",
     "SNR",
     "SparseCategoricalAccuracy",
+    "SparseTopKCategoricalAccuracy",
     "SpearmanRankCorrelation",
     "SSIM",
     "TopKCategoricalAccuracy",

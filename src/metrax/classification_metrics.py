@@ -920,3 +920,46 @@ class TopKCategoricalAccuracy(base.Average):
         total=correct.sum(),
         count=count.sum(),
     )
+
+
+@flax.struct.dataclass
+class SparseTopKCategoricalAccuracy(base.Average):
+  r"""Computes top-k accuracy for sparse categorical classification models.
+
+  This metric calculates the frequency with which the integer target class
+  (`labels`) is among the top `k` predicted classes. If no `sample_weights`
+  are provided, weights default to 1 for each element.
+  """
+
+  @classmethod
+  def from_model_output(  # pyrefly: ignore[bad-override]
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+      k: int = 5,
+  ) -> 'SparseTopKCategoricalAccuracy':
+    """Updates the metric state with new `predictions` and `labels`.
+
+    Args:
+      predictions: JAX array of predicted values (typically logits or
+        probabilities) of shape `(..., num_classes)`.
+      labels: JAX array of true integer class indices of shape `(...)` or `(...,
+        1)`.
+      sample_weights: Optional JAX array of weights broadcastable to `labels`.
+      k: Number of top elements to look at for computing accuracy. Defaults to
+        5.
+
+    Returns:
+      An updated instance of `SparseTopKCategoricalAccuracy` metric.
+    """
+    if labels.ndim == predictions.ndim - 1:
+      labels = jnp.expand_dims(labels, axis=-1)
+    correct = _in_top_k(labels, predictions, k)
+    count = jnp.ones_like(correct, dtype=jnp.int32)
+    if sample_weights is not None:
+      correct, count = _apply_sample_weights(sample_weights, correct, count)
+    return cls(
+        total=correct.sum(),
+        count=count.sum(),
+    )

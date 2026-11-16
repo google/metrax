@@ -123,6 +123,12 @@ class ClassificationMetricsTest(parameterized.TestCase):
     self.assertEqual(m.total, jnp.array(0, jnp.float32))
     self.assertEqual(m.count, jnp.array(0, jnp.int32))
 
+  def test_sparse_top_k_categorical_accuracy_empty(self):
+    """Tests the `empty` method of `SparseTopKCategoricalAccuracy`."""
+    m = metrax.SparseTopKCategoricalAccuracy.empty()
+    self.assertEqual(m.total, jnp.array(0, jnp.float32))
+    self.assertEqual(m.count, jnp.array(0, jnp.int32))
+
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
       ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
@@ -570,6 +576,50 @@ class ClassificationMetricsTest(parameterized.TestCase):
       metrax.TopKCategoricalAccuracy.from_model_output(
           predictions=MC_PREDS[0],
           labels=MC_LABELS_OH[0],
+          k=NUM_CLASSES + 1,
+      )
+
+  @parameterized.product(
+      inputs=(
+          (MC_LABELS_INT, MC_PREDS_F16, SAMPLE_WEIGHTS),
+          (MC_LABELS_INT, MC_PREDS, SAMPLE_WEIGHTS),
+          (MC_LABELS_INT, MC_PREDS_BF16, None),
+          (MC_LABELS_INT[..., None], MC_PREDS, SAMPLE_WEIGHTS),
+      ),
+      k=(1, 3, 5),
+  )
+  def test_sparse_top_k_categorical_accuracy(self, inputs, k):
+    """Test that `SparseTopKCategoricalAccuracy` computes correct values."""
+    y_true, y_pred, sample_weights = inputs
+    if sample_weights is None:
+      sample_weights = np.ones((BATCHES, BATCH_SIZE), dtype=np.float32)
+    metrax_metric = metrax.SparseTopKCategoricalAccuracy.empty()
+    keras_metric = keras.metrics.SparseTopKCategoricalAccuracy(k=k)
+    for labels, logits, weights in zip(y_true, y_pred, sample_weights):
+      update = metrax.SparseTopKCategoricalAccuracy.from_model_output(
+          predictions=logits,
+          labels=labels,
+          sample_weights=weights,
+          k=k,
+      )
+      metrax_metric = metrax_metric.merge(update)
+      keras_metric.update_state(labels, logits, weights)
+
+    rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        keras_metric.result(),
+        rtol=rtol,
+        atol=atol,
+    )
+
+  def test_sparse_top_k_categorical_accuracy_invalid_inputs(self):
+    """Test `SparseTopKCategoricalAccuracy` raises on invalid `k`."""
+    with self.assertRaises(ValueError):
+      metrax.SparseTopKCategoricalAccuracy.from_model_output(
+          predictions=MC_PREDS[0],
+          labels=MC_LABELS_INT[0],
           k=NUM_CLASSES + 1,
       )
 

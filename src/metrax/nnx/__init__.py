@@ -47,6 +47,7 @@ RougeL = nnx_metrics.RougeL
 RougeN = nnx_metrics.RougeN
 SNR = nnx_metrics.SNR
 SparseCategoricalAccuracy = nnx_metrics.SparseCategoricalAccuracy
+SparseTopKCategoricalAccuracy = nnx_metrics.SparseTopKCategoricalAccuracy
 SpearmanRankCorrelation = nnx_metrics.SpearmanRankCorrelation
 SSIM = nnx_metrics.SSIM
 TopKCategoricalAccuracy = nnx_metrics.TopKCategoricalAccuracy
@@ -82,6 +83,7 @@ __all__ = [
     "RougeN",
     "SNR",
     "SparseCategoricalAccuracy",
+    "SparseTopKCategoricalAccuracy",
     "SpearmanRankCorrelation",
     "SSIM",
     "TopKCategoricalAccuracy",
