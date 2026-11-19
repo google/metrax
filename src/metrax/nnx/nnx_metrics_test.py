@@ -40,6 +40,7 @@ class NnxMetricsTest(parameterized.TestCase):
     ]
     self.assertNotEmpty(metrax_metric_keys)
     self.assertSameElements(metrax_metric_keys, metrax_nnx_metric_keys)
+    self.assertSameElements(metrax.__all__, metrax.nnx.__all__)
 
 
 if __name__ == '__main__':
