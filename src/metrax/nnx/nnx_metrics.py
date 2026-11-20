@@ -146,6 +146,13 @@ class MSLE(NnxWrapper):
     super().__init__(metrax.MSLE)
 
 
+class MulticlassCalibrationError(NnxWrapper):
+  """An NNX class for the Metrax metric MulticlassCalibrationError."""
+
+  def __init__(self):
+    super().__init__(metrax.MulticlassCalibrationError)
+
+
 class NDCGAtK(NnxWrapper):
   """An NNX class for the Metrax metric NDCGAtK."""
 

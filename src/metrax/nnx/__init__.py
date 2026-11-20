@@ -34,6 +34,7 @@ MAE = nnx_metrics.MAE
 MRR = nnx_metrics.MRR
 MSE = nnx_metrics.MSE
 MSLE = nnx_metrics.MSLE
+MulticlassCalibrationError = nnx_metrics.MulticlassCalibrationError
 NDCGAtK = nnx_metrics.NDCGAtK
 Perplexity = nnx_metrics.Perplexity
 Precision = nnx_metrics.Precision
@@ -72,6 +73,7 @@ __all__ = [
     "MRR",
     "MAE",
     "MSE",
+    "MulticlassCalibrationError",
     "NDCGAtK",
     "Perplexity",
     "Precision",

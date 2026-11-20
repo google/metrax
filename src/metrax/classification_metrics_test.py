@@ -141,6 +141,16 @@ class ClassificationMetricsTest(parameterized.TestCase):
     self.assertEqual(m.norm, 'l1')
     self.assertEqual(m.compute(), jnp.array(0.0, jnp.float32))
 
+  def test_multiclass_calibration_error_empty(self):
+    """Tests the `empty` method of `MulticlassCalibrationError`."""
+    m = metrax.MulticlassCalibrationError.empty()
+    self.assertEqual(m.acc_sum, jnp.array(0, jnp.float32))
+    self.assertEqual(m.conf_sum, jnp.array(0, jnp.float32))
+    self.assertEqual(m.count_bin, jnp.array(0, jnp.float32))
+    self.assertEqual(m.n_bins, 15)
+    self.assertEqual(m.norm, 'l1')
+    self.assertEqual(m.compute(), jnp.array(0.0, jnp.float32))
+
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
       ('basic_f32', OUTPUT_LABELS, OUTPUT_PREDS_F32, SAMPLE_WEIGHTS),
@@ -764,6 +774,93 @@ class ClassificationMetricsTest(parameterized.TestCase):
         torch.from_numpy(np.repeat(preds, weights)),
         torch.from_numpy(np.repeat(labels, weights)),
     )
+
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        tm_metric.compute().numpy(),
+        rtol=1e-5,
+        atol=1e-5,
+    )
+
+  @parameterized.product(
+      inputs=(
+          (MC_LABELS_INT, MC_PREDS),
+          (MC_LABELS_INT, MC_PREDS_F16),
+          (MC_LABELS_INT, MC_PREDS_BF16),
+          (MC_LABELS_INT, MC_PREDS * 4.0 - 2.0),
+      ),
+      n_bins=(3, 10, 15),
+      norm=('l1', 'l2', 'max'),
+  )
+  def test_multiclass_calibration_error(self, inputs, n_bins, norm):
+    """Test that `MulticlassCalibrationError` matches TorchMetrics."""
+    y_true, y_pred = inputs
+    metrax_metric = metrax.MulticlassCalibrationError.empty()
+    tm_metric = torchmetrics.classification.MulticlassCalibrationError(
+        num_classes=NUM_CLASSES, n_bins=n_bins, norm=norm
+    )
+    for labels, preds in zip(y_true, y_pred):
+      update = metrax.MulticlassCalibrationError.from_model_output(
+          predictions=preds,
+          labels=labels,
+          n_bins=n_bins,
+          norm=norm,
+      )
+      metrax_metric = metrax_metric.merge(update)
+      tm_metric.update(
+          torch.from_numpy(np.asarray(preds, dtype=np.float32)),
+          torch.from_numpy(np.asarray(labels, dtype=np.int64)),
+      )
+
+    atol = rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        tm_metric.compute().numpy(),
+        rtol=rtol,
+        atol=atol,
+    )
+
+  def test_multiclass_calibration_error_one_hot_and_invalid_inputs(self):
+    """Tests one-hot labels and validation in `MulticlassCalibrationError`."""
+    m_int = metrax.MulticlassCalibrationError.from_model_output(
+        predictions=MC_PREDS[0],
+        labels=MC_LABELS_INT[0],
+        n_bins=5,
+        norm='l1',
+    )
+    m_oh = metrax.MulticlassCalibrationError.from_model_output(
+        predictions=MC_PREDS[0],
+        labels=MC_LABELS_OH[0],
+        n_bins=5,
+        norm='l1',
+    )
+    np.testing.assert_allclose(m_int.compute(), m_oh.compute(), rtol=1e-6)
+
+    with self.assertRaises(ValueError):
+      metrax.MulticlassCalibrationError.from_model_output(
+          MC_PREDS[0], MC_LABELS_INT[0], n_bins=0
+      )
+    with self.assertRaises(ValueError):
+      metrax.MulticlassCalibrationError.from_model_output(
+          MC_PREDS[0], MC_LABELS_INT[0], norm='invalid'
+      )
+
+  @parameterized.parameters('l1', 'l2', 'max')
+  def test_multiclass_calibration_error_saturated_logits(self, norm):
+    """Tests `MulticlassCalibrationError` parity when softmax rounds to 1.0."""
+    preds = np.array([[30.0, 0.0, 0.0], [2.0, 1.0, 0.0]], dtype=np.float32)
+    labels = np.array([1, 0], dtype=np.int64)
+
+    metrax_metric = metrax.MulticlassCalibrationError.from_model_output(
+        predictions=jnp.asarray(preds),
+        labels=jnp.asarray(labels),
+        n_bins=2,
+        norm=norm,
+    )
+    tm_metric = torchmetrics.classification.MulticlassCalibrationError(
+        num_classes=3, n_bins=2, norm=norm
+    )
+    tm_metric.update(torch.from_numpy(preds), torch.from_numpy(labels))
 
     np.testing.assert_allclose(
         metrax_metric.compute(),

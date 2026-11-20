@@ -1124,3 +1124,59 @@ class BinaryCalibrationError(_CalibrationError):
     return cls._from_confidences(  # pyrefly: ignore[bad-return]
         confidences, accuracies, sample_weights, n_bins, norm
     )
+
+
+@flax.struct.dataclass
+class MulticlassCalibrationError(_CalibrationError):
+  r"""Computes Top-label Calibration Error for multiclass classification tasks.
+
+  Follows the TorchMetrics `MulticlassCalibrationError` standard. Given
+  predicted class probabilities or logits `predictions` of shape `(...,
+  num_classes)` and ground-truth `labels`, extracts the top-1 confidence
+  `max(probs, axis=-1)` and top-1 accuracy `argmax(probs, axis=-1) == targets`,
+  bins them into `n_bins` uniform intervals over `[0, 1]`, and computes the
+  `'l1'` (ECE), `'l2'` (RMSCE), or `'max'` (MCE) calibration error.
+  """
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+      n_bins: int = 15,
+      norm: str = 'l1',
+  ) -> 'MulticlassCalibrationError':
+    """Updates `MulticlassCalibrationError` from predictions and labels.
+
+    Args:
+      predictions: Floating-point JAX array of class probabilities in `[0, 1]`
+        or logits outside `[0, 1]` (auto-normalized via softmax) of shape `(...,
+        num_classes)`.
+      labels: Ground-truth integer class indices of shape `(...)` or `(..., 1)`,
+        or one-hot encoded labels of shape `(..., num_classes)`.
+      sample_weights: Optional sample weights broadcastable to `labels`.
+      n_bins: Number of uniform bins in `[0, 1]`. Defaults to 15.
+      norm: Norm used to aggregate bin calibration errors (`'l1'`, `'l2'`, or
+        `'max'`). Defaults to `'l1'`.
+
+    Returns:
+      An updated `MulticlassCalibrationError` instance.
+    """
+    if labels.ndim == predictions.ndim and labels.shape[-1] > 1:
+      labels = jnp.argmax(labels, axis=-1)
+
+    predictions = predictions.astype(jnp.float32)
+    is_logits = jnp.any((predictions < 0.0) | (predictions > 1.0))
+    probs = jnp.where(
+        is_logits, jax.nn.softmax(predictions, axis=-1), predictions
+    )
+
+    confidences = jnp.max(probs, axis=-1)
+    pred_classes, targets = _squeeze_mismatching_trailing_ones(
+        jnp.argmax(probs, axis=-1), labels
+    )
+    accuracies = pred_classes == targets
+    return cls._from_confidences(  # pyrefly: ignore[bad-return]
+        confidences, accuracies, sample_weights, n_bins, norm
+    )

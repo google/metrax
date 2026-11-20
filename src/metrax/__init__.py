@@ -40,6 +40,7 @@ MAE = regression_metrics.MAE
 MRR = ranking_metrics.MRR
 MSE = regression_metrics.MSE
 MSLE = regression_metrics.MSLE
+MulticlassCalibrationError = classification_metrics.MulticlassCalibrationError
 NDCGAtK = ranking_metrics.NDCGAtK
 Perplexity = nlp_metrics.Perplexity
 Precision = classification_metrics.Precision
@@ -82,6 +83,7 @@ __all__ = [
     "MRR",
     "MSE",
     "MSLE",
+    "MulticlassCalibrationError",
     "NDCGAtK",
     "Perplexity",
     "Precision",
