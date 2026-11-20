@@ -964,3 +964,163 @@ class SparseTopKCategoricalAccuracy(base.Average):
         total=correct.sum(),
         count=count.sum(),
     )
+
+
+@flax.struct.dataclass
+class _CalibrationError(clu_metrics.Metric):
+  """Base class for Top-label Calibration Error metrics.
+
+  Attributes:
+    acc_sum: Sum of accuracies in each bin of shape `(n_bins,)`.
+    conf_sum: Sum of confidences in each bin of shape `(n_bins,)`.
+    count_bin: Count of samples in each bin of shape `(n_bins,)`.
+    n_bins: Number of uniform bins. Defaults to 15.
+    norm: Norm type ('l1', 'l2', or 'max'). Defaults to 'l1'.
+  """
+
+  acc_sum: jax.Array
+  conf_sum: jax.Array
+  count_bin: jax.Array
+  n_bins: int = flax.struct.field(pytree_node=False, default=15)
+  norm: str = flax.struct.field(pytree_node=False, default='l1')
+
+  @classmethod
+  def empty(cls) -> '_CalibrationError':
+    return cls(
+        acc_sum=jnp.array(0, jnp.float32),
+        conf_sum=jnp.array(0, jnp.float32),
+        count_bin=jnp.array(0, jnp.float32),
+        n_bins=15,
+        norm='l1',
+    )
+
+  @classmethod
+  def _from_confidences(
+      cls,
+      confidences: jax.Array,
+      accuracies: jax.Array,
+      sample_weights: jax.Array | None = None,
+      n_bins: int = 15,
+      norm: str = 'l1',
+  ) -> '_CalibrationError':
+    """Accumulates accuracy, confidence, and count per uniform bin in [0, 1]."""
+    if not isinstance(n_bins, int) or n_bins < 1:
+      raise ValueError(
+          f'Expected argument `n_bins` to be an integer >= 1, but got {n_bins}.'
+      )
+    if norm not in ('l1', 'l2', 'max'):
+      raise ValueError(
+          "Expected argument `norm` to be one of ('l1', 'l2', 'max'),"
+          f' but got {norm!r}.'
+      )
+
+    if sample_weights is not None:
+      confidences, sample_weights = _squeeze_mismatching_trailing_ones(
+          confidences, sample_weights
+      )
+      accuracies, sample_weights = _squeeze_mismatching_trailing_ones(
+          accuracies, sample_weights
+      )
+
+    bin_boundaries = jnp.linspace(0.0, 1.0, n_bins + 1, dtype=jnp.float32)
+    indices = jnp.searchsorted(bin_boundaries, confidences, side='right') - 1
+    indices = jnp.clip(indices, 0, n_bins)
+
+    weights = jnp.ones_like(confidences, dtype=jnp.float32)
+    if sample_weights is not None:
+      accuracies = accuracies * sample_weights
+      confidences = confidences * sample_weights
+      weights = weights * sample_weights
+
+    zeros = jnp.zeros(n_bins + 1, dtype=jnp.float32)
+    return cls(
+        acc_sum=zeros.at[indices].add(accuracies),
+        conf_sum=zeros.at[indices].add(confidences),
+        count_bin=zeros.at[indices].add(weights),
+        n_bins=n_bins,
+        norm=norm,
+    )
+
+  def merge(self, other: '_CalibrationError') -> '_CalibrationError':
+    return type(self)(
+        acc_sum=self.acc_sum + other.acc_sum,
+        conf_sum=self.conf_sum + other.conf_sum,
+        count_bin=self.count_bin + other.count_bin,
+        n_bins=other.n_bins,
+        norm=other.norm,
+    )
+
+  def compute(self) -> jax.Array:
+    acc_bin = base.divide_no_nan(self.acc_sum, self.count_bin)
+    conf_bin = base.divide_no_nan(self.conf_sum, self.count_bin)
+    prop_bin = base.divide_no_nan(self.count_bin, jnp.sum(self.count_bin))
+    abs_diff = jnp.abs(acc_bin - conf_bin)
+    if self.norm == 'l1':
+      return jnp.sum(abs_diff * prop_bin)
+    if self.norm == 'l2':
+      return jnp.sqrt(jnp.sum(jnp.square(abs_diff) * prop_bin))
+    if self.norm == 'max':
+      return jnp.max(abs_diff)
+    raise ValueError(
+        "Expected argument `norm` to be one of ('l1', 'l2', 'max'),"
+        f' but got {self.norm!r}.'
+    )
+
+
+@flax.struct.dataclass
+class BinaryCalibrationError(_CalibrationError):
+  r"""Computes Top-label Calibration Error for binary classification tasks.
+
+  Follows the TorchMetrics `BinaryCalibrationError` standard. Given predicted
+  probabilities or logits `predictions` and binary targets `labels` in `{0, 1}`,
+  bins predictions into `n_bins` uniform intervals over `[0, 1]` and computes:
+
+  .. math::
+      \text{ECE (l1)} = \sum_{i=1}^{N} b_i |p_i - c_i|
+
+  .. math::
+      \text{RMSCE (l2)} = \sqrt{\sum_{i=1}^{N} b_i (p_i - c_i)^2}
+
+  .. math::
+      \text{MCE (max)} = \max_{i} |p_i - c_i|
+
+  where :math:`p_i` is the empirical accuracy in bin :math:`i`, :math:`c_i` is
+  the mean predicted confidence in bin :math:`i`, and :math:`b_i` is the
+  fraction of samples falling into bin :math:`i`.
+  """
+
+  @classmethod
+  def from_model_output(
+      cls,
+      predictions: jax.Array,
+      labels: jax.Array,
+      sample_weights: jax.Array | None = None,
+      n_bins: int = 15,
+      norm: str = 'l1',
+  ) -> 'BinaryCalibrationError':
+    """Updates `BinaryCalibrationError` from predictions and binary labels.
+
+    Args:
+      predictions: Floating-point JAX array of probabilities in `[0, 1]` or
+        logits outside `[0, 1]` (auto-normalized via sigmoid) of shape `(N,
+        ...)`.
+      labels: Binary ground-truth labels in `{0, 1}` of shape compatible with
+        `predictions`.
+      sample_weights: Optional sample weights broadcastable to `predictions`.
+      n_bins: Number of uniform bins in `[0, 1]`. Defaults to 15.
+      norm: Norm used to aggregate bin calibration errors (`'l1'`, `'l2'`, or
+        `'max'`). Defaults to `'l1'`.
+
+    Returns:
+      An updated `BinaryCalibrationError` instance.
+    """
+    predictions, labels = _squeeze_mismatching_trailing_ones(
+        predictions, labels
+    )
+    predictions = predictions.astype(jnp.float32)
+    is_logits = jnp.any((predictions < 0.0) | (predictions > 1.0))
+    confidences = jnp.where(is_logits, jax.nn.sigmoid(predictions), predictions)
+    accuracies = labels == 1
+    return cls._from_confidences(  # pyrefly: ignore[bad-return]
+        confidences, accuracies, sample_weights, n_bins, norm
+    )

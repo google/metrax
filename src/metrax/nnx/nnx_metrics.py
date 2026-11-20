@@ -62,6 +62,13 @@ class BinaryAccuracy(NnxWrapper):
     super().__init__(metrax.BinaryAccuracy)
 
 
+class BinaryCalibrationError(NnxWrapper):
+  """An NNX class for the Metrax metric BinaryCalibrationError."""
+
+  def __init__(self):
+    super().__init__(metrax.BinaryCalibrationError)
+
+
 class BLEU(NnxWrapper):
   """An NNX class for the Metrax metric BLEU."""
 

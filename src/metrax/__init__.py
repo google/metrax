@@ -28,6 +28,7 @@ Accuracy = classification_metrics.Accuracy
 Average = base.Average
 AveragePrecisionAtK = ranking_metrics.AveragePrecisionAtK
 BinaryAccuracy = classification_metrics.BinaryAccuracy
+BinaryCalibrationError = classification_metrics.BinaryCalibrationError
 BLEU = nlp_metrics.BLEU
 CategoricalAccuracy = classification_metrics.CategoricalAccuracy
 CosineSimilarity = image_metrics.CosineSimilarity
@@ -69,6 +70,7 @@ __all__ = [
     "Average",
     "AveragePrecisionAtK",
     "BinaryAccuracy",
+    "BinaryCalibrationError",
     "BLEU",
     "CategoricalAccuracy",
     "CosineSimilarity",

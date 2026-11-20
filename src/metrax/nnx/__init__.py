@@ -22,6 +22,7 @@ Accuracy = nnx_metrics.Accuracy
 Average = nnx_metrics.Average
 AveragePrecisionAtK = nnx_metrics.AveragePrecisionAtK
 BinaryAccuracy = nnx_metrics.BinaryAccuracy
+BinaryCalibrationError = nnx_metrics.BinaryCalibrationError
 BLEU = nnx_metrics.BLEU
 CategoricalAccuracy = nnx_metrics.CategoricalAccuracy
 CosineSimilarity = nnx_metrics.CosineSimilarity
@@ -60,6 +61,7 @@ __all__ = [
     "Average",
     "AveragePrecisionAtK",
     "BinaryAccuracy",
+    "BinaryCalibrationError",
     "BLEU",
     "CategoricalAccuracy",
     "CosineSimilarity",

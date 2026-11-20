@@ -24,6 +24,8 @@ import jax.numpy as jnp
 import keras
 import metrax
 import numpy as np
+import torch
+import torchmetrics
 
 np.random.seed(42)
 BATCHES = 4
@@ -128,6 +130,16 @@ class ClassificationMetricsTest(parameterized.TestCase):
     m = metrax.SparseTopKCategoricalAccuracy.empty()
     self.assertEqual(m.total, jnp.array(0, jnp.float32))
     self.assertEqual(m.count, jnp.array(0, jnp.int32))
+
+  def test_binary_calibration_error_empty(self):
+    """Tests the `empty` method of `BinaryCalibrationError`."""
+    m = metrax.BinaryCalibrationError.empty()
+    self.assertEqual(m.acc_sum, jnp.array(0, jnp.float32))
+    self.assertEqual(m.conf_sum, jnp.array(0, jnp.float32))
+    self.assertEqual(m.count_bin, jnp.array(0, jnp.float32))
+    self.assertEqual(m.n_bins, 15)
+    self.assertEqual(m.norm, 'l1')
+    self.assertEqual(m.compute(), jnp.array(0.0, jnp.float32))
 
   @parameterized.named_parameters(
       ('basic_f16', OUTPUT_LABELS, OUTPUT_PREDS_F16, SAMPLE_WEIGHTS),
@@ -616,6 +628,149 @@ class ClassificationMetricsTest(parameterized.TestCase):
           labels=MC_LABELS_INT[0],
           k=NUM_CLASSES + 1,
       )
+
+  @parameterized.product(
+      inputs=(
+          (OUTPUT_LABELS, OUTPUT_PREDS_F32),
+          (OUTPUT_LABELS, OUTPUT_PREDS_F16),
+          (OUTPUT_LABELS, OUTPUT_PREDS_BF16),
+          (OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1),
+          (OUTPUT_LABELS, OUTPUT_PREDS_F32 * 4.0 - 2.0),
+      ),
+      n_bins=(2, 10, 15),
+      norm=('l1', 'l2', 'max'),
+  )
+  def test_binary_calibration_error(self, inputs, n_bins, norm):
+    """Test that `BinaryCalibrationError` matches TorchMetrics."""
+    y_true, y_pred = inputs
+    metrax_metric = metrax.BinaryCalibrationError.empty()
+    tm_metric = torchmetrics.classification.BinaryCalibrationError(
+        n_bins=n_bins, norm=norm
+    )
+    for labels, preds in zip(y_true, y_pred):
+      update = metrax.BinaryCalibrationError.from_model_output(
+          predictions=preds,
+          labels=labels,
+          n_bins=n_bins,
+          norm=norm,
+      )
+      metrax_metric = metrax_metric.merge(update)
+      tm_metric.update(
+          torch.from_numpy(np.asarray(preds, dtype=np.float32)),
+          torch.from_numpy(np.asarray(labels, dtype=np.int64)),
+      )
+
+    atol = rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        tm_metric.compute().numpy(),
+        rtol=rtol,
+        atol=atol,
+    )
+
+  def test_binary_calibration_error_invalid_inputs(self):
+    """Tests validation of inputs in `BinaryCalibrationError`."""
+    preds = jnp.array([0.2, 0.8], dtype=jnp.float32)
+    labels = jnp.array([0, 1], dtype=jnp.int32)
+    with self.assertRaises(ValueError):
+      metrax.BinaryCalibrationError.from_model_output(preds, labels, n_bins=0)
+    with self.assertRaises(ValueError):
+      metrax.BinaryCalibrationError.from_model_output(
+          preds, labels, norm='invalid'
+      )
+
+  @parameterized.product(
+      case=(
+          (
+              'boundary_zero_and_one',
+              [1.0, 1.0, 1.0, 1.0, 0.0],
+              [0, 0, 1, 1, 1],
+              2,
+          ),
+          (
+              'exact_bin_edges',
+              [0.0, 0.25, 0.5, 0.75, 1.0],
+              [0, 0, 1, 1, 1],
+              4,
+          ),
+          ('logits_with_boundaries', [-2.0, 0.0, 1.0, 2.0], [0, 0, 1, 1], 4),
+          ('saturated_logits', [30.0, 0.7], [0, 1], 2),
+          ('single_bin', [0.1, 0.4, 0.6, 0.9], [0, 1, 0, 1], 1),
+          ('sparse_empty_bins', [0.72, 0.75, 0.78], [1, 1, 0], 10),
+          ('perfect_calibration', [0.0, 0.0, 1.0, 1.0], [0, 0, 1, 1], 2),
+          (
+              'multidim_inputs',
+              [[[0.1, 0.5], [0.9, 1.0]], [[0.0, 0.3], [0.7, 0.8]]],
+              [[[0, 1], [1, 1]], [[0, 0], [1, 0]]],
+              5,
+          ),
+      ),
+      norm=('l1', 'l2', 'max'),
+  )
+  def test_binary_calibration_error_edge_cases(self, case, norm):
+    """Tests `BinaryCalibrationError` edge cases against TorchMetrics."""
+    _, preds, labels, n_bins = case
+    preds_arr = np.asarray(preds, dtype=np.float32)
+    labels_arr = np.asarray(labels, dtype=np.int64)
+
+    metrax_metric = metrax.BinaryCalibrationError.from_model_output(
+        predictions=jnp.asarray(preds_arr),
+        labels=jnp.asarray(labels_arr),
+        n_bins=n_bins,
+        norm=norm,
+    )
+    tm_metric = torchmetrics.classification.BinaryCalibrationError(
+        n_bins=n_bins, norm=norm
+    )
+    tm_metric.update(torch.from_numpy(preds_arr), torch.from_numpy(labels_arr))
+
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        tm_metric.compute().numpy(),
+        rtol=1e-5,
+        atol=1e-5,
+    )
+
+  @parameterized.product(
+      shapes=(
+          ((5,), (5,), (5,)),
+          ((5, 1), (5,), (5,)),
+          ((5,), (5, 1), (5, 1)),
+          ((5, 1), (5, 1), (5,)),
+          ((5,), (5,), (5, 1)),
+      ),
+      norm=('l1', 'l2', 'max'),
+  )
+  def test_binary_calibration_error_sample_weights(self, shapes, norm):
+    """Tests `BinaryCalibrationError` sample_weights and trailing-1 shapes."""
+    preds_shape, labels_shape, weights_shape = shapes
+    preds = np.array([0.1, 0.4, 0.6, 0.8, 1.0], dtype=np.float32)
+    labels = np.array([0, 1, 0, 0, 1], dtype=np.int64)
+    weights = np.array([1, 2, 0, 2, 3], dtype=np.int64)
+
+    metrax_metric = metrax.BinaryCalibrationError.from_model_output(
+        predictions=jnp.asarray(preds.reshape(preds_shape)),
+        labels=jnp.asarray(labels.reshape(labels_shape)),
+        sample_weights=jnp.asarray(
+            weights.astype(np.float32).reshape(weights_shape)
+        ),
+        n_bins=2,
+        norm=norm,
+    )
+    tm_metric = torchmetrics.classification.BinaryCalibrationError(
+        n_bins=2, norm=norm
+    )
+    tm_metric.update(
+        torch.from_numpy(np.repeat(preds, weights)),
+        torch.from_numpy(np.repeat(labels, weights)),
+    )
+
+    np.testing.assert_allclose(
+        metrax_metric.compute(),
+        tm_metric.compute().numpy(),
+        rtol=1e-5,
+        atol=1e-5,
+    )
 
 
 if __name__ == '__main__':
