@@ -211,9 +211,9 @@ class Precision(clu_metrics.Metric):
       ValueError: If type of `labels` is wrong or the shapes of `predictions`
       and `labels` are incompatible.
     """
-    predictions = jnp.where(predictions >= threshold, 1, 0)
-    true_positives = jnp.sum((predictions == 1) & (labels == 1))
-    false_positives = jnp.sum((predictions == 1) & (labels == 0))
+    pred_is_pos = predictions >= threshold
+    true_positives = jnp.sum(pred_is_pos & (labels == 1))
+    false_positives = jnp.sum(pred_is_pos & (labels == 0))
 
     return cls(true_positives=true_positives, false_positives=false_positives)
 
@@ -282,9 +282,9 @@ class Recall(clu_metrics.Metric):
       ValueError: If type of `labels` is wrong or the shapes of `predictions`
       and `labels` are incompatible.
     """
-    predictions = jnp.where(predictions >= threshold, 1, 0)
-    true_positives = jnp.sum((predictions == 1) & (labels == 1))
-    false_negatives = jnp.sum((predictions == 0) & (labels == 1))
+    pred_is_pos = predictions >= threshold
+    true_positives = jnp.sum(pred_is_pos & (labels == 1))
+    false_negatives = jnp.sum(~pred_is_pos & (labels == 1))
 
     return cls(true_positives=true_positives, false_negatives=false_negatives)
 
@@ -711,12 +711,13 @@ class FBetaScore(clu_metrics.Metric):
       raise ValueError('The "Threshold" value must be between 0 and 1.')
 
     # Modify predictions with the given threshold value
-    predictions = jnp.where(predictions >= threshold, 1, 0)
+    pred_is_pos = predictions >= threshold
+    label_is_pos = labels == 1
 
     # Assign the true_positive, false_positive, and false_negative their values
-    true_positives = jnp.sum(predictions * labels, axis=0)
-    false_positives = jnp.sum(predictions * (1 - labels), axis=0)
-    false_negatives = jnp.sum((1 - predictions) * labels, axis=0)
+    true_positives = jnp.sum(pred_is_pos & label_is_pos, axis=0)
+    false_positives = jnp.sum(pred_is_pos & ~label_is_pos, axis=0)
+    false_negatives = jnp.sum(~pred_is_pos & label_is_pos, axis=0)
 
     return cls(
         true_positives=true_positives,

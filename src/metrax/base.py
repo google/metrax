@@ -47,7 +47,7 @@ class Average(clu_metrics.Average):
       Updated Average metric.
     """
     total = values
-    count = jnp.ones_like(values, dtype=values.dtype)
+    count = jnp.ones_like(values, dtype=jnp.int32)
     if sample_weights is not None:
       total = values * sample_weights
       count = count * sample_weights

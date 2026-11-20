@@ -151,8 +151,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       keras_accuracy.update_state(labels, logits, weights)
 
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
-    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
     np.testing.assert_allclose(
         metrax_accuracy.compute(),
         keras_accuracy.result(),
@@ -190,8 +189,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       metric = update if metric is None else metric.merge(update)
 
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
-    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
     np.testing.assert_allclose(
         metric.compute(),
         expected,
@@ -266,12 +264,13 @@ class ClassificationMetricsTest(parameterized.TestCase):
     for labels, logits, weights in zip(y_true, y_pred, sample_weights):
       keras_aucpr.update_state(labels, logits, sample_weight=weights)
     expected = keras_aucpr.result()
+    # Use lower tolerance for lower precision dtypes.
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
     np.testing.assert_allclose(
         metric.compute(),
         expected,
-        # Use lower tolerance for lower precision dtypes.
-        rtol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5,
-        atol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5,
+        rtol=rtol,
+        atol=atol,
     )
 
   @parameterized.product(
@@ -307,12 +306,13 @@ class ClassificationMetricsTest(parameterized.TestCase):
     for labels, logits, weights in zip(y_true, y_pred, sample_weights):
       keras_aucroc.update_state(labels, logits, sample_weight=weights)
     expected = keras_aucroc.result()
+    # Use lower tolerance for lower precision dtypes.
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-7
     np.testing.assert_allclose(
         metric.compute(),
         expected,
-        # Use lower tolerance for lower precision dtypes.
-        rtol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-7,
-        atol=1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-7,
+        rtol=rtol,
+        atol=atol,
     )
 
   # Testing function for F-Beta classification
@@ -376,8 +376,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
     metric = metric.from_model_output(y_pred, y_true, beta, threshold)
 
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
-    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
     np.testing.assert_allclose(
         metric.compute(),
         expected,
@@ -431,8 +430,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       metrax_metric = metrax_metric.merge(update)
       keras_metric.update_state(labels, logits, weights)
 
-    rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
-    atol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
     np.testing.assert_allclose(
         metrax_metric.compute(),
         keras_metric.result(),
@@ -498,8 +496,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       metrax_metric = metrax_metric.merge(update)
       keras_metric.update_state(labels, logits, weights)
 
-    rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
-    atol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
     np.testing.assert_allclose(
         metrax_metric.compute(),
         keras_metric.result(),
@@ -527,8 +524,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       metrax_metric = metrax_metric.merge(update)
       keras_metric.update_state(labels, logits, weights)
 
-    rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
-    atol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
     np.testing.assert_allclose(
         metrax_metric.compute(),
         keras_metric.result(),
@@ -561,8 +557,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       metrax_metric = metrax_metric.merge(update)
       keras_metric.update_state(labels, logits, weights)
 
-    rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
-    atol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
     np.testing.assert_allclose(
         metrax_metric.compute(),
         keras_metric.result(),
@@ -605,8 +600,7 @@ class ClassificationMetricsTest(parameterized.TestCase):
       metrax_metric = metrax_metric.merge(update)
       keras_metric.update_state(labels, logits, weights)
 
-    rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
-    atol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
+    atol = rtol = 1e-2 if y_pred.dtype in (jnp.float16, jnp.bfloat16) else 1e-5
     np.testing.assert_allclose(
         metrax_metric.compute(),
         keras_metric.result(),

@@ -123,14 +123,22 @@ class BaseTest(parameterized.TestCase):
     keras_metrics = jnp.array(keras_metrics, dtype=values.dtype)
 
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if values.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
-    atol = 1e-2 if values.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = rtol = 1e-2 if values.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         metric.compute(),
         keras_metrics,
         rtol=rtol,
         atol=atol,
     )
+
+  def test_average_bf16_large_count(self):
+    """Test that `Average` keeps `int32` count across many `bfloat16` merges."""
+    batch = jnp.ones((32,), dtype=jnp.bfloat16)
+    metric = metrax.Average.empty()
+    for _ in range(300):
+      metric = metric.merge(metrax.Average.from_model_output(values=batch))
+    self.assertEqual(metric.count.dtype, jnp.int32)
+    np.testing.assert_allclose(metric.compute(), 1.0)
 
 
 if __name__ == '__main__':

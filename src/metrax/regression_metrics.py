@@ -66,14 +66,9 @@ class MAE(base.Average):
       ValueError: If type of `labels` is wrong or the shapes of `predictions`
       and `labels` are incompatible.
     """
-    absolute_error = jnp.abs(predictions - labels)
-    count = jnp.ones_like(labels, dtype=jnp.int32)
-    if sample_weights is not None:
-      absolute_error = absolute_error * sample_weights
-      count = count * sample_weights
-    return cls(
-        total=absolute_error.sum(),
-        count=count.sum(),
+    return super().from_model_output(  # pyrefly: ignore[bad-return]
+        values=jnp.abs(predictions - labels),
+        sample_weights=sample_weights,
     )
 
 
@@ -122,14 +117,9 @@ class MSE(base.Average):
       ValueError: If type of `labels` is wrong or the shapes of `predictions`
       and `labels` are incompatible.
     """
-    squared_error = jnp.square(predictions - labels)
-    count = jnp.ones_like(labels, dtype=jnp.int32)
-    if sample_weights is not None:
-      squared_error = squared_error * sample_weights
-      count = count * sample_weights
-    return cls(
-        total=squared_error.sum(),
-        count=count.sum(),
+    return super().from_model_output(  # pyrefly: ignore[bad-return]
+        values=jnp.square(predictions - labels),
+        sample_weights=sample_weights,
     )
 
 
@@ -194,16 +184,10 @@ class MSLE(base.Average):
     Returns:
       Updated MSLE metric. The shape should be a single scalar.
     """
-    log_predictions = jnp.log1p(predictions)
-    log_labels = jnp.log1p(labels)
-    squared_error = jnp.square(log_predictions - log_labels)
-    count = jnp.ones_like(labels, dtype=jnp.int32)
-    if sample_weights is not None:
-      squared_error = squared_error * sample_weights
-      count = count * sample_weights
-    return cls(
-        total=squared_error.sum(),
-        count=count.sum(),
+    squared_error = jnp.square(jnp.log1p(predictions) - jnp.log1p(labels))
+    return super().from_model_output(  # pyrefly: ignore[bad-return]
+        values=squared_error,
+        sample_weights=sample_weights,
     )
 
 

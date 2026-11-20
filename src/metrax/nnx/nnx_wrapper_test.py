@@ -74,7 +74,6 @@ class NnxWrapperTest(parameterized.TestCase):
   def test_metric_update_and_compute(self, y_true, y_pred, sample_weights):
     """Test that `MSE` Metric in `NnxWrapper` computes correct values."""
     y_true = y_true.astype(y_pred.dtype)
-    y_pred = y_pred.astype(y_true.dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -94,8 +93,7 @@ class NnxWrapperTest(parameterized.TestCase):
         sample_weight=sample_weights.astype('float32').flatten(),
     )
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
-    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         nnx_metric.compute(),
         expected,

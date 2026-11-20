@@ -175,7 +175,6 @@ class RegressionMetricsTest(parameterized.TestCase):
   def test_mae(self, y_true, y_pred, sample_weights):
     """Test that `MAE` Metric computes correct values."""
     y_true = y_true.astype(y_pred.dtype)
-    y_pred = y_pred.astype(y_true.dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -196,8 +195,7 @@ class RegressionMetricsTest(parameterized.TestCase):
         sample_weight=sample_weights.astype('float32').flatten(),
     )
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
-    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         metric.compute(),
         expected,
@@ -217,7 +215,6 @@ class RegressionMetricsTest(parameterized.TestCase):
   def test_mse(self, y_true, y_pred, sample_weights):
     """Test that `MSE` Metric computes correct values."""
     y_true = y_true.astype(y_pred.dtype)
-    y_pred = y_pred.astype(y_true.dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -238,8 +235,7 @@ class RegressionMetricsTest(parameterized.TestCase):
         sample_weight=sample_weights.astype('float32').flatten(),
     )
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
-    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         metric.compute(),
         expected,
@@ -259,7 +255,6 @@ class RegressionMetricsTest(parameterized.TestCase):
   def test_rmse(self, y_true, y_pred, sample_weights):
     """Test that `RMSE` Metric computes correct values."""
     y_true = y_true.astype(y_pred.dtype)
-    y_pred = y_pred.astype(y_true.dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -275,8 +270,7 @@ class RegressionMetricsTest(parameterized.TestCase):
       keras_rmse.update_state(labels, logits, sample_weight=weights)
 
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
-    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         metric.compute(),
         keras_rmse.result(),
@@ -296,7 +290,6 @@ class RegressionMetricsTest(parameterized.TestCase):
   def test_msle(self, y_true, y_pred, sample_weights):
     """Test that `MSLE` Metric computes correct values."""
     y_true = y_true.astype(y_pred.dtype)
-    y_pred = y_pred.astype(y_true.dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -315,8 +308,7 @@ class RegressionMetricsTest(parameterized.TestCase):
         sample_weight=sample_weights.astype('float32').flatten(),
     )
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
-    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         metric.compute(),
         expected,
@@ -336,7 +328,6 @@ class RegressionMetricsTest(parameterized.TestCase):
   def test_rmsle(self, y_true, y_pred, sample_weights):
     """Test that `RMSLE` Metric computes correct values."""
     y_true = y_true.astype(y_pred.dtype)
-    y_pred = y_pred.astype(y_true.dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -355,8 +346,7 @@ class RegressionMetricsTest(parameterized.TestCase):
         sample_weight=sample_weights.astype('float32').flatten(),
     )
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
-    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         metric.compute(),
         expected,
@@ -376,7 +366,6 @@ class RegressionMetricsTest(parameterized.TestCase):
   def test_rsquared(self, y_true, y_pred, sample_weights):
     """Test that `RSQUARED` Metric computes correct values."""
     y_true = y_true.astype(y_pred.dtype)
-    y_pred = y_pred.astype(y_true.dtype)
     if sample_weights is None:
       sample_weights = np.ones_like(y_true)
 
@@ -397,8 +386,7 @@ class RegressionMetricsTest(parameterized.TestCase):
       )
 
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
-    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         metric.compute(),
         keras_r2.result(),
@@ -415,7 +403,6 @@ class RegressionMetricsTest(parameterized.TestCase):
   def test_spearman(self, y_true, y_pred):
     """Test that `SpearmanRankCorrelation` Metric computes correct values."""
     y_true = y_true.astype(y_pred.dtype)
-    y_pred = y_pred.astype(y_true.dtype)
 
     metric = None
     for labels, logits in zip(y_true, y_pred):
@@ -430,8 +417,7 @@ class RegressionMetricsTest(parameterized.TestCase):
         y_pred.astype('float32').flatten(),
     )
     # Use lower tolerance for lower precision dtypes.
-    rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
-    atol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
+    atol = rtol = 1e-2 if y_true.dtype in (jnp.float16, jnp.bfloat16) else 1e-05
     np.testing.assert_allclose(
         metric.compute(),
         expected,

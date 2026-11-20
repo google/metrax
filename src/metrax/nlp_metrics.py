@@ -184,20 +184,17 @@ class BLEU(clu_metrics.Metric):
     )
 
   def compute(self) -> jax.Array:
-    precisions = [0] * self.max_order
-    for i in range(0, self.max_order):
-      precisions[i] = base.divide_no_nan(  # pyrefly: ignore[unsupported-operation]
-          self.matches_by_order[i], self.possible_matches_by_order[i]
-      )
+    precisions = base.divide_no_nan(
+        self.matches_by_order, self.possible_matches_by_order
+    )
     geo_mean = (
         math.exp(sum((1.0 / self.max_order) * math.log(p) for p in precisions))
-        if precisions and min(precisions) > 0
+        if precisions.size and jnp.min(precisions) > 0
         else 0
     )
     ratio = base.divide_no_nan(self.translation_length, self.reference_length)
     bp = 1.0 if ratio > 1.0 else math.exp(1 - 1.0 / ratio)
-    bleu = geo_mean * bp
-    return jnp.array(bleu)
+    return jnp.array(geo_mean * bp)
 
 
 @flax.struct.dataclass
@@ -446,13 +443,8 @@ class RougeBase(clu_metrics.Metric, abc.ABC):
 
   def compute(self) -> jax.Array:
     """Computes macro-averaged recall, precision, and F1-score."""
-    macro_avg_precision = base.divide_no_nan(
-        self.total_precision, self.num_examples
-    )
-    macro_avg_recall = base.divide_no_nan(self.total_recall, self.num_examples)
-    macro_avg_f1score = base.divide_no_nan(self.total_f1, self.num_examples)
-
-    return jnp.stack([macro_avg_precision, macro_avg_recall, macro_avg_f1score])
+    totals = jnp.stack([self.total_precision, self.total_recall, self.total_f1])
+    return base.divide_no_nan(totals, self.num_examples)
 
 
 @flax.struct.dataclass
